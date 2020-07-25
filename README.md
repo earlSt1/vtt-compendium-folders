@@ -14,3 +14,5 @@ v0.1.0 converts the static submenus in the Compendium directory to be folders, a
 1. Move compendiums between folders
 2. Create/Rename/Update/Delete folders
 3. ???
+
+If you have any issues feel free to ping me on Discord (@Erceron#0370)
