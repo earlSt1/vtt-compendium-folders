@@ -3,7 +3,6 @@ function deleteExistingRules(){
     for (var i=sheet.cssRules.length-1;i>=0;i--){
         if (sheet.cssRules[i].selectorText==='#compendium h3'){
             sheet.deleteRule(i);
-            return;
         }
     }
 }
@@ -25,7 +24,7 @@ function convertExistingSubmenuToFolder(){
         let title = submenu.querySelector('h3')
         let titleText = title.innerText
         let folderIcon = document.createElement('i')
-        folderIcon.classList.add('fas','fa-fw','fa-folder-open')
+        folderIcon.classList.add('fas','fa-fw','fa-folder')
         title.innerHTML = folderIcon.outerHTML+titleText
         
         let cogIcon = document.createElement('i')
@@ -35,7 +34,12 @@ function convertExistingSubmenuToFolder(){
         cogLink.appendChild(cogIcon)
         header.appendChild(title)
         header.appendChild(cogLink)
-        submenu.insertAdjacentElement('afterbegin',header)            
+        submenu.insertAdjacentElement('afterbegin',header)   
+
+        //Close folder by default
+        let packs = submenu.querySelector('ol.compendium-list')
+        packs.style.display='none'
+        cogLink.style.display='none'         
     }
 }
 function toggleFolder(parent){
