@@ -75,6 +75,7 @@ function convertExistingSubmenusToFolder(){
         allFolders[compendiumFolder._id]=compendiumFolder;
         convertSubmenuToFolder(submenu,compendiumFolder._id);
     }
+    allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums'};
     game.settings.set(mod,'cfolders',allFolders);
 }
 function convertSubmenuToFolder(submenu,uid){
@@ -82,7 +83,7 @@ function convertSubmenuToFolder(submenu,uid){
     submenu.classList.add('compendium-folder')
     let header = document.createElement('header')
     header.classList.add('compendium-folder-header', 'flexrow')
-
+    header.style.backgroundColor = '#000000';
     let title = submenu.querySelector('h3')
     let titleText = title.innerText
     let folderIcon = document.createElement('i')
@@ -169,12 +170,27 @@ function deleteExistingRules(){
         }
     }
 }
-
+function createHiddenFolder(prefix,compendiums,allCompendiumElements){
+    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
+    let folder = document.createElement('ol')
+    folder.classList.add('hidden-compendiums');
+    folder.style.display='none';
+    for (let compendium of compendiums){
+        
+        folder.appendChild(document.querySelector("[data-pack='"+compendium+"']"));
+    }
+    tab.querySelector(prefix+'ol.directory-list').appendChild(folder)
+}
 function setupFolders(prefix){
 
     let allFolders = game.settings.get(mod,'cfolders');
-    let allCompendiumElements = document.querySelectorAll(prefix+'li.compendium-pack');
     
+    let allCompendiumElements = document.querySelectorAll(prefix+'li.compendium-pack');
+    if (allFolders['hidden']!=null 
+        && allFolders['hidden'].compendiumList != null 
+        && allFolders['hidden'].compendiumList.length>0){
+        createHiddenFolder(prefix,allFolders['hidden'].compendiumList,allCompendiumElements)
+    }
     //Remove all current submenus
     for (let submenu of document.querySelectorAll(prefix+'li.compendium-entity')){
         submenu.remove();
@@ -189,17 +205,20 @@ function setupFolders(prefix){
 
     // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
     Object.keys(allFolders).forEach(function(key){
-        let folder = new CompendiumFolder('','');
-        folder.initFromExisting(allFolders[key]);
-        folder.uid=key;
+        if (key != 'hidden'){
 
-        let compendiumElements = [];
-        if (folder.compendiumList.length>0){
-            for (let compendiumKey of folder.compendiumList){
-                compendiumElements.push(allCompendiumElementsDict[compendiumKey])
+            let folder = new CompendiumFolder('','');
+            folder.initFromExisting(allFolders[key]);
+            folder.uid=key;
+
+            let compendiumElements = [];
+            if (folder.compendiumList.length>0){
+                for (let compendiumKey of folder.compendiumList){
+                    compendiumElements.push(allCompendiumElementsDict[compendiumKey])
+                }
             }
+            createFolderFromObject(folder,compendiumElements,prefix);
         }
-        createFolderFromObject(folder,compendiumElements,prefix);
     });
 }
 // Edit functions
@@ -252,7 +271,7 @@ class CompendiumFolderConfig extends FormApplication {
             //Box unticked AND compendium in folder
             packsToRemove.push(packKey);
             // TODO decide what happens here
-            // Add to invisible folder, else issues arise
+            // Add to Hidden folder, else issues arise
           }
       }
       await 
@@ -287,6 +306,8 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     }
     for (let packKey of packsToRemove){
         allFolders[folderId].compendiumList.splice(allFolders[folderId].compendiumList.indexOf(packKey),1);
+        allFolders['hidden'].compendiumList.push(packKey);
+        console.log(modName+' | Adding '+packKey+' to folder'+allFolders['hidden'].titleText);
     }
     allFolders[folderId].titleText = folder.titleText;
     allFolders[folderId].colorText = folder.colorText;
