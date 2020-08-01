@@ -181,6 +181,25 @@ function createHiddenFolder(prefix,compendiums,allCompendiumElements){
     }
     tab.querySelector(prefix+'ol.directory-list').appendChild(folder)
 }
+function alphaSortFolders(folders){
+    let items = Object.keys(folders).map(function(key) {
+        return [key, folders[key]];
+      });
+    items.sort(function(first,second){
+        if (first[1]['titleText']<second[1]['titleText']){
+            return -1;
+        }
+        if ( first[1]['titleText'] > second[1]['titleText']){
+          return 1;
+        }
+        return 0;
+    })
+    let sortedFolders = {}
+    for (let item of items){
+        sortedFolders[item[0]]=item[1];
+    }
+    return sortedFolders
+}
 function setupFolders(prefix){
 
     let allFolders = game.settings.get(mod,'cfolders');
@@ -204,7 +223,7 @@ function setupFolders(prefix){
     }
 
     // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
-    Object.keys(allFolders).forEach(function(key){
+    Object.keys(alphaSortFolders(allFolders)).forEach(function(key){
         if (key != 'hidden'){
 
             let folder = new CompendiumFolder('','');
@@ -354,7 +373,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     for (let packKey of packsToRemove){
         allFolders[folderId].compendiumList.splice(allFolders[folderId].compendiumList.indexOf(packKey),1);
         allFolders['hidden'].compendiumList.push(packKey);
-        console.log(modName+' | Adding '+packKey+' to folder'+allFolders['hidden'].titleText);
+        console.log(modName+' | Adding '+packKey+' to folder '+allFolders['hidden'].titleText);
     }
     allFolders[folderId].titleText = folder.titleText;
     allFolders[folderId].colorText = folder.colorText;
