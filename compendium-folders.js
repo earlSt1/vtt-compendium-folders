@@ -232,7 +232,7 @@ function setupFolders(prefix){
 
             let compendiumElements = [];
             if (folder.compendiumList.length>0){
-                for (let compendiumKey of folder.compendiumList){
+                for (let compendiumKey of folder.compendiumList.sort()){
                     compendiumElements.push(allCompendiumElementsDict[compendiumKey])
                 }
             }
