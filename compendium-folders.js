@@ -119,9 +119,9 @@ function createFolderObjectForSubmenu(submenu,titleText){
 }
 // Creation functions
 
-function createNewFolder(titleText,color){
+function createNewFolder(){
     // TODO create object then call createFolder()
-    Settings.addFolder(titleText,color,[]);
+    new CompendiumFolderConfig(new CompendiumFolder('New Folder','#000000')).render(true) 
 }
 function createFolderFromObject(compendiumFolder, compendiumElements,prefix){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
@@ -220,6 +220,30 @@ function setupFolders(prefix){
             createFolderFromObject(folder,compendiumElements,prefix);
         }
     });
+    // create folder button
+    if (document.querySelector(prefix+'button.cfolder-create')==null){
+        let button = document.createElement('button');
+        button.classList.add('cfolder-create')
+        button.type='submit';
+        button.addEventListener('click',function(){createNewFolder()});
+        let folderIcon = document.createElement('i')
+        folderIcon.classList.add('fas','fa-fw','fa-folder')
+        button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
+        document.querySelector(prefix+'#compendium .directory-footer').appendChild(button);
+    }
+    
+}
+// Delete functions
+async function deleteFolder(folder){
+    let folderId = folder._id;
+    let allFolders = Settings.getFolders();
+    let hiddenFolder = allFolders['hidden']
+    for (let compendium of folder.compendiumList){
+        hiddenFolder.compendiumList.push(compendium);
+    }
+    delete allFolders[folderId];
+    await game.settings.set(mod,'cfolders',allFolders);
+    refreshFolders()
 }
 // Edit functions
 
@@ -241,7 +265,7 @@ class CompendiumFolderConfig extends FormApplication {
   
     get title() {
       if ( this.object._id ) return `${game.i18n.localize("FOLDER.Update")}: ${this.object.titleText}`;
-      //return game.i18n.localize("FOLDER.Create");
+      return game.i18n.localize("FOLDER.Create");
     }
   
     /** @override */
@@ -250,7 +274,8 @@ class CompendiumFolderConfig extends FormApplication {
         folder: this.object,
         fpacks: game.packs,
 
-        submitText: game.i18n.localize(this.object._id ? "FOLDER.Update" : "FOLDER.Create")
+        submitText: game.i18n.localize(this.object._id ? "FOLDER.Update" : "FOLDER.Create"),
+        deleteText: "Delete Folder"
       }
     }
   
@@ -274,9 +299,28 @@ class CompendiumFolderConfig extends FormApplication {
             // Add to Hidden folder, else issues arise
           }
       }
-      await 
-      updateFolders(packsToAdd,packsToRemove,this.object);
-
+      if (formData.delete[0]==1){
+          //do delete stuff
+          new Dialog({
+            title: "Delete Folder",
+            content: "<p>Are you sure you want to delete the folder <strong>"+this.object.titleText+"?</strong></p>",
+            buttons: {
+              yes: {
+                icon: '<i class="fas fa-check"></i>',
+                label: "Yes",
+                callback: () => deleteFolder(this.object)
+              },
+              no: {
+                icon: '<i class="fas fa-times"></i>',
+                label: "No"
+              }
+            }
+          }).render(true);
+        
+      }else{
+        await updateFolders(packsToAdd,packsToRemove,this.object);
+      }
+      
     }
   }
 function refreshFolders(){
@@ -290,10 +334,12 @@ function refreshFolders(){
 }
 async function updateFolders(packsToAdd,packsToRemove,folder){
     let folderId = folder._id;
-
     //First find where compendium currently is (what folder it belongs to)
     //Then move the compendium and update
     let allFolders = Settings.getFolders();
+    if (allFolders[folderId] == null){
+        allFolders[folderId]=folder;
+    }
     for (let packKey of packsToAdd){
         Object.keys(allFolders).forEach(function(fId){
             if (allFolders[fId].compendiumList.indexOf(packKey)>-1){
@@ -301,6 +347,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
                 console.log(modName+' | Removing '+packKey+' from folder '+allFolders[fId].titleText);
             }
         });
+        
         allFolders[folderId].compendiumList.push(packKey);
         console.log(modName+' | Adding '+packKey+' to folder '+folder.titleText);
     }
@@ -313,7 +360,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     allFolders[folderId].colorText = folder.colorText;
 
     await game.settings.set(mod,'cfolders',allFolders);
-    refreshFolders();
+    refreshFolders()
 }
 // Events
 function toggleFolder(parent){

@@ -23,5 +23,9 @@
             {{/each}}
         </div>
     </div>
-    <button type="submit"><i class="fas fa-check"></i> {{submitText}}</button>
+    <div class='flexrow'>
+        <input type='hidden' name='delete' id='deleteValue' value=''/>
+        <button class='cfolder-submit' id='delete' type="submit" onclick="document.querySelector('#deleteValue').value='1';"><i class="fas fa-trash"></i> {{deleteText}}</button>
+        <button class='cfolder-submit' type="submit"><i class="fas fa-check"></i> {{submitText}}</button>
+    </div>
 </form>

@@ -49,3 +49,12 @@ li.compendium-folder > .compendium-folder-header {
     padding:1px 3px;
     font-size:12px;
   }
+  button.cfolder-create{
+    margin-top:5px !important;
+  }
+  button.cfolder-submit{
+    width:50%
+  }
+  button.cfolder-submit#delete  {
+    background-color:#c51c1c
+  }
