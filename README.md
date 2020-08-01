@@ -12,8 +12,8 @@ NOTE This latest update makes my previous module Compendium Hider redundant. You
 
 ## Future
 
-1. ~~Move compendiums between folders~~
-2. ~~Create/Rename/Update/Delete folders~~
+1. ~~Move compendiums between folders~~ Now in 0.1.3!
+2. ~~Create/Rename/Update/Delete folders~~ Now in 0.1.3!
 3. Nesting folders
 4. ???
 
