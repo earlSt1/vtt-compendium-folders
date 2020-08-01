@@ -427,7 +427,7 @@ export class Settings{
             scope: 'world',
             config: false,
             type: Object,
-            default:[]
+            default:{}
         });
     }
     static updateFolder(folderData){
@@ -458,8 +458,8 @@ Hooks.on('renderCompendiumDirectory', async function() {
     if (isPopout){
         prefix = '#compendium-popout '
     }
-
-    if (game.settings.get(mod,'cfolders').length==0){
+    let currentSettings = game.settings.get(mod,'cfolders')
+    if (Object.keys(currentSettings).length === 0 && currentSettings.constructor === Object){
         convertExistingSubmenusToFolder(prefix);
     }else{
         setupFolders(prefix)
