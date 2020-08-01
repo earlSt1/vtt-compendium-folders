@@ -37,3 +37,5 @@ li.compendium-folder > .compendium-folder-header {
   li.compendium-folder.collapsed > .compendium-folder-header .edit-folder {
     display: none;
   }
+  /* Fix for issue #2 */
+  #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
