@@ -39,3 +39,13 @@ li.compendium-folder > .compendium-folder-header {
   }
   /* Fix for issue #2 */
   #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
+  /* Form styles */
+  div.compendium-list {
+    max-height:300px; 
+    overflow:auto;
+    background:rgba(0,0,0,0.05);
+    border:1px solid #7a7971;
+    border-radius:3px;
+    padding:1px 3px;
+    font-size:12px;
+  }

@@ -1,0 +1,27 @@
+<form id="folder-create" autocomplete="off" onsubmit="event.preventDefault();">
+
+    <div class="form-group">
+        <label>{{localize "FOLDER.Name"}}</label>
+        <input type="text" name="name" placeholder="Folder Name" value="{{folder.titleText}}"/>
+    </div>
+
+    <div class="form-group">
+        <label>{{localize "FOLDER.Color"}}</label>
+        <div class="flexrow">
+            <input type="text" name="color" value="{{folder.colorText}}" data-dtype="String"/>
+            <input type="color" value="{{folder.colorText}}" data-edit="color"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Compendiums</label>
+        <div class='compendium-list'>
+            {{#each fpacks}}
+                <div class='flexrow'>
+                    <input type="checkbox" name="{{this.metadata.package}}.{{this.metadata.name}}" {{#ifIn metadata ../folder.compendiumList}} checked {{/ifIn}}/>
+                    <label for="{{this.metadata.package}}.{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} [{{this.metadata.package}}]</label>
+                </div>
+            {{/each}}
+        </div>
+    </div>
+    <button type="submit"><i class="fas fa-check"></i> {{submitText}}</button>
+</form>
