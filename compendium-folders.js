@@ -427,7 +427,7 @@ export class Settings{
             scope: 'world',
             config: false,
             type: Object,
-            default:{}
+            default:[]
         });
     }
     static updateFolder(folderData){
