@@ -4,7 +4,7 @@ This is a module which allows you to manage compendiums a bit easier by implemen
 
 This is in early development, but I plan on adding stuff found in the Future section below.
 
-v0.1.3 Introduces a full Create/Update/Delete folder system, which allows you to move compendiums between folders
+v0.1.4 Introduces a full Create/Update/Delete folder system, which allows you to move compendiums between folders
 
 NOTE This latest update makes my previous module Compendium Hider redundant. You can now hide compendiums by removing a compendium from a folder.
 
@@ -12,8 +12,8 @@ NOTE This latest update makes my previous module Compendium Hider redundant. You
 
 ## Future
 
-1. ~~Move compendiums between folders~~ Now in 0.1.3!
-2. ~~Create/Rename/Update/Delete folders~~ Now in 0.1.3!
+1. ~~Move compendiums between folders~~ Now in 0.1.4!
+2. ~~Create/Rename/Update/Delete folders~~ Now in 0.1.4!
 3. Nesting folders
 4. ???
 
