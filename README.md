@@ -17,4 +17,7 @@ NOTE This latest update makes my previous module Compendium Hider redundant. You
 3. Nesting folders
 4. ???
 
-If you have any issues feel free to ping me on Discord (@Erceron#0370)
+Any issues feel free to ping me on Discord (@Erceron#0370)
+
+## Contribution
+If you'd like to support my work, feel free to leave a tip through [my paypal](http://paypal.me/cre463)
