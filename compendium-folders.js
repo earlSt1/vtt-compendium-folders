@@ -121,7 +121,7 @@ function createNewFolder(){
     // TODO create object then call createFolder()
     new CompendiumFolderConfig(new CompendiumFolder('New Folder','')).render(true) 
 }
-function createFolderFromObject(compendiumFolder, compendiumElements,prefix){
+function createFolderFromObject(compendiumFolder, compendiumElements,prefix,wasOpen){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
     let folder = document.createElement('li')
     folder.classList.add('compendium-entity','compendium-folder')
@@ -130,7 +130,7 @@ function createFolderFromObject(compendiumFolder, compendiumElements,prefix){
     header.style.backgroundColor = compendiumFolder.colorText;
 
     let folderIcon = document.createElement('i')
-    folderIcon.classList.add('fas','fa-fw','fa-folder')
+    folderIcon.classList.add('fas','fa-fw')
     let cogIcon = document.createElement('i')
     cogIcon.classList.add('fas','fa-cog','fa-fw')
     let featherIcon = document.createElement('i')
@@ -144,8 +144,13 @@ function createFolderFromObject(compendiumFolder, compendiumElements,prefix){
     for (let compendium of compendiumElements){
         packList.appendChild(compendium);
     }
-    packList.style.display='none';
-    cogLink.style.display='none';
+    if (!wasOpen){
+        packList.style.display='none';
+        cogLink.style.display='none';
+        folderIcon.classList.add('fa-folder');
+    }else{
+        folderIcon.classList.add('fa-folder-open');
+    }
 
     let title = document.createElement('h3')
     title.innerHTML = folderIcon.outerHTML+compendiumFolder.titleText;
@@ -170,14 +175,16 @@ function deleteExistingRules(){
 }
 function createHiddenFolder(prefix,allCompendiumElementsDict){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
-    let folder = document.createElement('ol')
-    folder.classList.add('hidden-compendiums');
-    folder.style.display='none';
-    Object.keys(allCompendiumElementsDict).forEach(function(key){
-        console.log(mod+" | Adding "+key+" to hidden-compendiums");
-        folder.appendChild(allCompendiumElementsDict[key]);  
-    });
-    tab.querySelector(prefix+'ol.directory-list').appendChild(folder);   
+    if (document.querySelector('.hidden-compendiums')==null){
+        let folder = document.createElement('ol')
+        folder.classList.add('hidden-compendiums');
+        folder.style.display='none';
+        Object.keys(allCompendiumElementsDict).forEach(function(key){
+            console.log(mod+" | Adding "+key+" to hidden-compendiums");
+            folder.appendChild(allCompendiumElementsDict[key]);  
+        });
+        tab.querySelector(prefix+'ol.directory-list').appendChild(folder);   
+    }
 }
 function alphaSortFolders(folders){
     let items = Object.keys(folders).map(function(key) {
@@ -198,7 +205,7 @@ function alphaSortFolders(folders){
     }
     return sortedFolders
 }
-function setupFolders(prefix){
+function setupFolders(prefix,openFolders){
 
     let allFolders = game.settings.get(mod,'cfolders');
     
@@ -237,7 +244,8 @@ function setupFolders(prefix){
                 }
             }
             if (game.user.isGM || (!game.user.isGM && compendiumElements.length>0)){
-                createFolderFromObject(folder,compendiumElements,prefix);
+                
+                createFolderFromObject(folder,compendiumElements,prefix, (openFolders.includes(folder._id)));
             }
         }
     });
@@ -296,7 +304,11 @@ class CompendiumFolderConfig extends FormApplication {
     }
   
     get title() {
-      if ( this.object._id  ) return `${game.i18n.localize("FOLDER.Update")}: ${this.object.titleText}`;
+      if ( this.object.colorText.length>1  ) {
+        this.update = true;
+        return `${game.i18n.localize("FOLDER.Update")}: ${this.object.titleText}`;
+      }
+      this.update = false;
       return game.i18n.localize("FOLDER.Create");
     }
   
@@ -306,7 +318,7 @@ class CompendiumFolderConfig extends FormApplication {
         folder: this.object,
         fpacks: game.packs,
 
-        submitText: game.i18n.localize(this.object._id ? "FOLDER.Update" : "FOLDER.Create"),
+        submitText: game.i18n.localize( this.update   ? "FOLDER.Update" : "FOLDER.Create"),
         deleteText: "Delete Folder"
       }
     }
@@ -314,7 +326,11 @@ class CompendiumFolderConfig extends FormApplication {
     /** @override */
     async _updateObject(event, formData) {
       this.object.titleText = formData.name;
-      this.object.colorText = formData.color;
+      if (formData.color.length===0){
+          this.object.colorText = '#000000'; 
+      }else{
+        this.object.colorText = formData.color;
+      }
 
       // Update compendium assignment
       let packsToAdd = []
@@ -361,7 +377,17 @@ function refreshFolders(){
     if (isPopout){
         prefix=('#compendium-popout ')
     }
-    setupFolders(prefix);
+    let allFolders = document.querySelectorAll(prefix+'.compendium-folder')
+    let openFolders = [];
+    for (let folder of allFolders){
+        if (folder.querySelector('.edit-folder').style.display==='none'){
+            //folder closed
+        }else{
+            //folder open
+            openFolders.push(folder.getAttribute('data-cfolder-id'));
+        }
+    }
+    setupFolders(prefix,openFolders);
     addEventListeners(prefix);
 }
 async function updateFolders(packsToAdd,packsToRemove,folder){
@@ -479,7 +505,7 @@ Hooks.on('renderCompendiumDirectory', async function() {
     if (Object.keys(currentSettings).length === 0 && currentSettings.constructor === Object){
         convertExistingSubmenusToFolder(prefix);
     }else{
-        setupFolders(prefix)
+        setupFolders(prefix,[])
     }
     addEventListeners(prefix)
 });
