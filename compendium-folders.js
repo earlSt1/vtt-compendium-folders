@@ -305,10 +305,8 @@ class CompendiumFolderConfig extends FormApplication {
   
     get title() {
       if ( this.object.colorText.length>1  ) {
-        this.update = true;
         return `${game.i18n.localize("FOLDER.Update")}: ${this.object.titleText}`;
       }
-      this.update = false;
       return game.i18n.localize("FOLDER.Create");
     }
   
@@ -318,7 +316,7 @@ class CompendiumFolderConfig extends FormApplication {
         folder: this.object,
         fpacks: game.packs,
 
-        submitText: game.i18n.localize( this.update   ? "FOLDER.Update" : "FOLDER.Create"),
+        submitText: game.i18n.localize( this.object.colorText.length>1   ? "FOLDER.Update" : "FOLDER.Create"),
         deleteText: "Delete Folder"
       }
     }
