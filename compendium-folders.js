@@ -5,19 +5,21 @@ function generateRandomFolderName(){
     return Math.random().toString(36).replace('0.','cfolder_' || '');
 }
 export class CompendiumFolder{
-    constructor(title,color){
+    constructor(title,color,path){
         this.title = title;
         this.color = color
         this.compendiums = [];
         this.folders = [];
         this.uid=generateRandomFolderName();
+        this.pathToFolder = path;
     }
     initFromExisting(existing){
         this.title = existing['titleText'];
         this.color = existing['colorText']
         this.compendiums = existing['compendiumList'];
         this.folders = existing['folders'];
-        this.uid=existing['uid'];
+        this.uid = existing['uid'];
+        this.path = existing['pathToFolder'];
     }
     get uid(){
         return this._id;
@@ -54,6 +56,12 @@ export class CompendiumFolder{
     }
     addFolder(compendiumFolder){
         this.folders.push(compendiumFolder);
+    }
+    get path(){
+        return this.pathToFolder;
+    }
+    set path(npath){
+        this.pathToFolder=npath;
     }
 }
 
@@ -109,7 +117,7 @@ function convertSubmenuToFolder(submenu,uid){
 function createFolderObjectForSubmenu(submenu,titleText){
     let compendiums = submenu.querySelector('ol').querySelectorAll('li.compendium-pack')
     let compendiumNames = []
-    let folderObject = new CompendiumFolder(titleText,"#000000")
+    let folderObject = new CompendiumFolder(titleText,"#000000",[])
     for (let compendium of compendiums){
         folderObject.addCompendium(compendium.getAttribute('data-pack'))
     }   
@@ -117,12 +125,11 @@ function createFolderObjectForSubmenu(submenu,titleText){
 }
 // Creation functions
 
-function createNewFolder(){
-    // TODO create object then call createFolder()
-    new CompendiumFolderConfig(new CompendiumFolder('New Folder','')).render(true) 
+function createNewFolder(path){
+    new CompendiumFolderConfig(new CompendiumFolder('New Folder','',path)).render(true) 
 }
-function createFolderFromObject(compendiumFolder, compendiumElements,prefix,wasOpen){
-    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
+
+function createFolderFromObject(parent,compendiumFolder, compendiumElements,prefix,wasOpen){
     let folder = document.createElement('li')
     folder.classList.add('compendium-entity','compendium-folder')
     let header = document.createElement('header')
@@ -139,14 +146,26 @@ function createFolderFromObject(compendiumFolder, compendiumElements,prefix,wasO
     cogLink.classList.add('edit-folder')
     cogLink.appendChild(cogIcon)
 
+    let newFolderIcon = document.createElement('i');
+    let newFolderLink = document.createElement('a');
+    newFolderIcon.classList.add('fas','fa-folder-plus');
+    newFolderLink.classList.add('create-folder');
+
+    newFolderLink.appendChild(newFolderIcon);
+
     let packList = document.createElement('ol');
     packList.classList.add('compendium-list');
     for (let compendium of compendiumElements){
         packList.appendChild(compendium);
     }
+    let folderList = document.createElement('ol');
+    folderList.classList.add('folder-list');
+
     if (!wasOpen){
         packList.style.display='none';
+        folderList.style.display='none';
         cogLink.style.display='none';
+        newFolderLink.style.display='none';
         folderIcon.classList.add('fa-folder');
     }else{
         folderIcon.classList.add('fa-folder-open');
@@ -155,13 +174,15 @@ function createFolderFromObject(compendiumFolder, compendiumElements,prefix,wasO
     let title = document.createElement('h3')
     title.innerHTML = folderIcon.outerHTML+compendiumFolder.titleText;
     
-    header.appendChild(title)
-    header.appendChild(cogLink)
-    folder.appendChild(header)
+    header.appendChild(title);
+    header.appendChild(newFolderLink);
+    header.appendChild(cogLink);
+    folder.appendChild(header);
+    folder.appendChild(folderList);
     folder.appendChild(packList);
 
     folder.setAttribute('data-cfolder-id',compendiumFolder._id);
-    tab.querySelector(prefix+'ol.directory-list').appendChild(folder)
+    parent.appendChild(folder)
 }
 
 function deleteExistingRules(){
@@ -187,23 +208,16 @@ function createHiddenFolder(prefix,allCompendiumElementsDict){
     }
 }
 function alphaSortFolders(folders){
-    let items = Object.keys(folders).map(function(key) {
-        return [key, folders[key]];
-      });
-    items.sort(function(first,second){
-        if (first[1]['titleText']<second[1]['titleText']){
+    folders.sort(function(first,second){
+        if (first['titleText'] < second['titleText']){
             return -1;
         }
-        if ( first[1]['titleText'] > second[1]['titleText']){
-          return 1;
+        if (first['titleText'] > second['titleText']){
+            return 1;
         }
         return 0;
     })
-    let sortedFolders = {}
-    for (let item of items){
-        sortedFolders[item[0]]=item[1];
-    }
-    return sortedFolders
+    return folders
 }
 function setupFolders(prefix,openFolders){
 
@@ -222,30 +236,52 @@ function setupFolders(prefix,openFolders){
     for (let compendiumElement of allCompendiumElements){
         allCompendiumElementsDict[compendiumElement.getAttribute('data-pack')]=compendiumElement;
     }
+    // For nesting folders, group by depth first.
+    // let depth = folder.pathToFolder.length
+    // Grouped folders are format {depth:[folders]}
+    let groupedFolders = {}
+    Object.keys(allFolders).forEach(function(key) {
+        let depth = 0;
+        if (allFolders[key].pathToFolder == null){
+            depth = 0;
+        }else{
+            depth = allFolders[key].pathToFolder.length
+        }
+        if (groupedFolders[depth] == null){
+            groupedFolders[depth] = [allFolders[key]];
+        }else{
+            groupedFolders[depth].push(allFolders[key]);
+        }
+      });
+    Object.keys(groupedFolders).sort().forEach(function(depth){
+        // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
+        for (let groupedFolder of alphaSortFolders(groupedFolders[depth])){
+            if (groupedFolder.titleText != 'hidden-compendiums'){
 
-    // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
-    Object.keys(alphaSortFolders(allFolders)).forEach(function(key){
-        if (key != 'hidden'){
+                let folder = new CompendiumFolder('','');
+                folder.initFromExisting(groupedFolder);
+                folder.uid=groupedFolder._id;
 
-            let folder = new CompendiumFolder('','');
-            folder.initFromExisting(allFolders[key]);
-            folder.uid=key;
-
-            let compendiumElements = [];
-            if (folder.compendiumList.length>0){
-                for (let compendiumKey of folder.compendiumList.sort()){
-                    // Check if compendium exists in DOM
-                    // If it doesnt, ignore
-                    let comp = allCompendiumElementsDict[compendiumKey]
-                    if (comp != null){
-                        compendiumElements.push(comp);
-                        delete allCompendiumElementsDict[compendiumKey];
+                let compendiumElements = [];
+                if (folder.compendiumList.length>0){
+                    for (let compendiumKey of folder.compendiumList.sort()){
+                        // Check if compendium exists in DOM
+                        // If it doesnt, ignore
+                        let comp = allCompendiumElementsDict[compendiumKey]
+                        if (comp != null){
+                            compendiumElements.push(comp);
+                            delete allCompendiumElementsDict[compendiumKey];
+                        }
                     }
                 }
-            }
-            if (game.user.isGM || (!game.user.isGM && compendiumElements.length>0)){
-                
-                createFolderFromObject(folder,compendiumElements,prefix, (openFolders.includes(folder._id)));
+                if (game.user.isGM || (!game.user.isGM && compendiumElements.length>0)){
+                    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
+                    let rootFolder = tab.querySelector(prefix+'ol.directory-list')
+                    if (depth > 0){
+                        rootFolder = tab.querySelector("li.compendium-folder[data-cfolder-id='"+folder.pathToFolder[depth-1]+"'] > ol.folder-list")
+                    }
+                    createFolderFromObject(rootFolder,folder,compendiumElements,prefix, (openFolders.includes(folder._id)));
+                }
             }
         }
     });
@@ -265,7 +301,7 @@ function setupFolders(prefix,openFolders){
         let button = document.createElement('button');
         button.classList.add('cfolder-create')
         button.type='submit';
-        button.addEventListener('click',function(){createNewFolder()});
+        button.addEventListener('click',function(){createNewFolder([])});
         let folderIcon = document.createElement('i')
         folderIcon.classList.add('fas','fa-fw','fa-folder')
         button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
@@ -416,28 +452,35 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     refreshFolders()
 }
 // Events
-function toggleFolder(parent){
-
+function toggleFolder(event,parent){
+    event.stopPropagation();
     let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
-    let cogLink = parent.querySelector('a.edit-folder')
+    let cogLink = parent.querySelector('a.edit-folder');
+    let newFolderLink = parent.querySelector('a.create-folder');
+    let folderList = parent.querySelector(':scope > .folder-list');
+    let packs = parent.querySelector(':scope > .compendium-list');
     if (folderIcon.classList.contains('fa-folder-open')){
         //Closing folder
         folderIcon.classList.remove('fa-folder-open')
         folderIcon.classList.add('fa-folder')
-        let packs = parent.querySelector('ol.compendium-list')
+        
         packs.style.display='none'
+        folderList.style.display='none';
         if (game.user.isGM){
             cogLink.style.display='none'
+            newFolderLink.style.display='none';
         }
 
     }else if (folderIcon.classList.contains('fa-folder')){
         //Opening folder
         folderIcon.classList.remove('fa-folder')
         folderIcon.classList.add('fa-folder-open')
-        let packs = parent.querySelector('ol.compendium-list')
+        
         packs.style.display=''
+        folderList.style.display='';
         if (game.user.isGM){
             cogLink.style.display=''
+            newFolderLink.style.display='';
         }
     }
 }
@@ -447,11 +490,28 @@ function showEditDialog(submenu,event){
     let folderId = submenu.getAttribute('data-cfolder-id')
     new CompendiumFolderConfig(allFolders[folderId]).render(true);   
 }
+function showCreateDialogWithPath(submenu,event){
+    event.stopPropagation();
+    let directParent = submenu.getAttribute('data-cfolder-id');
+    let path = []
+    path.push(directParent);
+    let currentElement = submenu;
+    while (!currentElement.parentElement.classList.contains('directory-list')){
+        currentElement = currentElement.parentElement.parentElement;
+        path.push(currentElement.getAttribute('data-cfolder-id'));
+    }
+    path.reverse();
+    console.log('path: '+path);
+    let allFolders = game.settings.get(mod,'cfolders');
+    let newFolder = new CompendiumFolder('New Folder','',path);
+    new CompendiumFolderConfig(newFolder).render(true);
+}
 
 function addEventListeners(prefix){
     for (let submenu of document.querySelectorAll(prefix+'li.compendium-folder')){
-        submenu.addEventListener('click',function(){ toggleFolder(submenu) },false)
+        submenu.addEventListener('click',function(event){ toggleFolder(event,submenu) },false)
         submenu.querySelector('a.edit-folder').addEventListener('click',function(event){showEditDialog(submenu,event)},false)
+        submenu.querySelector('a.create-folder').addEventListener('click',function(event){showCreateDialogWithPath(submenu,event)},false);
         for (let pack of submenu.querySelectorAll('li.compendium-pack')){
             pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
         }
