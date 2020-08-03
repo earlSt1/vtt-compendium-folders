@@ -341,8 +341,6 @@ class CompendiumFolderConfig extends FormApplication {
           }else if (!formData[packKey] && this.object.compendiumList.indexOf(packKey)>-1){
             //Box unticked AND compendium in folder
             packsToRemove.push(packKey);
-            // TODO decide what happens here
-            // Add to Hidden folder, else issues arise
           }
       }
       if (formData.delete[0]==1){
@@ -378,9 +376,7 @@ function refreshFolders(){
     let allFolders = document.querySelectorAll(prefix+'.compendium-folder')
     let openFolders = [];
     for (let folder of allFolders){
-        if (folder.querySelector('.edit-folder').style.display==='none'){
-            //folder closed
-        }else{
+        if (folder.querySelector('.edit-folder').style.display!='none'){
             //folder open
             openFolders.push(folder.getAttribute('data-cfolder-id'));
         }
@@ -407,6 +403,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
         allFolders[folderId].compendiumList.push(packKey);
         console.log(modName+' | Adding '+packKey+' to folder '+folder.titleText);
     }
+    // For removing packs, add them to hidden compendium
     for (let packKey of packsToRemove){
         allFolders[folderId].compendiumList.splice(allFolders[folderId].compendiumList.indexOf(packKey),1);
         allFolders['hidden'].compendiumList.push(packKey);
