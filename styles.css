@@ -64,16 +64,31 @@ button.cfolder-submit#delete  {
 }
 .folder-list{
   margin:0px;
-
   padding:0px;
-  border:1px solid #000000;
+  position:relative !important;
 }
 .compendium-list{
   margin-left:3px !important;
+  position:relative !important;
 }
 .folder-list > .compendium-folder{
   flex:1;
   list-style:none;
   overflow-y:auto;
+
+}
+.folder-contents{
+  border-left:6px solid #000000;
+  border-bottom:2px solid #000000;
+}
+.folder-contents > .folder-list{
+  border-left:2px solid #333;
+}
+.compendium-list > .compendium-pack{
+  padding-top:10px !important ;
+  padding-bottom:10px !important ;
+  padding-left:5px !important ;
+  padding-right:5px !important ;
+  margin:0px !important
 }
 

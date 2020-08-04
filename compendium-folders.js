@@ -98,6 +98,14 @@ function convertSubmenuToFolder(submenu,uid){
     folderIcon.classList.add('fas','fa-fw','fa-folder')
     title.innerHTML = folderIcon.outerHTML+titleText
     
+    let newFolderIcon = document.createElement('i');
+    let newFolderLink = document.createElement('a');
+    newFolderIcon.classList.add('fas','fa-folder-plus');
+    newFolderLink.classList.add('create-folder');
+
+    newFolderLink.appendChild(newFolderIcon);
+
+
     let cogIcon = document.createElement('i')
     cogIcon.classList.add('fas','fa-cog','fa-fw')
     let cogLink = document.createElement('a')
@@ -105,11 +113,21 @@ function convertSubmenuToFolder(submenu,uid){
     cogLink.appendChild(cogIcon)
     header.appendChild(title)
     header.appendChild(cogLink)
+    header.appendChild(newFolderLink);
     submenu.insertAdjacentElement('afterbegin',header)
 
     //Close folder by default
+    let contents = document.createElement('div');
+    contents.classList.add('folder-contents');
+    let folderList = document.createElement('ol');
+    folderList.classList.add('folder-list');
     let packs = submenu.querySelector('ol.compendium-list')
-    packs.style.display='none'
+    packs.insertAdjacentElement('beforebegin',contents);
+    contents.appendChild(folderList);
+    contents.appendChild(packs);
+    
+    
+    contents.style.display='none'
     cogLink.style.display='none'   
 
     submenu.setAttribute('data-cfolder-id',uid);
@@ -160,16 +178,21 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     }
     let folderList = document.createElement('ol');
     folderList.classList.add('folder-list');
-
+    let contents = document.createElement('div');
+    contents.classList.add('folder-contents');
+    contents.appendChild(folderList);
+    contents.appendChild(packList);
     if (!wasOpen){
-        packList.style.display='none';
-        folderList.style.display='none';
+        contents.style.display='none';
+        //packList.style.display='none';
+        //folderList.style.display='none';
         cogLink.style.display='none';
         newFolderLink.style.display='none';
         folderIcon.classList.add('fa-folder');
     }else{
         folderIcon.classList.add('fa-folder-open');
     }
+    
 
     let title = document.createElement('h3')
     title.innerHTML = folderIcon.outerHTML+compendiumFolder.titleText;
@@ -178,8 +201,9 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     header.appendChild(newFolderLink);
     header.appendChild(cogLink);
     folder.appendChild(header);
-    folder.appendChild(folderList);
-    folder.appendChild(packList);
+    // folder.appendChild(folderList);
+    // folder.appendChild(packList);
+    folder.appendChild(contents);
 
     folder.setAttribute('data-cfolder-id',compendiumFolder._id);
     parent.appendChild(folder)
@@ -286,7 +310,7 @@ function setupFolders(prefix,openFolders){
                     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
                     let rootFolder = tab.querySelector(prefix+'ol.directory-list')
                     if (depth > 0){
-                        rootFolder = tab.querySelector("li.compendium-folder[data-cfolder-id='"+folder.pathToFolder[depth-1]+"'] > ol.folder-list")
+                        rootFolder = tab.querySelector("li.compendium-folder[data-cfolder-id='"+folder.pathToFolder[depth-1]+"'] > .folder-contents > ol.folder-list")
                     }
                     createFolderFromObject(rootFolder,folder,compendiumElements,prefix, (openFolders.includes(folder._id)));
                 }
@@ -315,7 +339,12 @@ function setupFolders(prefix,openFolders){
         button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
         document.querySelector(prefix+'#compendium .directory-footer').appendChild(button);
     }
-    
+    // Hide all empty lists
+    for (let element of document.querySelectorAll('.folder-contents > ol')){
+        if (element.innerHTML.length===0){
+            element.style.display="none";
+        }
+    }
 }
 // Delete functions
 async function deleteFolder(folder){
@@ -465,15 +494,16 @@ function toggleFolder(event,parent){
     let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder');
     let newFolderLink = parent.querySelector('a.create-folder');
-    let folderList = parent.querySelector(':scope > .folder-list');
-    let packs = parent.querySelector(':scope > .compendium-list');
+    let contents = parent.querySelector('.folder-contents');
+    let folderList = contents.querySelector(':scope > .folder-list');
+    let packs = contents.querySelector(':scope > .compendium-list');
     if (folderIcon.classList.contains('fa-folder-open')){
         //Closing folder
         folderIcon.classList.remove('fa-folder-open')
         folderIcon.classList.add('fa-folder')
-        
-        packs.style.display='none'
-        folderList.style.display='none';
+        contents.style.display='none';
+        //packs.style.display='none'
+        //folderList.style.display='none';
         if (game.user.isGM){
             cogLink.style.display='none'
             newFolderLink.style.display='none';
@@ -483,9 +513,9 @@ function toggleFolder(event,parent){
         //Opening folder
         folderIcon.classList.remove('fa-folder')
         folderIcon.classList.add('fa-folder-open')
-        
-        packs.style.display=''
-        folderList.style.display='';
+        contents.style.display='';
+        //packs.style.display=''
+        //folderList.style.display='';
         if (game.user.isGM){
             cogLink.style.display=''
             newFolderLink.style.display='';
@@ -505,7 +535,7 @@ function showCreateDialogWithPath(submenu,event){
     path.push(directParent);
     let currentElement = submenu;
     while (!currentElement.parentElement.classList.contains('directory-list')){
-        currentElement = currentElement.parentElement.parentElement;
+        currentElement = currentElement.parentElement.parentElement.parentElement;
         path.push(currentElement.getAttribute('data-cfolder-id'));
     }
     path.reverse();
