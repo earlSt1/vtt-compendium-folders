@@ -115,6 +115,9 @@ function createFolderObjectForSubmenu(submenu,titleText){
     }   
     return folderObject
 }
+function filterCompendiumsBySearchTerm(searchTerm){
+    // TODO Redraw list, but filter to only matching searchTerm
+}
 function createDirectoryHeader(){
     let tab = document.querySelector("#sidebar .sidebar-tab[data-tab='compendium']");
     if (tab.querySelector('.directory-header')==null){
@@ -131,9 +134,10 @@ function createDirectoryHeader(){
         searchBar.setAttribute('placeholder','Search Compendiums');
         searchBar.setAttribute('autocomplete','off');
         // TODO dynamic search
-        //searchBar.addEventListener('keyup',function(event){
+        searchBar.addEventListener('keyup',function(event){
             //console.log(event.target.value);
-        //});
+            filterCompendiumsBySearchTerm(event.target.value);
+        });
 
         let collapseLink = document.createElement('a');
         collapseLink.classList.add('header-control','collapse-all');
