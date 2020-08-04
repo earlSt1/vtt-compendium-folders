@@ -240,12 +240,20 @@ function setupFolders(prefix,openFolders){
     // let depth = folder.pathToFolder.length
     // Grouped folders are format {depth:[folders]}
     let groupedFolders = {}
+    let parentFolders = [];
     Object.keys(allFolders).forEach(function(key) {
         let depth = 0;
         if (allFolders[key].pathToFolder == null){
             depth = 0;
         }else{
             depth = allFolders[key].pathToFolder.length
+            // Add all parent folders to list
+            // Need to make sure to render them
+            for (let segment of allFolders[key].pathToFolder){
+                if (!parentFolders.includes(segment)){
+                    parentFolders.push(segment);
+                }
+            }
         }
         if (groupedFolders[depth] == null){
             groupedFolders[depth] = [allFolders[key]];
@@ -274,7 +282,7 @@ function setupFolders(prefix,openFolders){
                         }
                     }
                 }
-                if (game.user.isGM || (!game.user.isGM && compendiumElements.length>0)){
+                if (game.user.isGM || (!game.user.isGM && (compendiumElements.length>0 || parentFolders.includes(folder._id)))){
                     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
                     let rootFolder = tab.querySelector(prefix+'ol.directory-list')
                     if (depth > 0){
