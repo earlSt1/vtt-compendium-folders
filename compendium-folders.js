@@ -593,8 +593,8 @@ function closeFolder(parent){
         }
     }
 }
-function toggleFolder(parent){
-
+function toggleFolder(event,parent){
+    event.stopPropagation();
     let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder');
     let newFolderLink = parent.querySelector('a.create-folder');
