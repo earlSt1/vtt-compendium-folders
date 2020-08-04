@@ -13,12 +13,21 @@
         </div>
     </div>
     <div class="form-group">
-        <label>Compendiums</label>
+        <p><i>Tick a compendium to add it to this folder. If it already belongs to a folder it will be moved from the previous folder</i></p>
+    </div><div class="form-group">
         <div class='compendium-list'>
-            {{#each fpacks}}
+            <h2>Assigned</h2>
+            {{#each apacks}}
                 <div class='flexrow'>
                     <input type="checkbox" name="{{this.metadata.package}}.{{this.metadata.name}}" {{#ifIn metadata ../folder.compendiumList}} checked {{/ifIn}}/>
                     <label for="{{this.metadata.package}}.{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} [{{this.metadata.package}}]</label>
+                </div>
+            {{/each}}
+            <h2>Unassigned</h2>
+            {{#each upacks}}
+                <div class='flexrow'>
+                    <input type="checkbox" name="{{this.metadata.package}}.{{this.metadata.name}}"/>
+                    <label for="{{this.metadata.package}}.{{this.metadata.name}}" style='margin-top:2px;color:#666;'><i>{{this.metadata.label}} [{{this.metadata.package}}]</i></label>
                 </div>
             {{/each}}
         </div>

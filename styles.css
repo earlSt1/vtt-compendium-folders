@@ -47,7 +47,7 @@ div.compendium-list {
   border:1px solid #7a7971;
   border-radius:3px;
   padding:1px 3px;
-  font-size:12px;
+  font-size:14px;
 }
 button.cfolder-create{
   margin-top:5px !important;
@@ -91,4 +91,3 @@ button.cfolder-submit#delete  {
   padding-right:5px !important ;
   margin:0px !important
 }
-

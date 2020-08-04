@@ -351,6 +351,7 @@ async function deleteFolder(folder){
     let folderId = folder._id;
     let allFolders = Settings.getFolders();
     let hiddenFolder = allFolders['hidden']
+    ui.notifications.notify("Adding compendiums "+folder.compendiumList+" to unassigned/hidden folder");
     for (let compendium of folder.compendiumList){
         hiddenFolder.compendiumList.push(compendium);
     }
@@ -367,6 +368,20 @@ Handlebars.registerHelper('ifIn', function(elem, compendiums, options) {
     }
     return options.inverse(this);
   });
+function alphaSortCompendiums(compendiums){
+    compendiums.sort(function(first,second){
+        let firstName = first.metadata.package+'.'+first.metadata.name;
+        let secondName = second.metadata.package+'.'+second.metadata.name;
+        if (firstName < secondName){
+            return -1;
+        }else if (firstName > secondName){
+            return 1;
+        }else{
+            return 0;
+        }
+    });
+    return compendiums;
+}
 class CompendiumFolderConfig extends FormApplication {
     static get defaultOptions() {
       const options = super.defaultOptions;
@@ -382,13 +397,33 @@ class CompendiumFolderConfig extends FormApplication {
       }
       return game.i18n.localize("FOLDER.Create");
     }
-  
+    getGroupedPacks(){
+        let allFolders = game.settings.get(mod,'cfolders');
+        let assigned = {};
+        let unassigned = {};
+        Object.keys(allFolders).forEach(function(key){
+            if (key != 'hidden'){
+                for (let a of allFolders[key].compendiumList){
+                    assigned[a]=game.packs.get(a);
+                }
+            }
+        });
+        for (let pack of game.packs.keys()){
+            if (!Object.keys(assigned).includes(pack)){
+                unassigned[pack] = game.packs.get(pack);
+            }
+        }
+        return [assigned,unassigned];
+
+    }
     /** @override */
     async getData(options) {
+      let allPacks = this.getGroupedPacks();
       return {
         folder: this.object,
         fpacks: game.packs,
-
+        apacks: alphaSortCompendiums(Object.values(allPacks[0])),
+        upacks: alphaSortCompendiums(Object.values(allPacks[1])),
         submitText: game.i18n.localize( this.object.colorText.length>1   ? "FOLDER.Update" : "FOLDER.Create"),
         deleteText: "Delete Folder"
       }
@@ -465,18 +500,28 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     if (allFolders[folderId] == null){
         allFolders[folderId]=folder;
     }
+    let packsMoved=[]
     for (let packKey of packsToAdd){
         Object.keys(allFolders).forEach(function(fId){
             if (allFolders[fId].compendiumList.indexOf(packKey)>-1){
                 allFolders[fId].compendiumList.splice(allFolders[fId].compendiumList.indexOf(packKey),1);
                 console.log(modName+' | Removing '+packKey+' from folder '+allFolders[fId].titleText);
+                if (fId != 'hidden'){
+                    packsMoved.push(packKey);
+                }
             }
         });
         
         allFolders[folderId].compendiumList.push(packKey);
         console.log(modName+' | Adding '+packKey+' to folder '+folder.titleText);
     }
+    if (packsMoved.length>0){
+        ui.notifications.notify("Removing "+packsMoved.length+" compendium"+(packsMoved.length>1?"s from other folders":" from another folder"))
+    }
     // For removing packs, add them to hidden compendium
+    if (packsToRemove.length>0){
+        ui.notifications.notify("Adding "+packsToRemove.length+" compendium"+(packsToRemove.length>1?"s":"")+" to unassigned/hidden folder");
+    }
     for (let packKey of packsToRemove){
         allFolders[folderId].compendiumList.splice(allFolders[folderId].compendiumList.indexOf(packKey),1);
         allFolders['hidden'].compendiumList.push(packKey);
