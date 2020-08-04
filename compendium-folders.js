@@ -141,6 +141,47 @@ function createFolderObjectForSubmenu(submenu,titleText){
     }   
     return folderObject
 }
+function createDirectoryHeader(){
+    let tab = document.querySelector("#sidebar .sidebar-tab[data-tab='compendium']");
+    if (tab.querySelector('.directory-header')==null){
+        let header = document.createElement('header');
+        header.classList.add('directory-header','flexrow');
+        let searchDiv = document.createElement('div');
+        searchDiv.classList.add('header-search');
+
+        let searchIcon = document.createElement('i');
+        searchIcon.classList.add('fas','fa-search');
+        let searchBar = document.createElement('input');
+        searchBar.setAttribute('type','text');
+        searchBar.setAttribute('name','search');
+        searchBar.setAttribute('placeholder','Search Compendiums');
+        searchBar.setAttribute('autocomplete','off');
+        // TODO dynamic search
+        //searchBar.addEventListener('keyup',function(event){
+            //console.log(event.target.value);
+        //});
+
+        let collapseLink = document.createElement('a');
+        collapseLink.classList.add('header-control','collapse-all');
+        collapseLink.title='Collapse all Folders';
+        collapseLink.addEventListener('click',function(){
+            document.querySelectorAll('.compendium-folder').forEach(function(element){
+                closeFolder(element);
+            });
+        })
+        let collapseIcon = document.createElement('i');
+        collapseIcon.classList.add('fas','fa-sort-amount-up');
+        collapseLink.append(collapseIcon);
+
+        
+        searchDiv.appendChild(searchIcon);
+        searchDiv.appendChild(searchBar);
+        header.appendChild(searchDiv);
+        header.appendChild(collapseLink);
+        tab.insertAdjacentElement('afterbegin',header);
+    }
+
+}
 // Creation functions
 
 function createNewFolder(path){
@@ -345,6 +386,10 @@ function setupFolders(prefix,openFolders){
             element.style.display="none";
         }
     }
+
+    // TODO directory header
+    //createDirectoryHeader();
+    
 }
 // Delete functions
 async function deleteFolder(folder){
@@ -534,8 +579,22 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     refreshFolders()
 }
 // Events
-function toggleFolder(event,parent){
-    event.stopPropagation();
+function closeFolder(parent){
+    let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
+    let cogLink = parent.querySelector('a.edit-folder')
+    if (folderIcon.classList.contains('fa-folder-open')){
+        //Closing folder
+        folderIcon.classList.remove('fa-folder-open')
+        folderIcon.classList.add('fa-folder')
+        let packs = parent.querySelector('ol.compendium-list')
+        packs.style.display='none'
+        if (game.user.isGM){
+            cogLink.style.display='none'
+        }
+    }
+}
+function toggleFolder(parent){
+
     let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder');
     let newFolderLink = parent.querySelector('a.create-folder');
@@ -631,19 +690,27 @@ export class Settings{
 }
 var eventsSetup = []
 
-Hooks.on('renderCompendiumDirectory', async function() {
-    Settings.registerSettings()
-    await loadTemplates(["modules/compendium-folder/compendium-folder-edit.html"]);
-    let isPopout = document.querySelector('#compendium-popout') != null;
-    let prefix = '#sidebar '
-    if (isPopout){
-        prefix = '#compendium-popout '
+Hooks.once('setup',async function(){
+    let hook = 'renderCompendiumDirectory';
+
+    //Fix for pf1 system
+    if (game.system.id === 'pf1'){
+        hook = 'renderCompendiumDirectoryPF';
     }
-    let currentSettings = game.settings.get(mod,'cfolders')
-    if (Object.keys(currentSettings).length === 0 && currentSettings.constructor === Object){
-        convertExistingSubmenusToFolder(prefix);
-    }else{
-        setupFolders(prefix,[])
-    }
-    addEventListeners(prefix)
+    Hooks.on(hook, async function() {
+        Settings.registerSettings()
+        await loadTemplates(["modules/compendium-folder/compendium-folder-edit.html"]);
+        let isPopout = document.querySelector('#compendium-popout') != null;
+        let prefix = '#sidebar '
+        if (isPopout){
+            prefix = '#compendium-popout '
+        }
+        let currentSettings = game.settings.get(mod,'cfolders')
+        if (Object.keys(currentSettings).length === 0 && currentSettings.constructor === Object){
+            convertExistingSubmenusToFolder(prefix);
+        }else{
+            setupFolders(prefix,[])
+        }
+        addEventListeners(prefix)
+    });
 });

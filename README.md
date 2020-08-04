@@ -16,7 +16,7 @@ NOTE This latest update makes my previous module Compendium Hider redundant. You
 2. ~~Create/Rename/Update/Delete folders~~ Now in 0.1.4!
 3. Nesting folders
 4. Seach, collapse all, and refresh (like other tabs)
-5. ???
+5. Import/Export folder configuration
 
 Any issues feel free to ping me on Discord (@Erceron#0370)
 
