@@ -62,6 +62,7 @@ function alphaSortCompendiums(compendiums){
 }
 function checkForDeletedCompendiums(){
     let allFolders = game.settings.get(mod,'cfolders');
+    
     let allCompendiums = Array.from(game.packs.keys())
     Object.keys(allFolders).forEach(function (key){
         let packsToRemove = [];
@@ -76,7 +77,9 @@ function checkForDeletedCompendiums(){
             allFolders[key].compendiumList.splice(compendiumIndex,1);
         }
     });
-    game.settings.set(mod,'cfolders',allFolders);
+    if (game.user.isGM){
+        game.settings.set(mod,'cfolders',allFolders);
+    }
     return allFolders;
 }
 // ==========================
@@ -674,7 +677,9 @@ Hooks.once('setup',async function(){
         hook = 'renderCompendiumDirectoryPF';
     }
     Hooks.on(hook, async function() {
+
         Settings.registerSettings()
+        
         await loadTemplates(["modules/compendium-folder/compendium-folder-edit.html"]);
         let isPopout = document.querySelector('#compendium-popout') != null;
         let prefix = '#sidebar '
