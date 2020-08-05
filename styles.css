@@ -44,7 +44,7 @@ li.compendium-folder > .compendium-folder-header {
   #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
   /* Form styles */
   div.compendium-list {
-    max-height:300px; 
+    height:300px; 
     overflow:auto;
     background:rgba(0,0,0,0.05);
     border:1px solid #7a7971;
@@ -60,4 +60,18 @@ li.compendium-folder > .compendium-folder-header {
   }
   button.cfolder-submit#delete  {
     background-color:#c51c1c
+  }
+  #compendium .header-search > input{
+    margin-left:4px;
+  }
+  #folder-create input[name='search-packs']{
+    width: calc(100% - 25px);
+  }
+  #folder-create i.fa-search{
+    padding-left:5px;
+    padding-right:5px;
+  }
+  #folder-create .form-header{
+    padding-top:4px;
+    padding-bottom:4px;
   }
