@@ -266,7 +266,7 @@ function createDirectoryHeader(){
 // Creation functions
 // ==========================
 function createNewFolder(){
-    new CompendiumFolderConfig(new CompendiumFolder('New Folder','')).render(true).then(console.log('test'))
+    new CompendiumFolderConfig(new CompendiumFolder('New Folder','')).render(true);
 }
 function createFolderFromObject(compendiumFolder, compendiumElements,prefix,wasOpen){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
