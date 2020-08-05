@@ -20,16 +20,32 @@
         </ul>
     </div><div class="form-group">
         <div class='compendium-list'>
+            <script>
+                document.querySelector("#folder-create input[name='search-packs']").addEventListener('keyup',function(event){
+                    let searchTerm = this.value;
+                    let packs = document.querySelectorAll('#folder-create .compendium-list .pack-select')
+                    for (let pack of packs){
+                        if (pack.innerText.toLowerCase().includes(searchTerm.toLowerCase())){
+                            pack.style.display='';
+                        }else{
+                            pack.style.display='none';
+                        }
+                    }
+                })
+            </script>
+            <div class='form-header'>
+                <i class='fas fa-search'></i><input type='text' name='search-packs' placeholder='Search'/>
+            </div>
             <h2>Assigned</h2>
             {{#each apacks}}
-                <div class='flexrow'>
+                <div class='flexrow pack-select pack-assigned'>
                     <input type="checkbox" name="{{this.metadata.package}}.{{this.metadata.name}}" {{#ifIn metadata ../folder.compendiumList}} checked {{/ifIn}}/>
                     <label for="{{this.metadata.package}}.{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} [{{this.metadata.package}}]</label>
                 </div>
             {{/each}}
             <h2>Unassigned</h2>
             {{#each upacks}}
-                <div class='flexrow'>
+                <div class='flexrow pack-select pack-unassigned'>
                     <input type="checkbox" name="{{this.metadata.package}}.{{this.metadata.name}}"/>
                     <label for="{{this.metadata.package}}.{{this.metadata.name}}" style='margin-top:2px;color:#666;'><i>{{this.metadata.label}} [{{this.metadata.package}}]</i></label>
                 </div>
