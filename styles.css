@@ -75,3 +75,6 @@ li.compendium-folder > .compendium-folder-header {
     padding-top:4px;
     padding-bottom:4px;
   }
+  #import-export textarea{
+    height:300px;
+  }

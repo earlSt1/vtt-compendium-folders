@@ -417,13 +417,42 @@ async function deleteFolder(folder){
     refreshFolders()
 }
 // Edit functions
-
+class ImportExportConfig extends FormApplication {
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "compendium-folder-edit";
+        options.template = "modules/compendium-folders/templates/import-export.html";
+        options.width = 500;
+        return options;
+      }
+    get title() {
+        return "Import/Export Folder Configuration";
+    }
+    async getData(options) {
+        return {
+          exportData:JSON.stringify(game.settings.get(mod,'cfolders')),
+          submitText:'Import'
+        }
+      }
+    async _updateObject(event, formData) {
+        let importData = formData.importData;
+        if (importData != null && importData.length > 0){
+            try{
+                let importJson = JSON.parse(importData);
+                game.settings.set(mod,'cfolders',importJson).then(function(){
+                    refreshFolders();
+                    ui.notifications.info("Folder data imported successfully");
+                });
+            }catch(error){ui.notifications.error("Failed to import folder data")}
+        }
+    }
+}
 
 class CompendiumFolderConfig extends FormApplication {
     static get defaultOptions() {
       const options = super.defaultOptions;
       options.id = "compendium-folder-edit";
-      options.template = "modules/compendium-folders/compendium-folder-edit.html";
+      options.template = "modules/compendium-folders/templates/compendium-folder-edit.html";
       options.width = 500;
       return options;
     }
@@ -434,6 +463,17 @@ class CompendiumFolderConfig extends FormApplication {
       }
       return game.i18n.localize("FOLDER.Create");
     }
+    async getData(options) {
+        let allPacks = this.getGroupedPacks();
+        return {
+          folder: this.object,
+          fpacks: game.packs,
+          apacks: alphaSortCompendiums(Object.values(allPacks[0])),
+          upacks: alphaSortCompendiums(Object.values(allPacks[1])),
+          submitText: game.i18n.localize( this.object.colorText.length>1   ? "FOLDER.Update" : "FOLDER.Create"),
+          deleteText: "Delete Folder"
+        }
+      }
     getGroupedPacks(){
         let allFolders = game.settings.get(mod,'cfolders');
         let assigned = {};
@@ -639,6 +679,13 @@ function addEventListeners(prefix){
 }
 export class Settings{
     static registerSettings(){
+        game.settings.registerMenu(mod,'settingsMenu',{
+            name: 'Configuration',
+            label: 'Import/Export Configuration',
+            icon: 'fas fa-wrench',
+            type: ImportExportConfig,
+            restricted: true
+        });
         game.settings.register(mod, 'cfolders', {
             scope: 'world',
             config: false,
