@@ -463,7 +463,13 @@ function setupFolders(prefix,openFolders){
             }
         }
       });
-    Object.keys(groupedFolders).sort().forEach(function(depth){
+    Object.keys(groupedFolders).sort(function(o1,o2){
+        if (parseInt(o1)<parseInt(o2)){
+            return -1;
+        }else if (parseInt(o1>parseInt(o2))){
+            return 1;
+        }return 0;
+    }).forEach(function(depth){
         // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
         for (let groupedFolder of alphaSortFolders(groupedFolders[depth])){
             let folder = new CompendiumFolder('','');
