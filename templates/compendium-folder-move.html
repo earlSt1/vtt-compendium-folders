@@ -1,11 +1,5 @@
 <form id="folder-move" autocomplete="off" onsubmit="event.preventDefault();">
     <div class="form-group">
-        <ul>
-        <li><i>Any marked compendium(s) will be included in this folder. </i></li>
-        <li><i>A compendium can only belong to one folder.</i></li>
-        <li><i>Marking compendiums already assigned to other folders will move them here.</i></li>
-        </ul>
-    </div><div class="form-group">
         <div class='form-folder-list'>
             <script>
                 document.querySelector("#folder-move input[name='search-folders']").addEventListener('keyup',function(event){
@@ -23,7 +17,7 @@
             <div class='form-header'>
                 <i class='fas fa-search'></i><input type='text' name='search-folders' placeholder='Search'/>
             </div>
-            <h2>Folders</h2>
+            <h2>Choose Destination Folder</h2>
             {{#each allFolders}}
                 <div class='flexrow folder-select'>
                     <input type="radio" name='dest-folder' value="{{this.id}}"/>

@@ -188,7 +188,7 @@ function convertSubmenuToFolder(submenu,uid){
 
     let moveFolderIcon = document.createElement('i');
     let moveFolderLink = document.createElement('a');
-    moveFolderIcon.classList.add('fas','fa-reply','fa-fw');
+    moveFolderIcon.classList.add('fas','fa-arrows-alt','fa-fw');
     moveFolderLink.classList.add('move-folder');
 
     moveFolderLink.appendChild(moveFolderIcon);
@@ -349,7 +349,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     newFolderLink.appendChild(newFolderIcon);
     let moveFolderIcon = document.createElement('i');
     let moveFolderLink = document.createElement('a');
-    moveFolderIcon.classList.add('fas','fa-reply','fa-fw');
+    moveFolderIcon.classList.add('fas','fa-arrows-alt','fa-fw');
     moveFolderLink.classList.add('move-folder');
 
     moveFolderLink.appendChild(moveFolderIcon);
@@ -636,9 +636,17 @@ class CompendiumFolderMoveDialog extends FormApplication {
             }
             return 0;
         });
+        if (this.object.pathToFolder != null && this.object.pathToFolder.length>0){
+            formData.splice(0,0,{
+                'titleText':'Root',
+                'titlePath':'Root',
+                'fullPathTitle':'Root',
+                'id':'root'
+            })
+        }
         let temp = Array.from(formData);
         for (let obj of temp){
-            if (
+            if (obj.id!='root' &&(
                 // If formData contains folders which are direct parents of this.object
                 (this.object.pathToFolder != null
                 && this.object.pathToFolder.length>0
@@ -647,10 +655,10 @@ class CompendiumFolderMoveDialog extends FormApplication {
                 || (allFolders[obj.id].pathToFolder != null
                     && allFolders[obj.id].pathToFolder.includes(this.object._id))
                 // or If formData contains this.object
-                || obj.id === this.object._id)
+                || obj.id === this.object._id))
                 formData.splice(formData.indexOf(obj),1);
             }
-        
+
         return {
             folder: this.object,
             allFolders: formData,
@@ -678,13 +686,19 @@ class CompendiumFolderMoveDialog extends FormApplication {
 
         let allFolders = game.settings.get(mod,'cfolders');
         if (destFolderId != null && destFolderId.length>0){
-            let destFolder = allFolders[destFolderId];
-            let destParentPath = (allFolders[destFolderId]['pathToFolder']==null)?[]:allFolders[destFolderId]['pathToFolder']
-            let fullPath = destParentPath.concat([destFolderId]);
-            allFolders[this.object._id]['pathToFolder'] = fullPath;
-            this.updateFullPathForChildren(allFolders,this.object._id,fullPath)
-
-            ui.notifications.info("Moved folder "+this.object.titleText+" to "+destFolder['titleText'])
+            let notificationDest = ""
+            if (destFolderId=='root'){
+                allFolders[this.object._id]['pathToFolder'] = []
+                this.updateFullPathForChildren(allFolders,this.object._id,[])
+                notificationDest="Root";
+            }else{
+                let destParentPath = (allFolders[destFolderId]['pathToFolder']==null)?[]:allFolders[destFolderId]['pathToFolder']
+                let fullPath = destParentPath.concat([destFolderId]);
+                allFolders[this.object._id]['pathToFolder'] = fullPath;
+                this.updateFullPathForChildren(allFolders,this.object._id,fullPath)
+                notificationDest = allFolders[destFolderId].titleText;
+            }
+            ui.notifications.info("Moved folder "+this.object.titleText+" to "+notificationDest)
             await game.settings.set(mod,'cfolders',allFolders);
             refreshFolders();
         }
@@ -779,7 +793,8 @@ class CompendiumFolderEditConfig extends FormApplication {
             new Dialog({
                 title: "Delete Folder",
                 content: "<p>Are you sure you want to delete the folder <strong>"+this.object.titleText+"?</strong></p>"
-                        +"<p>This will delete <strong>all</strong> subfolders</p>",
+                        +"<p>This will delete <strong>all</strong> subfolders.</p>"
+                        +"<p><i>Compendiums in these folders will not be deleted</i></p>",
                 buttons: {
                     yes: {
                         icon: '<i class="fas fa-check"></i>',
