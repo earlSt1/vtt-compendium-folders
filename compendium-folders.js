@@ -1,6 +1,6 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
-
+const FOLDER_LIMIT = 8
 
 
 // ==========================
@@ -86,6 +86,17 @@ function checkForDeletedCompendiums(){
         game.settings.set(mod,'cfolders',allFolders);
     }
     return allFolders;
+}
+function getMaxDepth(){
+    let allFolders = game.settings.get(mod,'cfolders');
+    let maxDepth = 1;
+    Object.keys(allFolders).forEach(function(key){
+        if (allFolders[key].pathToFolder != null
+            && allFolders[key].pathToFolder.length > maxDepth){
+                maxDepth = allFolders[key].pathToFolder.length;
+        };
+    });
+    return maxDepth;
 }
 // ==========================
 // Folder object structure
@@ -672,15 +683,22 @@ class CompendiumFolderMoveDialog extends FormApplication {
         }
     }
     updateFullPathForChildren(allFolders,parentFolderId,fullPath){
+        let success = true;
         Object.keys(allFolders).forEach(function(key){
             if (allFolders[key].pathToFolder != null
                 && allFolders[key].pathToFolder.includes(parentFolderId)
                 && key != parentFolderId){
+
                 let temp = allFolders[key].pathToFolder.slice(allFolders[key].pathToFolder.indexOf(parentFolderId),allFolders[key].pathToFolder.length)
                 //fullPath.push(parentFolderId);
                 allFolders[key].pathToFolder = (fullPath).concat(temp);
+                if(allFolders[key].pathToFolder.length+1 >= FOLDER_LIMIT){
+                    success = false;
+                }
+
             }
-        })
+        });
+        return success;
     }
     async _updateObject(event, formData) {
         let destFolderId = null;
@@ -691,22 +709,27 @@ class CompendiumFolderMoveDialog extends FormApplication {
         });
 
         let allFolders = game.settings.get(mod,'cfolders');
+        let success = false;
         if (destFolderId != null && destFolderId.length>0){
             let notificationDest = ""
             if (destFolderId=='root'){
                 allFolders[this.object._id]['pathToFolder'] = []
-                this.updateFullPathForChildren(allFolders,this.object._id,[])
+                success = this.updateFullPathForChildren(allFolders,this.object._id,[])
                 notificationDest="Root";
             }else{
                 let destParentPath = (allFolders[destFolderId]['pathToFolder']==null)?[]:allFolders[destFolderId]['pathToFolder']
                 let fullPath = destParentPath.concat([destFolderId]);
                 allFolders[this.object._id]['pathToFolder'] = fullPath;
-                this.updateFullPathForChildren(allFolders,this.object._id,fullPath)
+                success = this.updateFullPathForChildren(allFolders,this.object._id,fullPath)
                 notificationDest = allFolders[destFolderId].titleText;
             }
-            ui.notifications.info("Moved folder "+this.object.titleText+" to "+notificationDest)
-            await game.settings.set(mod,'cfolders',allFolders);
-            refreshFolders();
+            if (success==true){
+                ui.notifications.info("Moved folder "+this.object.titleText+" to "+notificationDest)
+                await game.settings.set(mod,'cfolders',allFolders);
+                refreshFolders();
+            }else{
+                ui.notifications.error("Max folder depth reached ("+FOLDER_LIMIT+")")
+            }
         }
         
     }
@@ -933,6 +956,9 @@ function toggleFolder(event,parent){
         openFolder(parent);
     }else{
         closeFolder(parent);
+        for (let child of parent.querySelectorAll('.compendium-folder')){
+            closeFolder(child);
+        }
     }
 }
 function showEditDialog(submenu,event){
@@ -944,6 +970,12 @@ function showEditDialog(submenu,event){
 function showCreateDialogWithPath(submenu,event){
     event.stopPropagation();
     let directParent = submenu.getAttribute('data-cfolder-id');
+    let allFolders = game.settings.get(mod,'cfolders');
+    let currentDepth = allFolders[directParent].pathToFolder==null?1:allFolders[directParent].pathToFolder.length
+    if (currentDepth + 1 >= FOLDER_LIMIT){
+        ui.notifications.error("Max folder depth reached ("+FOLDER_LIMIT+")")
+        return
+    }
     let path = []
     path.push(directParent);
     let currentElement = submenu;
@@ -952,8 +984,7 @@ function showCreateDialogWithPath(submenu,event){
         path.push(currentElement.getAttribute('data-cfolder-id'));
     }
     path.reverse();
-    console.log('path: '+path);
-    let allFolders = game.settings.get(mod,'cfolders');
+   
     let newFolder = new CompendiumFolder('New Folder','',path);
     new CompendiumFolderEditConfig(newFolder).render(true);
 }
