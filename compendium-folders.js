@@ -593,10 +593,21 @@ class ImportExportConfig extends FormApplication {
         if (importData != null && importData.length > 0){
             try{
                 let importJson = JSON.parse(importData);
-                game.settings.set(mod,'cfolders',importJson).then(function(){
-                    refreshFolders();
-                    ui.notifications.info("Folder data imported successfully");
+                let success = true;
+                Object.keys(importJson).forEach(function(key){
+                    if (importJson[key].pathToFolder != null
+                        && importJson[key].pathToFolder.length > FOLDER_LIMIT){
+                            success = false;
+                    }
                 });
+                if (success){
+                    game.settings.set(mod,'cfolders',importJson).then(function(){
+                        refreshFolders();
+                        ui.notifications.info("Folder data imported successfully");
+                    });
+                }else{
+                    ui.notifications.error("Imported string contains folders that exceed max folder limit ("+FOLDER_LIMIT+")")
+                }
             }catch(error){ui.notifications.error("Failed to import folder data")}
         }
     }
