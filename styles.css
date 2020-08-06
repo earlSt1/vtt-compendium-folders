@@ -40,14 +40,14 @@ li.compendium-folder.collapsed > .compendium-folder-header .edit-folder {
 /* Fix for issue #2 */
 #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
 /* Form styles */
-div.compendium-list {
-  max-height:300px; 
+.form-compendium-list,.form-folder-list {
+  height:300px; 
   overflow:auto;
   background:rgba(0,0,0,0.05);
   border:1px solid #7a7971;
   border-radius:3px;
   padding:1px 3px;
-  font-size:14px;
+  font-size:13px;
 }
 button.cfolder-create{
   margin-top:5px !important;
@@ -58,7 +58,7 @@ button.cfolder-submit{
 button.cfolder-submit#delete  {
   background-color:#c51c1c
 }
-.compendium-folder-header a.create-folder{
+.compendium-folder-header > .create-folder,.move-folder{
   flex:none;
   padding-right:3px;
 }
@@ -97,13 +97,28 @@ button.cfolder-submit#delete  {
 #folder-create input[name='search-packs']{
   width: calc(100% - 25px);
 }
+#folder-move input[name='search-folders']{
+  width: calc(100% - 25px);
+}
 #folder-create i.fa-search{
+  padding-left:5px;
+  padding-right:5px;
+}
+#folder-move i.fa-search{
   padding-left:5px;
   padding-right:5px;
 }
 #folder-create .form-header{
   padding-top:4px;
   padding-bottom:4px;
+}
+#folder-move .form-header{
+  padding-top:4px;
+  padding-bottom:4px;
+}
+#folder-move input[type='radio']{
+  flex:none;
+  padding-left:10px
 }
 #import-export textarea{
   height:300px;

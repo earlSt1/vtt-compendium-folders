@@ -19,11 +19,11 @@
         <li><i>Marking compendiums already assigned to other folders will move them here.</i></li>
         </ul>
     </div><div class="form-group">
-        <div class='compendium-list'>
+        <div class='form-compendium-list'>
             <script>
                 document.querySelector("#folder-create input[name='search-packs']").addEventListener('keyup',function(event){
                     let searchTerm = this.value;
-                    let packs = document.querySelectorAll('#folder-create .compendium-list .pack-select')
+                    let packs = document.querySelectorAll('#folder-create .form-compendium-list .pack-select')
                     for (let pack of packs){
                         if (pack.innerText.toLowerCase().includes(searchTerm.toLowerCase())){
                             pack.style.display='';
@@ -53,8 +53,10 @@
         </div>
     </div>
     <div class='flexrow'>
+        {{#if deleteText}}
         <input type='hidden' name='delete' id='deleteValue' value=''/>
         <button class='cfolder-submit' id='delete' type="submit" onclick="document.querySelector('#deleteValue').value='1';"><i class="fas fa-trash"></i> {{deleteText}}</button>
+        {{/if}}
         <button class='cfolder-submit' type="submit"><i class="fas fa-check"></i> {{submitText}}</button>
     </div>
 </form>

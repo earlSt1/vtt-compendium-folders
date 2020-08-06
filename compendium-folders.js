@@ -60,9 +60,14 @@ function alphaSortCompendiums(compendiums){
     });
     return compendiums;
 }
+function waitForAllCompendiumsToRender(){
+    let packs = document.querySelectorAll('li.compendium-pack');
+    while (game.packs.entries.length != packs.length){
+        setTimeout(function(){packs = document.querySelectorAll('li.compendium-pack')},500)
+    }
+}
 function checkForDeletedCompendiums(){
     let allFolders = game.settings.get(mod,'cfolders');
-    
     let allCompendiums = Array.from(game.packs.keys())
     Object.keys(allFolders).forEach(function (key){
         let packsToRemove = [];
@@ -99,7 +104,7 @@ export class CompendiumFolder{
         this.color = existing['colorText']
         this.compendiums = existing['compendiumList'];
         this.folders = existing['folders'];
-        this.uid = existing['uid'];
+        this.uid = existing['_id'];
         this.path = existing['pathToFolder'];
     }
     get uid(){return this._id;}
@@ -146,6 +151,18 @@ function convertExistingSubmenusToFolder(){
         convertSubmenuToFolder(submenu,compendiumFolder._id);
     }
     allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums'};
+    // create folder button
+    
+    let button = document.createElement('button');
+    button.classList.add('cfolder-create')
+    button.type='submit';
+    button.addEventListener('click',function(){createNewFolder([])});
+    let folderIcon = document.createElement('i')
+    folderIcon.classList.add('fas','fa-fw','fa-folder')
+    button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
+    document.querySelector('#compendium .directory-footer').appendChild(button);
+
+    createDirectoryHeader();
     game.settings.set(mod,'cfolders',allFolders);
 }
 
@@ -164,10 +181,17 @@ function convertSubmenuToFolder(submenu,uid){
     
     let newFolderIcon = document.createElement('i');
     let newFolderLink = document.createElement('a');
-    newFolderIcon.classList.add('fas','fa-folder-plus');
+    newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
     newFolderLink.classList.add('create-folder');
-
+    
     newFolderLink.appendChild(newFolderIcon);
+
+    let moveFolderIcon = document.createElement('i');
+    let moveFolderLink = document.createElement('a');
+    moveFolderIcon.classList.add('fas','fa-reply','fa-fw');
+    moveFolderLink.classList.add('move-folder');
+
+    moveFolderLink.appendChild(moveFolderIcon);
 
 
     let cogIcon = document.createElement('i')
@@ -176,8 +200,9 @@ function convertSubmenuToFolder(submenu,uid){
     cogLink.classList.add('edit-folder')
     cogLink.appendChild(cogIcon)
     header.appendChild(title)
-    header.appendChild(cogLink)
+    header.appendChild(moveFolderLink);
     header.appendChild(newFolderLink);
+    header.appendChild(cogLink);
     submenu.insertAdjacentElement('afterbegin',header)
 
     //Close folder by default
@@ -194,6 +219,7 @@ function convertSubmenuToFolder(submenu,uid){
     contents.style.display='none'
     cogLink.style.display='none' 
     newFolderLink.style.display='none';
+    moveFolderLink.style.display='none';
     submenu.setAttribute('collapsed','')
 
     submenu.setAttribute('data-cfolder-id',uid);
@@ -205,7 +231,7 @@ function createFolderObjectForSubmenu(submenu,titleText){
     let folderObject = new CompendiumFolder(titleText,"#000000",[])
     for (let compendium of compendiums){
         folderObject.addCompendium(compendium.getAttribute('data-pack'))
-    }   
+    }
     return folderObject
 }
 
@@ -297,7 +323,7 @@ function createDirectoryHeader(){
 // Creation functions
 
 function createNewFolder(path){
-    new CompendiumFolderConfig(new CompendiumFolder('New Folder','',path)).render(true) 
+    new CompendiumFolderEditConfig(new CompendiumFolder('New Folder','',path)).render(true) 
 }
 
 function createFolderFromObject(parent,compendiumFolder, compendiumElements,prefix,wasOpen){
@@ -317,10 +343,16 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
 
     let newFolderIcon = document.createElement('i');
     let newFolderLink = document.createElement('a');
-    newFolderIcon.classList.add('fas','fa-folder-plus');
+    newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
     newFolderLink.classList.add('create-folder');
 
     newFolderLink.appendChild(newFolderIcon);
+    let moveFolderIcon = document.createElement('i');
+    let moveFolderLink = document.createElement('a');
+    moveFolderIcon.classList.add('fas','fa-reply','fa-fw');
+    moveFolderLink.classList.add('move-folder');
+
+    moveFolderLink.appendChild(moveFolderIcon);
 
     let packList = document.createElement('ol');
     packList.classList.add('compendium-list');
@@ -339,6 +371,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
         //folderList.style.display='none';
         cogLink.style.display='none';
         newFolderLink.style.display='none';
+        moveFolderLink.style.display='none';
         folderIcon.classList.add('fa-folder');
         folder.setAttribute('collapsed','');
     }else{
@@ -350,6 +383,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     title.innerHTML = folderIcon.outerHTML+compendiumFolder.titleText;
     
     header.appendChild(title);
+    header.appendChild(moveFolderLink);
     header.appendChild(newFolderLink);
     header.appendChild(cogLink);
     folder.appendChild(header);
@@ -362,15 +396,15 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
 }
 
 
-function createHiddenFolder(prefix,allCompendiumElementsDict){
+function createHiddenFolder(prefix,remainingElements){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
     if (document.querySelector('.hidden-compendiums')==null){
         let folder = document.createElement('ol')
         folder.classList.add('hidden-compendiums');
         folder.style.display='none';
-        Object.keys(allCompendiumElementsDict).forEach(function(key){
+        Object.keys(remainingElements).forEach(function(key){
             console.log(modName+" | Adding "+key+" to hidden-compendiums");
-            folder.appendChild(allCompendiumElementsDict[key]);  
+            folder.appendChild(remainingElements[key]);  
         });
         tab.querySelector(prefix+'ol.directory-list').appendChild(folder);   
     }
@@ -390,7 +424,10 @@ function setupFolders(prefix,openFolders){
     for (let submenu of document.querySelectorAll(prefix+'li.compendium-entity')){
         submenu.remove();
     }
-    
+    //Remove hidden compendium (so we can add new stuff to it later if from refresh)
+    if (document.querySelector('.hidden-compendiums')!=null){
+        document.querySelector('.hidden-compendiums').remove();
+    }
 
     let allCompendiumElementsDict = {}
     // Convert existing compendiums into dict of format { packName : packElement }
@@ -405,56 +442,56 @@ function setupFolders(prefix,openFolders){
     let groupedFolders = {}
     let parentFolders = [];
     Object.keys(allFolders).forEach(function(key) {
-        let depth = 0;
-        if (allFolders[key].pathToFolder == null){
-            depth = 0;
-        }else{
-            depth = allFolders[key].pathToFolder.length
-            // Add all parent folders to list
-            // Need to make sure to render them
-            for (let segment of allFolders[key].pathToFolder){
-                if (!parentFolders.includes(segment)){
-                    parentFolders.push(segment);
+        if (allFolders[key].titleText != 'hidden-compendiums'){
+            let depth = 0;
+            if (allFolders[key].pathToFolder == null){
+                depth = 0;
+            }else{
+                depth = allFolders[key].pathToFolder.length
+                // Add all parent folders to list
+                // Need to make sure to render them
+                for (let segment of allFolders[key].pathToFolder){
+                    if (!parentFolders.includes(segment)){
+                        parentFolders.push(segment);
+                    }
                 }
             }
-        }
-        if (groupedFolders[depth] == null){
-            groupedFolders[depth] = [allFolders[key]];
-        }else{
-            groupedFolders[depth].push(allFolders[key]);
+            if (groupedFolders[depth] == null){
+                groupedFolders[depth] = [allFolders[key]];
+            }else{
+                groupedFolders[depth].push(allFolders[key]);
+            }
         }
       });
     Object.keys(groupedFolders).sort().forEach(function(depth){
         // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
         for (let groupedFolder of alphaSortFolders(groupedFolders[depth])){
-            if (groupedFolder.titleText != 'hidden-compendiums'){
+            let folder = new CompendiumFolder('','');
+            folder.initFromExisting(groupedFolder);
+            folder.uid=groupedFolder._id;
 
-                let folder = new CompendiumFolder('','');
-                folder.initFromExisting(groupedFolder);
-                folder.uid=groupedFolder._id;
-
-                let compendiumElements = [];
-                if (folder.compendiumList.length>0){
-                    for (let compendiumKey of folder.compendiumList.sort()){
-                        // Check if compendium exists in DOM
-                        // If it doesnt, ignore
-                        let comp = allCompendiumElementsDict[compendiumKey]
-                        if (comp != null){
-                            compendiumElements.push(comp);
-                            delete allCompendiumElementsDict[compendiumKey];
-                        }
+            let compendiumElements = [];
+            if (folder.compendiumList.length>0){
+                for (let compendiumKey of folder.compendiumList.sort()){
+                    // Check if compendium exists in DOM
+                    // If it doesnt, ignore
+                    let comp = allCompendiumElementsDict[compendiumKey]
+                    if (comp != null){
+                        compendiumElements.push(comp);
+                        delete allCompendiumElementsDict[compendiumKey];
                     }
-                }
-                if (game.user.isGM || (!game.user.isGM && (compendiumElements.length>0 || parentFolders.includes(folder._id)))){
-                    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
-                    let rootFolder = tab.querySelector(prefix+'ol.directory-list')
-                    if (depth > 0){
-                        rootFolder = tab.querySelector("li.compendium-folder[data-cfolder-id='"+folder.pathToFolder[depth-1]+"'] > .folder-contents > ol.folder-list")
-                    }
-                    createFolderFromObject(rootFolder,folder,compendiumElements,prefix, (openFolders.includes(folder._id)));
                 }
             }
+            if (game.user.isGM || (!game.user.isGM && (compendiumElements.length>0 || parentFolders.includes(folder._id)))){
+                let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
+                let rootFolder = tab.querySelector(prefix+'ol.directory-list')
+                if (depth > 0){
+                    rootFolder = tab.querySelector("li.compendium-folder[data-cfolder-id='"+folder.pathToFolder[depth-1]+"'] > .folder-contents > ol.folder-list")
+                }
+                createFolderFromObject(rootFolder,folder,compendiumElements,prefix, (openFolders.includes(folder._id)));
+            }
         }
+        
     });
     // Create hidden compendium folder
     // Add any remaining compendiums to this folder (newly added compendiums)
@@ -485,22 +522,36 @@ function setupFolders(prefix,openFolders){
         }
     }
 
-    // TODO directory header
     createDirectoryHeader();
     
 }
 // Delete functions
-async function deleteFolder(folder){
-    let folderId = folder._id;
-    let allFolders = Settings.getFolders();
+function deleteFolder(folder,allFolders){
     let hiddenFolder = allFolders['hidden']
-    ui.notifications.notify("Adding compendiums "+folder.compendiumList+" to unassigned/hidden folder");
     for (let compendium of folder.compendiumList){
         hiddenFolder.compendiumList.push(compendium);
     }
-    delete allFolders[folderId];
+    Object.keys(allFolders).forEach(function(key){
+        if (key != folder._id && key != 'hidden'){
+            if (allFolders[key] != null // has not been deleted already
+                && allFolders[key].pathToFolder != null
+                && allFolders[key].pathToFolder.includes(folder._id)){
+                //Delete folders that are children of this folder
+                deleteFolder(allFolders[key],allFolders)
+                
+            }
+        }
+    });
+    delete allFolders[folder._id];
+}
+async function deleteAllChildFolders(folder){
+    let allFolders = Settings.getFolders();
+    
+    deleteFolder(folder,allFolders)
     await game.settings.set(mod,'cfolders',allFolders);
+    ui.notifications.notify("Adding ");
     refreshFolders()
+    
 }
 // Edit functions
 class ImportExportConfig extends FormApplication {
@@ -533,21 +584,128 @@ class ImportExportConfig extends FormApplication {
         }
     }
 }
-
-class CompendiumFolderConfig extends FormApplication {
+class CompendiumFolderMoveDialog extends FormApplication {
     static get defaultOptions() {
-      const options = super.defaultOptions;
-      options.id = "compendium-folder-edit";
-      options.template = "modules/compendium-folders/templates/compendium-folder-edit.html";
-      options.width = 500;
-      return options;
+        const options = super.defaultOptions;
+        options.id = "compendium-folder-move";
+        options.template = "modules/compendium-folders/templates/compendium-folder-move.html";
+        options.width = 500;
+        return options;
+    }
+    get title() {
+        return "Move Folder: "+this.object.titleText;
+    }
+    async getData(options) { 
+        let formData = []
+        let allFolders = game.settings.get(mod,'cfolders');
+
+        Object.keys(allFolders).forEach(function(key){
+            if (key != 'hidden'){
+                let prettyTitle = ""
+                let prettyPath = []
+                if (allFolders[key].pathToFolder != null){
+                    for (let folder of allFolders[key].pathToFolder){
+                        prettyPath.push(allFolders[folder].titleText);
+                        prettyTitle = prettyTitle+allFolders[folder].titleText+"/";
+                    }
+                }
+                prettyTitle=prettyTitle+allFolders[key].titleText
+                formData.push({
+                    'titleText':allFolders[key].titleText,
+                    'titlePath':prettyPath,
+                    'fullPathTitle':prettyTitle,
+                    'id':key
+                })
+            }
+        });
+        formData.sort(function(first,second){
+            let fullFirst = "";
+            let fullSecond = "";
+            for(let firstPath of first['titlePath']){
+                fullFirst = fullFirst+firstPath+'/'
+            }
+            for (let secondPath of second['titlePath']){
+                fullSecond = fullSecond+secondPath+'/'
+            }
+            fullFirst = fullFirst+first['titleText'];
+            fullSecond = fullSecond+second['titleText'];
+            if (fullFirst < fullSecond){
+                return -1
+            } else if (fullFirst > fullSecond){
+                return 1;
+            }
+            return 0;
+        });
+        let temp = Array.from(formData);
+        for (let obj of temp){
+            if (
+                // If formData contains folders which are direct parents of this.object
+                (this.object.pathToFolder != null
+                && this.object.pathToFolder.length>0
+                && obj.id === this.object.pathToFolder[this.object.pathToFolder.length-1])
+                // or If formData contains folders where this.object is directly on the path
+                || (allFolders[obj.id].pathToFolder != null
+                    && allFolders[obj.id].pathToFolder.includes(this.object._id))
+                // or If formData contains this.object
+                || obj.id === this.object._id)
+                formData.splice(formData.indexOf(obj),1);
+            }
+        
+        return {
+            folder: this.object,
+            allFolders: formData,
+            submitText: "Move Folder"
+        }
+    }
+    updateFullPathForChildren(allFolders,parentFolderId,fullPath){
+        Object.keys(allFolders).forEach(function(key){
+            if (allFolders[key].pathToFolder != null
+                && allFolders[key].pathToFolder.includes(parentFolderId)
+                && key != parentFolderId){
+                let temp = allFolders[key].pathToFolder.slice(allFolders[key].pathToFolder.indexOf(parentFolderId),allFolders[key].pathToFolder.length)
+                //fullPath.push(parentFolderId);
+                allFolders[key].pathToFolder = (fullPath).concat(temp);
+            }
+        })
+    }
+    async _updateObject(event, formData) {
+        let destFolderId = null;
+        document.querySelectorAll('#folder-move input[type=\'radio\']').forEach(function(e){
+            if (e.checked){
+                destFolderId=e.value;
+                return;} 
+        });
+
+        let allFolders = game.settings.get(mod,'cfolders');
+        if (destFolderId != null && destFolderId.length>0){
+            let destFolder = allFolders[destFolderId];
+            let destParentPath = (allFolders[destFolderId]['pathToFolder']==null)?[]:allFolders[destFolderId]['pathToFolder']
+            let fullPath = destParentPath.concat([destFolderId]);
+            allFolders[this.object._id]['pathToFolder'] = fullPath;
+            this.updateFullPathForChildren(allFolders,this.object._id,fullPath)
+
+            ui.notifications.info("Moved folder "+this.object.titleText+" to "+destFolder['titleText'])
+            await game.settings.set(mod,'cfolders',allFolders);
+            refreshFolders();
+        }
+        
+    }
+}
+    
+class CompendiumFolderEditConfig extends FormApplication {
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "compendium-folder-edit";
+        options.template = "modules/compendium-folders/templates/compendium-folder-edit.html";
+        options.width = 500;
+        return options;
     }
   
     get title() {
-      if ( this.object.colorText.length>1  ) {
-        return `${game.i18n.localize("FOLDER.Update")}: ${this.object.titleText}`;
-      }
-      return game.i18n.localize("FOLDER.Create");
+        if ( this.object.colorText.length>1  ) {
+            return `${game.i18n.localize("FOLDER.Update")}: ${this.object.titleText}`;
+        }
+        return game.i18n.localize("FOLDER.Create");
     }
     async getData(options) {
         let allPacks = this.getGroupedPacks();
@@ -590,56 +748,56 @@ class CompendiumFolderConfig extends FormApplication {
         apacks: alphaSortCompendiums(Object.values(allPacks[0])),
         upacks: alphaSortCompendiums(Object.values(allPacks[1])),
         submitText: game.i18n.localize( this.object.colorText.length>1   ? "FOLDER.Update" : "FOLDER.Create"),
-        deleteText: "Delete Folder"
+        deleteText: this.object.colorText.length>1?"Delete Folder":null
       }
     }
   
     /** @override */
     async _updateObject(event, formData) {
-      this.object.titleText = formData.name;
-      if (formData.color.length===0){
-          this.object.colorText = '#000000'; 
-      }else{
-        this.object.colorText = formData.color;
-      }
+        this.object.titleText = formData.name;
+        if (formData.color.length===0){
+            this.object.colorText = '#000000'; 
+        }else{
+            this.object.colorText = formData.color;
+        }
 
-      // Update compendium assignment
-      let packsToAdd = []
-      let packsToRemove = []
-      for (let packKey of game.packs.keys()){
-          if (formData[packKey] && this.object.compendiumList.indexOf(packKey)==-1){
-            // Box ticked AND compendium not in folder
-            packsToAdd.push(packKey);
+        // Update compendium assignment
+        let packsToAdd = []
+        let packsToRemove = []
+        for (let packKey of game.packs.keys()){
+            if (formData[packKey] && this.object.compendiumList.indexOf(packKey)==-1){
+                // Box ticked AND compendium not in folder
+                packsToAdd.push(packKey);
             
-          }else if (!formData[packKey] && this.object.compendiumList.indexOf(packKey)>-1){
-            // Box unticked AND compendium in folder
-            packsToRemove.push(packKey);
-          }
-      }
-      if (formData.delete[0]==1){
-          //do delete stuff
-          new Dialog({
-            title: "Delete Folder",
-            content: "<p>Are you sure you want to delete the folder <strong>"+this.object.titleText+"?</strong></p>",
-            buttons: {
-              yes: {
-                icon: '<i class="fas fa-check"></i>',
-                label: "Yes",
-                callback: () => deleteFolder(this.object)
-              },
-              no: {
-                icon: '<i class="fas fa-times"></i>',
-                label: "No"
-              }
+            }else if (!formData[packKey] && this.object.compendiumList.indexOf(packKey)>-1){
+                // Box unticked AND compendium in folder
+                packsToRemove.push(packKey);
             }
-          }).render(true);
+        }
+        if (formData.delete != null && formData.delete[0]==1){
+            //do delete stuff
+            new Dialog({
+                title: "Delete Folder",
+                content: "<p>Are you sure you want to delete the folder <strong>"+this.object.titleText+"?</strong></p>"
+                        +"<p>This will delete <strong>all</strong> subfolders</p>",
+                buttons: {
+                    yes: {
+                        icon: '<i class="fas fa-check"></i>',
+                        label: "Yes",
+                        callback: () => deleteAllChildFolders(this.object)
+                    },
+                    no: {
+                        icon: '<i class="fas fa-times"></i>',
+                        label: "No"
+                    }
+                }
+            }).render(true);
         
-      }else{
-        await updateFolders(packsToAdd,packsToRemove,this.object);
-      }
-      
+        }else{
+            await updateFolders(packsToAdd,packsToRemove,this.object);
+        }
     }
-  }
+}
 
 function refreshFolders(){  
     let isPopout = document.querySelector('#compendium-popout') != null;
@@ -666,7 +824,9 @@ function refreshFolders(){
         }
     setupFolders('#sidebar ',openFoldersSidebar);
     addEventListeners('#sidebar ');
+    //Hooks.call('renderCompendiumDirectory');
 }
+//TODO Fix why multiple packs being added to folder only shows 1
 async function updateFolders(packsToAdd,packsToRemove,folder){
     let folderId = folder._id;
     // First find where compendium currently is (what folder it belongs to)
@@ -715,6 +875,7 @@ function closeFolder(parent){
     let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
+    let moveFolderLink = parent.querySelector('a.move-folder');
     let contents = parent.querySelector('.folder-contents');
     if (folderIcon.classList.contains('fa-folder-open')){
         //Closing folder
@@ -724,6 +885,7 @@ function closeFolder(parent){
         if (game.user.isGM){
             cogLink.style.display='none'
             newFolderLink.style.display='none'
+            moveFolderLink.style.display='none'
         }
     }
     parent.setAttribute('collapsed','');
@@ -732,14 +894,15 @@ function openFolder(parent){
     let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
+    let moveFolderLink = parent.querySelector('a.move-folder');
     let contents = parent.querySelector('.folder-contents');
     folderIcon.classList.remove('fa-folder')
     folderIcon.classList.add('fa-folder-open')
-    let packs = parent.querySelector('ol.compendium-list')
     contents.style.display=''
     if (game.user.isGM){
         cogLink.style.display=''
         newFolderLink.style.display=''
+        moveFolderLink.style.display=''
     }
     parent.removeAttribute('collapsed');
 }
@@ -755,7 +918,7 @@ function showEditDialog(submenu,event){
     event.stopPropagation();
     let allFolders = game.settings.get(mod,'cfolders')
     let folderId = submenu.getAttribute('data-cfolder-id')
-    new CompendiumFolderConfig(allFolders[folderId]).render(true);   
+    new CompendiumFolderEditConfig(allFolders[folderId]).render(true);   
 }
 function showCreateDialogWithPath(submenu,event){
     event.stopPropagation();
@@ -771,14 +934,22 @@ function showCreateDialogWithPath(submenu,event){
     console.log('path: '+path);
     let allFolders = game.settings.get(mod,'cfolders');
     let newFolder = new CompendiumFolder('New Folder','',path);
-    new CompendiumFolderConfig(newFolder).render(true);
+    new CompendiumFolderEditConfig(newFolder).render(true);
 }
-
+function showMoveDialog(folder,event){
+    let folderId = folder.getAttribute('data-cfolder-id');
+    let folderRawObject = game.settings.get(mod,'cfolders')[folderId];
+    let folderObject = new CompendiumFolder('','');
+    folderObject.initFromExisting(folderRawObject);
+    event.stopPropagation();
+    new CompendiumFolderMoveDialog(folderObject).render(true);
+}
 function addEventListeners(prefix){
     for (let submenu of document.querySelectorAll(prefix+'li.compendium-folder')){
         submenu.addEventListener('click',function(event){ toggleFolder(event,submenu) },false)
         submenu.querySelector('a.edit-folder').addEventListener('click',function(event){showEditDialog(submenu,event)},false)
         submenu.querySelector('a.create-folder').addEventListener('click',function(event){showCreateDialogWithPath(submenu,event)},false);
+        submenu.querySelector('a.move-folder').addEventListener('click',function(event){showMoveDialog(submenu,event)},false);
         for (let pack of submenu.querySelectorAll('li.compendium-pack')){
             pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
         }
