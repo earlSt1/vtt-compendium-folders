@@ -566,7 +566,7 @@ async function deleteAllChildFolders(folder){
     
     deleteFolder(folder,allFolders)
     await game.settings.set(mod,'cfolders',allFolders);
-    ui.notifications.notify("Adding ");
+    ui.notifications.notify("Deleting folder "+folder.titleText+" and all its subfolders");
     refreshFolders()
     
 }
