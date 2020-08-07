@@ -1,6 +1,6 @@
 # Compendium Folders
 
-This is a module which allows you to manage compendiums a bit easier by implementing a folder system.
+This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system.
 
 With v1.0.0 I've introduced the ability to nest folders (with a max depth of 8), move nested folders and their children, and import/export folder configurations!
 
