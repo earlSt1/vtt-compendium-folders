@@ -829,9 +829,16 @@ class CompendiumFolderEditConfig extends FormApplication {
         }else{
             this.object.colorText = formData.color;
         }
-        if (formData.icon != null && formData.icon.length>0){
-            this.object.folderIcon = formData.icon;
+        if (formData.icon != null){
+            if (formData.icon.length==0){
+                this.object.folderIcon = null;
+            }else{
+                this.object.folderIcon = formData.icon;
+            }
+        }else{
+            this.object.folderIcon = null;
         }
+        
 
         // Update compendium assignment
         let packsToAdd = []
