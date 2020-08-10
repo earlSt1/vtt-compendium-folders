@@ -953,7 +953,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
 // Event funtions
 // ==========================
 function closeFolder(parent){
-    let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
+    let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
     let moveFolderLink = parent.querySelector('a.move-folder');
@@ -972,7 +972,7 @@ function closeFolder(parent){
     parent.setAttribute('collapsed','');
 }
 function openFolder(parent){
-    let folderIcon = parent.querySelector('header > h3 > .fa-folder, .fa-folder-open')
+    let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
     let moveFolderLink = parent.querySelector('a.move-folder');
