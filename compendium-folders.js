@@ -192,27 +192,33 @@ function convertSubmenuToFolder(submenu,uid){
     let folderIcon = document.createElement('i')
     folderIcon.classList.add('fas','fa-fw','fa-folder')
     title.innerHTML = folderIcon.outerHTML+titleText
-    
+
+    let newFolderLabel = document.createElement('label')
     let newFolderIcon = document.createElement('i');
     let newFolderLink = document.createElement('a');
+    newFolderLabel.setAttribute('title','Create Subfolder');
     newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
     newFolderLink.classList.add('create-folder');
-    
-    newFolderLink.appendChild(newFolderIcon);
+    newFolderLabel.appendChild(newFolderIcon)
+    newFolderLink.appendChild(newFolderLabel);
 
+    let moveFolderLabel = document.createElement('label')
     let moveFolderIcon = document.createElement('i');
     let moveFolderLink = document.createElement('a');
-    moveFolderIcon.classList.add('fas','fa-arrows-alt','fa-fw');
+    moveFolderLabel.setAttribute('title','Move Folder')
+    moveFolderIcon.classList.add('fas','fa-sitemap','fa-fw');
     moveFolderLink.classList.add('move-folder');
+    moveFolderLabel.appendChild(moveFolderIcon);
+    moveFolderLink.appendChild(moveFolderLabel);
 
-    moveFolderLink.appendChild(moveFolderIcon);
-
-
+    let cogLabel = document.createElement('label')
+    cogLabel.setAttribute('title','Edit Folder');
     let cogIcon = document.createElement('i')
     cogIcon.classList.add('fas','fa-cog','fa-fw')
     let cogLink = document.createElement('a')
     cogLink.classList.add('edit-folder')
-    cogLink.appendChild(cogIcon)
+    cogLabel.appendChild(cogIcon)
+    cogLink.appendChild(cogLabel)
     header.appendChild(title)
     header.appendChild(moveFolderLink);
     header.appendChild(newFolderLink);
@@ -347,25 +353,37 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     header.classList.add('compendium-folder-header', 'flexrow')
     header.style.backgroundColor = compendiumFolder.colorText;
     
-
+    let cogLabel = document.createElement('label');
     let cogIcon = document.createElement('i')
-    cogIcon.classList.add('fas','fa-cog','fa-fw')
     let cogLink = document.createElement('a')
-    cogLink.classList.add('edit-folder')
-    cogLink.appendChild(cogIcon)
 
+    cogLabel.setAttribute('title','Edit Folder');
+    cogIcon.classList.add('fas','fa-cog','fa-fw')
+    cogLink.classList.add('edit-folder')
+    cogLabel.appendChild(cogIcon);
+    cogLink.appendChild(cogLabel)
+
+    let newFolderLabel = document.createElement('label');
     let newFolderIcon = document.createElement('i');
     let newFolderLink = document.createElement('a');
+    
+    newFolderLabel.setAttribute('title','Create Subfolder');
     newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
     newFolderLink.classList.add('create-folder');
 
-    newFolderLink.appendChild(newFolderIcon);
+    newFolderLabel.appendChild(newFolderIcon);
+    newFolderLink.appendChild(newFolderLabel);
+
+    let moveFolderLabel = document.createElement('label');
     let moveFolderIcon = document.createElement('i');
     let moveFolderLink = document.createElement('a');
-    moveFolderIcon.classList.add('fas','fa-arrows-alt','fa-fw');
+
+    moveFolderLabel.setAttribute('title','Move Folder');
+    moveFolderIcon.classList.add('fas','fa-sitemap','fa-fw');
     moveFolderLink.classList.add('move-folder');
 
-    moveFolderLink.appendChild(moveFolderIcon);
+    moveFolderLabel.appendChild(moveFolderIcon);
+    moveFolderLink.appendChild(moveFolderLabel);
 
     let packList = document.createElement('ol');
     packList.classList.add('compendium-list');
