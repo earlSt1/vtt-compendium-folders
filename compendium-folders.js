@@ -109,6 +109,7 @@ export class CompendiumFolder{
         this.folders = [];
         this.uid=generateRandomFolderName();
         this.pathToFolder = path;
+        this.icon = null;
     }
     initFromExisting(existing){
         this.title = existing['titleText'];
@@ -117,6 +118,7 @@ export class CompendiumFolder{
         this.folders = existing['folders'];
         this.uid = existing['_id'];
         this.path = existing['pathToFolder'];
+        this.icon = existing['folderIcon']
     }
     get uid(){return this._id;}
     set uid(id){this._id=id;}
@@ -128,7 +130,8 @@ export class CompendiumFolder{
     get folders(){return this.folderList;}
     set compendiums(compendiums){this.compendiumList = compendiums;}
     set folders(folders){this.folderList = folders;}
-
+    get icon(){return this.folderIcon}
+    set icon(nIcon){this.folderIcon=nIcon}
     addCompendium(compendium){
         this.compendiums.push(compendium);
     }
@@ -343,9 +346,8 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     let header = document.createElement('header')
     header.classList.add('compendium-folder-header', 'flexrow')
     header.style.backgroundColor = compendiumFolder.colorText;
+    
 
-    let folderIcon = document.createElement('i')
-    folderIcon.classList.add('fas','fa-fw')
     let cogIcon = document.createElement('i')
     cogIcon.classList.add('fas','fa-cog','fa-fw')
     let cogLink = document.createElement('a')
@@ -376,6 +378,22 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     contents.classList.add('folder-contents');
     contents.appendChild(folderList);
     contents.appendChild(packList);
+    let folderIconHTML = "";
+    let folderIcon = null;
+    if (compendiumFolder.folderIcon == null){
+        folderIcon = document.createElement('i')
+        folderIcon.classList.add('fas','fa-fw')
+        if (!wasOpen){
+            folderIcon.classList.add('fa-folder');
+        }else{
+            folderIcon.classList.add('fa-folder-open')
+        }
+        folderIconHTML=folderIcon.outerHTML
+    }else{
+        let folderCustomIcon = document.createElement('img');
+        folderCustomIcon.src = compendiumFolder.folderIcon;
+        folderIconHTML = folderCustomIcon.outerHTML;
+    }
     if (!wasOpen){
         contents.style.display='none';
         //packList.style.display='none';
@@ -383,15 +401,12 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
         cogLink.style.display='none';
         newFolderLink.style.display='none';
         moveFolderLink.style.display='none';
-        folderIcon.classList.add('fa-folder');
         folder.setAttribute('collapsed','');
-    }else{
-        folderIcon.classList.add('fa-folder-open');
     }
-    
-
     let title = document.createElement('h3')
-    title.innerHTML = folderIcon.outerHTML+compendiumFolder.titleText;
+    title.innerHTML = folderIconHTML+compendiumFolder.titleText;
+
+   
     
     header.appendChild(title);
     header.appendChild(moveFolderLink);
@@ -814,6 +829,9 @@ class CompendiumFolderEditConfig extends FormApplication {
         }else{
             this.object.colorText = formData.color;
         }
+        if (formData.icon != null && formData.icon.length>0){
+            this.object.folderIcon = formData.icon;
+        }
 
         // Update compendium assignment
         let packsToAdd = []
@@ -919,6 +937,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     }
     allFolders[folderId].titleText = folder.titleText;
     allFolders[folderId].colorText = folder.colorText;
+    allFolders[folderId].folderIcon = folder.folderIcon;
 
     await game.settings.set(mod,'cfolders',allFolders);
     refreshFolders()
@@ -932,16 +951,16 @@ function closeFolder(parent){
     let newFolderLink = parent.querySelector('a.create-folder');
     let moveFolderLink = parent.querySelector('a.move-folder');
     let contents = parent.querySelector('.folder-contents');
-    if (folderIcon.classList.contains('fa-folder-open')){
+    if (folderIcon != null){
         //Closing folder
         folderIcon.classList.remove('fa-folder-open')
-        folderIcon.classList.add('fa-folder')
-        contents.style.display='none'
-        if (game.user.isGM){
-            cogLink.style.display='none'
-            newFolderLink.style.display='none'
-            moveFolderLink.style.display='none'
-        }
+        folderIcon.classList.add('fa-folder') 
+    }
+    contents.style.display='none'
+    if (game.user.isGM){
+        cogLink.style.display='none'
+        newFolderLink.style.display='none'
+        moveFolderLink.style.display='none'
     }
     parent.setAttribute('collapsed','');
 }
@@ -951,8 +970,10 @@ function openFolder(parent){
     let newFolderLink = parent.querySelector('a.create-folder');
     let moveFolderLink = parent.querySelector('a.move-folder');
     let contents = parent.querySelector('.folder-contents');
-    folderIcon.classList.remove('fa-folder')
-    folderIcon.classList.add('fa-folder-open')
+    if (folderIcon != null){
+        folderIcon.classList.remove('fa-folder')
+        folderIcon.classList.add('fa-folder-open')
+    }
     contents.style.display=''
     if (game.user.isGM){
         cogLink.style.display=''

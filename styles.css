@@ -37,6 +37,14 @@ li.compendium-folder.collapsed > .compendium-folder-header h3 > i:before {
 li.compendium-folder.collapsed > .compendium-folder-header .edit-folder {
   display: none;
 }
+li.compendium-folder img{
+  width:22px;
+  height:22px;
+  margin-bottom:-6px;
+  margin-right:7px;
+  border:0px;
+  border-radius:0px;
+}
 /* Fix for issue #2 */
 #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
 /* Form styles */
@@ -74,8 +82,6 @@ button.cfolder-submit#delete  {
 .folder-list > .compendium-folder{
   flex:1;
   list-style:none;
-  overflow-y:auto;
-
 }
 .folder-contents{
   border-left:6px solid #000000;
