@@ -3,7 +3,7 @@
     "title": "Compendium Folders",
     "description": "Collapsable folders for compendiums",
     "author": "Erceron",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "minimumCoreVersion": "0.6.5",
     "compatibleCoreVersion":"0.6.5",
     "esmodules": [
