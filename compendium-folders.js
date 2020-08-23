@@ -1171,7 +1171,7 @@ Hooks.once('setup',async function(){
             prefix = '#compendium-popout '
         }
         let currentSettings = game.settings.get(mod,'cfolders')
-        if (Object.keys(currentSettings).length === 0 && currentSettings.constructor === Object){
+        if (Object.keys(currentSettings).length === 1 && currentSettings.constructor === Object){
             convertExistingSubmenusToFolder(prefix);
         }else{
             setupFolders(prefix,[])
