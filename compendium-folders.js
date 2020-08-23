@@ -68,7 +68,8 @@ function waitForAllCompendiumsToRender(){
 }
 function checkForDeletedCompendiums(){
     let allFolders = game.settings.get(mod,'cfolders');
-    let allCompendiums = Array.from(game.packs.keys())
+    let allCompendiums = Array.from(game.packs.keys());
+    let defaultFolderExists = false;
     Object.keys(allFolders).forEach(function (key){
         let packsToRemove = [];
         for (let folderCompendium of allFolders[key].compendiumList){
@@ -81,8 +82,14 @@ function checkForDeletedCompendiums(){
             let compendiumIndex = allFolders[key].compendiumList.indexOf(toRemove);
             allFolders[key].compendiumList.splice(compendiumIndex,1);
         }
+        if (key === 'default'){
+            defaultFolderExists = true;
+        }
     });
     if (game.user.isGM){
+        if (!defaultFolderExists){
+            allFolders['default']={'compendiumList':[],'titleText':'Default'}
+        }
         game.settings.set(mod,'cfolders',allFolders);
     }
     return allFolders;
@@ -165,6 +172,7 @@ function convertExistingSubmenusToFolder(){
         convertSubmenuToFolder(submenu,compendiumFolder._id);
     }
     allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums'};
+    allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
     // create folder button
     
     let button = document.createElement('button');
@@ -412,7 +420,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
         folderCustomIcon.src = compendiumFolder.folderIcon;
         folderIconHTML = folderCustomIcon.outerHTML;
     }
-    if (!wasOpen){
+    if (!wasOpen || compendiumFolder._id==='default'){
         contents.style.display='none';
         //packList.style.display='none';
         //folderList.style.display='none';
@@ -427,8 +435,10 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
    
     
     header.appendChild(title);
+    //if (compendiumFolder._id != 'default'){
     header.appendChild(moveFolderLink);
     header.appendChild(newFolderLink);
+    //}
     header.appendChild(cogLink);
     folder.appendChild(header);
     // folder.appendChild(folderList);
@@ -436,21 +446,51 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     folder.appendChild(contents);
 
     folder.setAttribute('data-cfolder-id',compendiumFolder._id);
-    parent.appendChild(folder)
+    if (compendiumFolder._id==='default'){
+        return folder;
+    }else{
+        parent.appendChild(folder)
+        return null;
+    }
 }
 
 
-function createHiddenFolder(prefix,remainingElements){
+function createHiddenFolder(prefix){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
     if (document.querySelector('.hidden-compendiums')==null){
         let folder = document.createElement('ol')
         folder.classList.add('hidden-compendiums');
         folder.style.display='none';
-        Object.keys(remainingElements).forEach(function(key){
-            console.log(modName+" | Adding "+key+" to hidden-compendiums");
-            folder.appendChild(remainingElements[key]);  
-        });
         tab.querySelector(prefix+'ol.directory-list').appendChild(folder);   
+    }
+}
+function insertDefaultFolder(prefix,defaultFolder){
+    let allFolders = game.settings.get(mod,'cfolders');
+    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]');
+    for (let folder of tab.querySelectorAll('li.compendium-folder')){
+        let folderId = folder.getAttribute('data-cfolder-id');
+        if (allFolders[folderId].titleText > allFolders['default'].titleText){
+            folder.insertAdjacentElement('beforebegin',defaultFolder);
+            return;
+        }
+    }
+}
+function createDefaultFolder(prefix,defaultFolder,hiddenFolder,remainingElements){
+    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium] > ol.directory-list')
+    if (document.querySelector('.default-folder')==null){
+        let remainingElementsList = []
+        Object.keys(remainingElements).forEach(function(key){
+            if (hiddenFolder.compendiumList != null
+                && hiddenFolder.compendiumList.length>0
+                && !hiddenFolder.compendiumList.includes(key)){
+                console.log(modName+" | Adding "+key+" to default folder")
+                remainingElementsList.push(remainingElements[key]);
+            }  
+        });
+        if (remainingElementsList.length>0){
+            let folderObject = createFolderFromObject(tab,defaultFolder,remainingElementsList,prefix,false);
+            insertDefaultFolder(prefix,folderObject);
+        }
     }
 }
 
@@ -464,6 +504,7 @@ function setupFolders(prefix,openFolders){
     let allFolders = checkForDeletedCompendiums();
     let allCompendiumElements = document.querySelectorAll(prefix+'li.compendium-pack');
 
+
     //Remove all current submenus
     for (let submenu of document.querySelectorAll(prefix+'li.compendium-entity')){
         submenu.remove();
@@ -471,6 +512,9 @@ function setupFolders(prefix,openFolders){
     //Remove hidden compendium (so we can add new stuff to it later if from refresh)
     if (document.querySelector('.hidden-compendiums')!=null){
         document.querySelector('.hidden-compendiums').remove();
+    }
+    if (document.querySelector('.compendium-folder[data-cfolder-id=default]')!=null){
+        document.querySelector('.compendium-folder[data-cfolder-id=default]').remove();
     }
 
     let allCompendiumElementsDict = {}
@@ -486,7 +530,7 @@ function setupFolders(prefix,openFolders){
     let groupedFolders = {}
     let parentFolders = [];
     Object.keys(allFolders).forEach(function(key) {
-        if (allFolders[key].titleText != 'hidden-compendiums'){
+        if (key != 'hidden' && key != 'default'){
             let depth = 0;
             if (allFolders[key].pathToFolder == null){
                 depth = 0;
@@ -544,15 +588,21 @@ function setupFolders(prefix,openFolders){
         
     });
     // Create hidden compendium folder
-    // Add any remaining compendiums to this folder (newly added compendiums)
-    // (prevents adding a compendium from breaking everything)
-    if ((allFolders['hidden']!=null 
+    if (allFolders['hidden']!=null 
         && allFolders['hidden'].compendiumList != null 
-        && allFolders['hidden'].compendiumList.length>0)
-        ||Object.keys(allCompendiumElementsDict).length>0){
-        createHiddenFolder(prefix,allCompendiumElementsDict);
+        && allFolders['hidden'].compendiumList.length>0){
+        createHiddenFolder(prefix);
     }
 
+    // Create default folder
+    // Add any remaining compendiums to this folder (newly added compendiums)
+    // (prevents adding a compendium from breaking everything)
+    if ((allFolders['default']!=null
+        && allFolders['default'].compendiumList != null
+        && allFolders['default'].compendiumList.length>0)
+        ||Object.keys(allCompendiumElementsDict).length>0){
+        createDefaultFolder(prefix,allFolders['default'],allFolders['hidden'],allCompendiumElementsDict)
+    }
 
     // create folder button
     if (game.user.isGM && document.querySelector(prefix+'button.cfolder-create')==null){
@@ -661,7 +711,7 @@ class CompendiumFolderMoveDialog extends FormApplication {
         let allFolders = game.settings.get(mod,'cfolders');
 
         Object.keys(allFolders).forEach(function(key){
-            if (key != 'hidden'){
+            if (key != 'hidden' && key != 'default'){
                 let prettyTitle = ""
                 let prettyPath = []
                 if (allFolders[key].pathToFolder != null){
@@ -794,17 +844,6 @@ class CompendiumFolderEditConfig extends FormApplication {
         }
         return game.i18n.localize("FOLDER.Create");
     }
-    async getData(options) {
-        let allPacks = this.getGroupedPacks();
-        return {
-          folder: this.object,
-          fpacks: game.packs,
-          apacks: alphaSortCompendiums(Object.values(allPacks[0])),
-          upacks: alphaSortCompendiums(Object.values(allPacks[1])),
-          submitText: game.i18n.localize( this.object.colorText.length>1   ? "FOLDER.Update" : "FOLDER.Create"),
-          deleteText: "Delete Folder"
-        }
-      }
     getGroupedPacks(){
         let allFolders = game.settings.get(mod,'cfolders');
         let assigned = {};
@@ -831,11 +870,12 @@ class CompendiumFolderEditConfig extends FormApplication {
       let allPacks = this.getGroupedPacks();
       return {
         folder: this.object,
+        defaultFolder:this.object._id==='default',
         fpacks: game.packs,
         apacks: alphaSortCompendiums(Object.values(allPacks[0])),
         upacks: alphaSortCompendiums(Object.values(allPacks[1])),
         submitText: game.i18n.localize( this.object.colorText.length>1   ? "FOLDER.Update" : "FOLDER.Create"),
-        deleteText: this.object.colorText.length>1?"Delete Folder":null
+        deleteText: (this.object.colorText.length>1 && this.object._id != 'default') ?"Delete Folder":null
       }
     }
   
@@ -984,8 +1024,12 @@ function closeFolder(parent){
     contents.style.display='none'
     if (game.user.isGM){
         cogLink.style.display='none'
-        newFolderLink.style.display='none'
-        moveFolderLink.style.display='none'
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            newFolderLink.style.display='none'
+        }
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            moveFolderLink.style.display='none'
+        }
     }
     parent.setAttribute('collapsed','');
 }
@@ -1002,8 +1046,12 @@ function openFolder(parent){
     contents.style.display=''
     if (game.user.isGM){
         cogLink.style.display=''
-        newFolderLink.style.display=''
-        moveFolderLink.style.display=''
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            newFolderLink.style.display=''
+        }
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            moveFolderLink.style.display=''
+        }
     }
     parent.removeAttribute('collapsed');
 }
