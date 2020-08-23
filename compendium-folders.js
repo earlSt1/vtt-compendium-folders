@@ -88,9 +88,9 @@ function checkForDeletedCompendiums(){
     });
     if (game.user.isGM){
         if (!defaultFolderExists){
-            allFolders['default']={'compendiumList':[],'titleText':'Default'}
+            allFolders['default']={'compendiumList':[],'titleText':'Default','colorText':'#000000','_id':'default'}
         }
-        game.settings.set(mod,'cfolders',allFolders);
+        game.settings.set(mod,'cfolders',allFolders).then(() => {return allFolders});
     }
     return allFolders;
 }
@@ -464,13 +464,13 @@ function createHiddenFolder(prefix){
         tab.querySelector(prefix+'ol.directory-list').appendChild(folder);   
     }
 }
-function insertDefaultFolder(prefix,defaultFolder){
+function insertDefaultFolder(prefix,defaultFolder,folderObject){
     let allFolders = game.settings.get(mod,'cfolders');
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]');
     for (let folder of tab.querySelectorAll('li.compendium-folder')){
         let folderId = folder.getAttribute('data-cfolder-id');
-        if (allFolders[folderId].titleText > allFolders['default'].titleText){
-            folder.insertAdjacentElement('beforebegin',defaultFolder);
+        if (allFolders[folderId].titleText > defaultFolder.titleText){
+            folder.insertAdjacentElement('beforebegin',folderObject);
             return;
         }
     }
@@ -489,7 +489,7 @@ function createDefaultFolder(prefix,defaultFolder,hiddenFolder,remainingElements
         });
         if (remainingElementsList.length>0){
             let folderObject = createFolderFromObject(tab,defaultFolder,remainingElementsList,prefix,false);
-            insertDefaultFolder(prefix,folderObject);
+            insertDefaultFolder(prefix,defaultFolder,folderObject);
         }
     }
 }
