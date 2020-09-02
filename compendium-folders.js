@@ -162,7 +162,7 @@ function convertExistingSubmenusToFolder(){
     while (submenus == null){
         setTimeout(function(){submenus = document.querySelectorAll('li.compendium-entity')},1000)
     }
-    var allFolders = {};
+    let allFolders = game.settings.get(mod,'cfolders');
     for (var submenu of submenus){
         if (submenu.classList.contains('compendium-folder')){
             continue;
@@ -171,10 +171,8 @@ function convertExistingSubmenusToFolder(){
         allFolders[compendiumFolder._id]=compendiumFolder;
         convertSubmenuToFolder(submenu,compendiumFolder._id);
     }
-    allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums'};
-    allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
+
     // create folder button
-    
     let button = document.createElement('button');
     button.classList.add('cfolder-create')
     button.type='submit';
@@ -354,7 +352,7 @@ function createNewFolder(path){
     new CompendiumFolderEditConfig(new CompendiumFolder('New Folder','',path)).render(true) 
 }
 
-function createFolderFromObject(parent,compendiumFolder, compendiumElements,prefix,wasOpen){
+function createFolderFromObject(parent,compendiumFolder, compendiumElements,prefix,isOpen){
     let folder = document.createElement('li')
     folder.classList.add('compendium-entity','compendium-folder')
     let header = document.createElement('header')
@@ -409,7 +407,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     if (compendiumFolder.folderIcon == null){
         folderIcon = document.createElement('i')
         folderIcon.classList.add('fas','fa-fw')
-        if (!wasOpen){
+        if (!isOpen){
             folderIcon.classList.add('fa-folder');
         }else{
             folderIcon.classList.add('fa-folder-open')
@@ -420,7 +418,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
         folderCustomIcon.src = compendiumFolder.folderIcon;
         folderIconHTML = folderCustomIcon.outerHTML;
     }
-    if (!wasOpen || compendiumFolder._id==='default'){
+    if (!isOpen || compendiumFolder._id==='default'){
         contents.style.display='none';
         //packList.style.display='none';
         //folderList.style.display='none';
@@ -503,9 +501,10 @@ function createDefaultFolder(prefix,defaultFolder,hiddenFolder,remainingElements
 * Takes a prefix (a selector to determine whether to modify the Sidebar or Popup window)
 * and a list of previously open folders
 */
-function setupFolders(prefix,openFolders){
+function setupFolders(prefix){
 
     let allFolders = checkForDeletedCompendiums();
+    let openFolders = game.settings.get(mod,'open-folders');
     let allCompendiumElements = document.querySelectorAll(prefix+'li.compendium-pack');
 
     console.debug(modName+" | Elements on screen: "+allCompendiumElements.length);
@@ -941,31 +940,10 @@ class CompendiumFolderEditConfig extends FormApplication {
 }
 
 function refreshFolders(){  
-    let isPopout = document.querySelector('#compendium-popout') != null;
-    if (isPopout){
-        // First refresh Popout window, then refresh sidebar
-        let allFolders = document.querySelectorAll('#compendium-popout .compendium-folder')
-        let openFoldersPopout = [];
-        for (let folder of allFolders){
-            if (!folder.hasAttribute('collapsed')){
-                //folder open
-                openFoldersPopout.push(folder.getAttribute('data-cfolder-id'));
-            }
-        }
-        setupFolders('#compendium-popout ',openFoldersPopout);
-        addEventListeners('#compendium-popout ');
+    if (document.querySelector('section#compendium') != null){
+        setupFolders('#sidebar ');
+        addEventListeners('#sidebar ');
     }
-    let allFolders = document.querySelectorAll('#sidebar .compendium-folder')
-        let openFoldersSidebar = [];
-        for (let folder of allFolders){
-            if (!folder.hasAttribute('collapsed')){
-                //folder open
-                openFoldersSidebar.push(folder.getAttribute('data-cfolder-id'));
-            }
-        }
-    setupFolders('#sidebar ',openFoldersSidebar);
-    addEventListeners('#sidebar ');
-    //Hooks.call('renderCompendiumDirectory');
 }
 //TODO Fix why multiple packs being added to folder only shows 1
 async function updateFolders(packsToAdd,packsToRemove,folder){
@@ -1013,7 +991,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
 // ==========================
 // Event funtions
 // ==========================
-function closeFolder(parent){
+function closeFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
@@ -1035,8 +1013,13 @@ function closeFolder(parent){
         }
     }
     parent.setAttribute('collapsed','');
+    if (save){
+        let openFolders = game.settings.get(mod,'open-folders');
+        openFolders.splice(openFolders.indexOf(parent.getAttribute('data-cfolder-id')),1);
+        game.settings.set(mod,'open-folders',openFolders).then(() => {return true;});
+    }
 }
-function openFolder(parent){
+function openFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
@@ -1057,17 +1040,24 @@ function openFolder(parent){
         }
     }
     parent.removeAttribute('collapsed');
+    if (save){
+        let openFolders = game.settings.get(mod,'open-folders');
+        openFolders.push(parent.getAttribute('data-cfolder-id'));
+        game.settings.set(mod,'open-folders',openFolders).then(() => {return true;});
+    }
 }
 function toggleFolder(event,parent){
     event.stopPropagation();
+    let success = true;
     if (parent.hasAttribute('collapsed')){
-        openFolder(parent);
+        success = success && openFolder(parent,true);
     }else{
-        closeFolder(parent);
+        success = success && closeFolder(parent,true);
         for (let child of parent.querySelectorAll('.compendium-folder')){
-            closeFolder(child);
+            success = success && closeFolder(child,true);
         }
     }
+    return success;
 }
 function showEditDialog(submenu,event){
     event.stopPropagation();
@@ -1132,6 +1122,13 @@ export class Settings{
             type: Object,
             default:{}
         });
+        game.settings.register(mod,'open-folders',{
+            scope: 'client',
+            config:false,
+            type: Object,
+            default:[]
+        });
+        
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -1173,12 +1170,30 @@ Hooks.once('setup',async function(){
         if (isPopout){
             prefix = '#compendium-popout '
         }
-        let currentSettings = game.settings.get(mod,'cfolders')
-        if (Object.keys(currentSettings).length === 1 && currentSettings.constructor === Object){
-            convertExistingSubmenusToFolder(prefix);
-        }else{
-            setupFolders(prefix,[])
+        let allFolders = game.settings.get(mod,'cfolders')
+        let toReturn = allFolders['hidden']==null || allFolders['default']==null;
+        if (allFolders['hidden']==null){
+            allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums','_id':'hidden'};
         }
-        addEventListeners(prefix)
+        if (allFolders['default']==null){
+            allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
+        }
+        if (toReturn){
+            game.settings.set(mod,'cfolders',allFolders).then(function(){
+                if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
+                    convertExistingSubmenusToFolder(prefix);
+                }else{
+                    setupFolders(prefix)
+                }
+                addEventListeners(prefix)
+            });
+        }else{
+            if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
+                convertExistingSubmenusToFolder(prefix);
+            }else{
+                setupFolders(prefix)
+            }
+            addEventListeners(prefix)
+        }   
     });
 });
