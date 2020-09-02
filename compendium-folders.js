@@ -455,13 +455,22 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
 }
 
 
-function createHiddenFolder(prefix){
+function createHiddenFolder(prefix,hiddenFolder,remainingElements){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]')
     if (document.querySelector('.hidden-compendiums')==null){
         let folder = document.createElement('ol')
         folder.classList.add('hidden-compendiums');
         folder.style.display='none';
         tab.querySelector(prefix+'ol.directory-list').appendChild(folder);   
+        Object.keys(remainingElements).forEach(function(key){
+            if (hiddenFolder.compendiumList != null
+                && hiddenFolder.compendiumList.length>0
+                && hiddenFolder.compendiumList.includes(key)){
+                folder.appendChild(remainingElements[key]);
+                delete remainingElements[key];
+                console.log(modName+" | Adding "+key+" to hidden folder")
+            }
+        });
     }
 }
 function insertDefaultFolder(prefix,defaultFolder,folderObject){
@@ -477,15 +486,11 @@ function insertDefaultFolder(prefix,defaultFolder,folderObject){
 }
 function createDefaultFolder(prefix,defaultFolder,hiddenFolder,remainingElements){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium] > ol.directory-list')
-    if (document.querySelector('.default-folder')==null){
+    if (document.querySelector('.compendium-folder[data-cfolder-id=default]')==null){
         let remainingElementsList = []
         Object.keys(remainingElements).forEach(function(key){
-            if (hiddenFolder.compendiumList != null
-                && hiddenFolder.compendiumList.length>0
-                && !hiddenFolder.compendiumList.includes(key)){
-                console.log(modName+" | Adding "+key+" to default folder")
-                remainingElementsList.push(remainingElements[key]);
-            }  
+            remainingElementsList.push(remainingElements[key]);
+            console.log(modName+" | Adding "+key+" to default folder")              
         });
         if (remainingElementsList.length>0){
             let folderObject = createFolderFromObject(tab,defaultFolder,remainingElementsList,prefix,false);
@@ -504,7 +509,9 @@ function setupFolders(prefix,openFolders){
     let allFolders = checkForDeletedCompendiums();
     let allCompendiumElements = document.querySelectorAll(prefix+'li.compendium-pack');
 
-
+    console.debug(modName+" | Elements on screen: "+allCompendiumElements.length);
+    console.debug(modName+" | Total Compendiums: "+game.packs.entries.length);
+    
     //Remove all current submenus
     for (let submenu of document.querySelectorAll(prefix+'li.compendium-entity')){
         submenu.remove();
@@ -591,16 +598,13 @@ function setupFolders(prefix,openFolders){
     if (allFolders['hidden']!=null 
         && allFolders['hidden'].compendiumList != null 
         && allFolders['hidden'].compendiumList.length>0){
-        createHiddenFolder(prefix);
+        createHiddenFolder(prefix,allFolders['hidden'],allCompendiumElementsDict);
     }
 
     // Create default folder
     // Add any remaining compendiums to this folder (newly added compendiums)
     // (prevents adding a compendium from breaking everything)
-    if ((allFolders['default']!=null
-        && allFolders['default'].compendiumList != null
-        && allFolders['default'].compendiumList.length>0)
-        ||Object.keys(allCompendiumElementsDict).length>0){
+    if (Object.keys(allCompendiumElementsDict).length>0){
         createDefaultFolder(prefix,allFolders['default'],allFolders['hidden'],allCompendiumElementsDict)
     }
 
