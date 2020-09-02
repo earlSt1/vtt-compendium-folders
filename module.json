@@ -5,7 +5,7 @@
     "author": "Erceron",
     "version": "1.0.4",
     "minimumCoreVersion": "0.6.5",
-    "compatibleCoreVersion":"0.6.5",
+    "compatibleCoreVersion":"0.6.6",
     "esmodules": [
         "./compendium-folders.js"
       ],
