@@ -475,8 +475,7 @@ function createHiddenFolder(prefix,hiddenFolder,remainingElements){
 }
 function insertDefaultFolder(prefix,defaultFolder,folderObject){
     let allFolders = game.settings.get(mod,'cfolders');
-    let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium]');
-    for (let folder of tab.querySelectorAll('li.compendium-folder')){
+    for (let folder of document.querySelectorAll(prefix+'.sidebar-tab[data-tab=compendium] > ol > li.compendium-folder')){
         let folderId = folder.getAttribute('data-cfolder-id');
         if (allFolders[folderId].titleText > defaultFolder.titleText){
             folder.insertAdjacentElement('beforebegin',folderObject);
