@@ -904,11 +904,12 @@ class CompendiumFolderEditConfig extends FormApplication {
         let packsToAdd = []
         let packsToRemove = []
         for (let packKey of game.packs.keys()){
-            if (formData[packKey] && this.object.compendiumList.indexOf(packKey)==-1){
+            let formName = game.packs.get(packKey).metadata.package+game.packs.get(packKey).metadata.name;
+            if (formData[formName] && !this.object.compendiumList.includes(packKey)){
                 // Box ticked AND compendium not in folder
                 packsToAdd.push(packKey);
             
-            }else if (!formData[packKey] && this.object.compendiumList.indexOf(packKey)>-1){
+            }else if (!formData[formName] && this.object.compendiumList.includes(packKey)){
                 // Box unticked AND compendium in folder
                 packsToRemove.push(packKey);
             }
