@@ -29,7 +29,7 @@ I would recommend once you are happy with your layout, to save your folder confi
 6. Custom folder ordering (currently defaults to alphabetical)
 7. ~~Default folder for new compendiums~~
 8. ~~Default open/close state for folders~~
-9. Custom folder and icon text color
+9. ~~Custom folder and icon text color~~ Now in 1.0.6!
 10. ???
 
 Any issues feel free to ping me on Discord (@Erceron#0370)
