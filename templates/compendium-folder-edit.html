@@ -13,6 +13,13 @@
         </div>
     </div>
     <div class="form-group">
+        <label>Text Color</label>
+        <div class="flexrow">
+            <input type="text" name="fontColor" value="{{folder.fontColorText}}" data-dtype="String"/>
+            <input type="color" value="{{folder.fontColorText}}" data-edit="fontColor"/>
+        </div>
+    </div>
+    <div class="form-group">
         <label>Folder Icon</label>
         <div class="form-fields">
             {{filePicker target="icon" type="image"}}

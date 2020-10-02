@@ -117,6 +117,7 @@ export class CompendiumFolder{
         this.uid=generateRandomFolderName();
         this.pathToFolder = path;
         this.icon = null;
+        this.fontColor = '#FFFFFF'
     }
     initFromExisting(existing){
         this.title = existing['titleText'];
@@ -126,6 +127,7 @@ export class CompendiumFolder{
         this.uid = existing['_id'];
         this.path = existing['pathToFolder'];
         this.icon = existing['folderIcon']
+        this.fontColor = existing['fontColorText']
     }
     get uid(){return this._id;}
     set uid(id){this._id=id;}
@@ -139,6 +141,8 @@ export class CompendiumFolder{
     set folders(folders){this.folderList = folders;}
     get icon(){return this.folderIcon}
     set icon(nIcon){this.folderIcon=nIcon}
+    get fontColor(){return this.fontColorText;}
+    set fontColor(fc){this.fontColorText=fc;}
     addCompendium(compendium){
         this.compendiums.push(compendium);
     }
@@ -358,6 +362,11 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     let header = document.createElement('header')
     header.classList.add('compendium-folder-header', 'flexrow')
     header.style.backgroundColor = compendiumFolder.colorText;
+    if (compendiumFolder.fontColorText == null){
+        header.style.color = '#FFFFFF';
+    }else{
+        header.style.color = compendiumFolder.fontColorText;
+    }
     
     let cogLabel = document.createElement('label');
     let cogIcon = document.createElement('i')
@@ -889,6 +898,11 @@ class CompendiumFolderEditConfig extends FormApplication {
         }else{
             this.object.colorText = formData.color;
         }
+        if (formData.fontColor.length === 0){
+            this.object.fontColorText = '#FFFFFF'
+        }else{
+            this.object.fontColorText = formData.fontColor;
+        }
         if (formData.icon != null){
             if (formData.icon.length==0){
                 this.object.folderIcon = null;
@@ -984,6 +998,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
     }
     allFolders[folderId].titleText = folder.titleText;
     allFolders[folderId].colorText = folder.colorText;
+    allFolders[folderId].fontColorText = folder.fontColorText;
     allFolders[folderId].folderIcon = folder.folderIcon;
 
     await game.settings.set(mod,'cfolders',allFolders);
