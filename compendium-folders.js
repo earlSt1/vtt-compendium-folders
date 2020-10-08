@@ -206,7 +206,7 @@ function convertSubmenuToFolder(submenu,uid){
     let newFolderLabel = document.createElement('label')
     let newFolderIcon = document.createElement('i');
     let newFolderLink = document.createElement('a');
-    newFolderLabel.setAttribute('title','Create Subfolder');
+    newFolderLabel.setAttribute('title',game.i18n.localize('CF.createSubfolder'));
     newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
     newFolderLink.classList.add('create-folder');
     newFolderLabel.appendChild(newFolderIcon)
@@ -215,14 +215,14 @@ function convertSubmenuToFolder(submenu,uid){
     let moveFolderLabel = document.createElement('label')
     let moveFolderIcon = document.createElement('i');
     let moveFolderLink = document.createElement('a');
-    moveFolderLabel.setAttribute('title','Move Folder')
+    moveFolderLabel.setAttribute('title',game.i18n.localize('CF.moveFolder'))
     moveFolderIcon.classList.add('fas','fa-sitemap','fa-fw');
     moveFolderLink.classList.add('move-folder');
     moveFolderLabel.appendChild(moveFolderIcon);
     moveFolderLink.appendChild(moveFolderLabel);
 
     let cogLabel = document.createElement('label')
-    cogLabel.setAttribute('title','Edit Folder');
+    cogLabel.setAttribute('title',game.i18n.localize('FOLDER.Edit'));
     let cogIcon = document.createElement('i')
     cogIcon.classList.add('fas','fa-cog','fa-fw')
     let cogLink = document.createElement('a')
@@ -330,7 +330,7 @@ function createDirectoryHeader(){
 
         let collapseLink = document.createElement('a');
         collapseLink.classList.add('header-control','collapse-all');
-        collapseLink.title='Collapse all Folders';
+        collapseLink.title=game.i18n.localize('FOLDER.Collapse');
         collapseLink.addEventListener('click',function(){
             document.querySelectorAll('.compendium-folder').forEach(function(folder){
                 closeFolder(folder);
@@ -372,7 +372,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     let cogIcon = document.createElement('i')
     let cogLink = document.createElement('a')
 
-    cogLabel.setAttribute('title','Edit Folder');
+    cogLabel.setAttribute('title',game.i18n.localize('FOLDER.Edit'));
     cogIcon.classList.add('fas','fa-cog','fa-fw')
     cogLink.classList.add('edit-folder')
     cogLabel.appendChild(cogIcon);
@@ -382,7 +382,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     let newFolderIcon = document.createElement('i');
     let newFolderLink = document.createElement('a');
     
-    newFolderLabel.setAttribute('title','Create Subfolder');
+    newFolderLabel.setAttribute('title',game.i18n.localize('CF.createSubfolder'));
     newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
     newFolderLink.classList.add('create-folder');
 
@@ -393,7 +393,7 @@ function createFolderFromObject(parent,compendiumFolder, compendiumElements,pref
     let moveFolderIcon = document.createElement('i');
     let moveFolderLink = document.createElement('a');
 
-    moveFolderLabel.setAttribute('title','Move Folder');
+    moveFolderLabel.setAttribute('title',game.i18n.localize('CF.moveFolder'));
     moveFolderIcon.classList.add('fas','fa-sitemap','fa-fw');
     moveFolderLink.classList.add('move-folder');
 
@@ -660,7 +660,7 @@ async function deleteAllChildFolders(folder){
     
     deleteFolder(folder,allFolders)
     await game.settings.set(mod,'cfolders',allFolders);
-    ui.notifications.notify("Deleting folder "+folder.titleText+" and all its subfolders");
+    ui.notifications.notify(game.i18n.localize('CF.deleteNotification').replace('{folderName}',folder.titleText));
     refreshFolders()
     
 }
@@ -674,7 +674,7 @@ class ImportExportConfig extends FormApplication {
         return options;
       }
     get title() {
-        return "Import/Export Folder Configuration";
+        return game.i18n.localize('CF.importExportLabel');
     }
     async getData(options) {
         return {
@@ -697,12 +697,12 @@ class ImportExportConfig extends FormApplication {
                 if (success){
                     game.settings.set(mod,'cfolders',importJson).then(function(){
                         refreshFolders();
-                        ui.notifications.info("Folder data imported successfully");
+                        ui.notifications.info(game.i18n.localize('CF.folderImportSuccess'));
                     });
                 }else{
-                    ui.notifications.error("Imported string contains folders that exceed max folder limit ("+FOLDER_LIMIT+")")
+                    ui.notifications.error(game.i18n.localize('CF.folderImportMaxDepth') +" ("+FOLDER_LIMIT+")")
                 }
-            }catch(error){ui.notifications.error("Failed to import folder data")}
+            }catch(error){ui.notifications.error(game.i18n.localize('CF.folderImportFailure'))}
         }
     }
 }
@@ -784,7 +784,7 @@ class CompendiumFolderMoveDialog extends FormApplication {
         return {
             folder: this.object,
             allFolders: formData,
-            submitText: "Move Folder"
+            submitText: game.i18n.localize("CF.moveFolder")
         }
     }
     updateFullPathForChildren(allFolders,parentFolderId,fullPath){
@@ -829,11 +829,11 @@ class CompendiumFolderMoveDialog extends FormApplication {
                 notificationDest = allFolders[destFolderId].titleText;
             }
             if (success==true){
-                ui.notifications.info("Moved folder "+this.object.titleText+" to "+notificationDest)
+                ui.notifications.info(game.i18n.localize('CF.moveFolderNotification').replace('{src}',this.object.titleText).replace('{dest}',notificationDest))
                 await game.settings.set(mod,'cfolders',allFolders);
                 refreshFolders();
             }else{
-                ui.notifications.error("Max folder depth reached ("+FOLDER_LIMIT+")")
+                ui.notifications.error(game.i18n.localize('CF.folderDepthError')+" ("+FOLDER_LIMIT+")")
             }
         }
         
@@ -931,10 +931,10 @@ class CompendiumFolderEditConfig extends FormApplication {
         if (formData.delete != null && formData.delete[0]==1){
             //do delete stuff
             new Dialog({
-                title: "Delete Folder",
-                content: "<p>Are you sure you want to delete the folder <strong>"+this.object.titleText+"?</strong></p>"
-                        +"<p>This will delete <strong>all</strong> subfolders.</p>"
-                        +"<p><i>Compendiums in these folders will not be deleted</i></p>",
+                title: game.i18n.localize("CF.deleteFolder"),
+                content: "<p>"+game.i18n.localize("CF.deletePromptL1")+" <strong>"+this.object.titleText+"?</strong></p>"
+                        +"<p>"+game.i18n.localize("CF.deletePromptL2")+"</p>"
+                        +"<p><i>"+game.i18n.localize("CF.deletePromptL3")+"</i></p>",
                 buttons: {
                     yes: {
                         icon: '<i class="fas fa-check"></i>',
@@ -985,11 +985,19 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
         console.log(modName+' | Adding '+packKey+' to folder '+folder.titleText);
     }
     if (packsMoved.length>0){
-        ui.notifications.notify("Removing "+packsMoved.length+" compendium"+(packsMoved.length>1?"s from other folders":" from another folder"))
+        let notification = game.i18n.localize("CF.addSinglePackNotification")
+        if (packsMoved.length>1){
+            notification = game.i18n.localize("CF.addMultiPackNotification").replace('{packNum}',packsMoved.length);
+        }
+        ui.notifications.notify(notification)
     }
     // For removing packs, add them to hidden compendium
     if (packsToRemove.length>0){
-        ui.notifications.notify("Adding "+packsToRemove.length+" compendium"+(packsToRemove.length>1?"s":"")+" to unassigned/hidden folder");
+        let notification = game.i18n.localize("CF.removeSinglePackNotification")
+        if (packsToRemove.length>1){
+            notification = game.i18n.localize("CF.removeMultiPackNotification").replace('{packNum}',packsToRemove.length);
+        }
+        ui.notifications.notify(notification);
     }
     for (let packKey of packsToRemove){
         allFolders[folderId].compendiumList.splice(allFolders[folderId].compendiumList.indexOf(packKey),1);
@@ -1087,7 +1095,7 @@ function showCreateDialogWithPath(submenu,event){
     let allFolders = game.settings.get(mod,'cfolders');
     let currentDepth = allFolders[directParent].pathToFolder==null?1:allFolders[directParent].pathToFolder.length
     if (currentDepth + 1 >= FOLDER_LIMIT){
-        ui.notifications.error("Max folder depth reached ("+FOLDER_LIMIT+")")
+        ui.notifications.error(game.i18n.localize("CF.folderDepthError") + " ("+FOLDER_LIMIT+")")
         return
     }
     let path = []
@@ -1127,7 +1135,7 @@ export class Settings{
     static registerSettings(){
         game.settings.registerMenu(mod,'settingsMenu',{
             name: 'Configuration',
-            label: 'Import/Export Configuration',
+            label: game.i18n.localize('CF.importExportLabel'),
             icon: 'fas fa-wrench',
             type: ImportExportConfig,
             restricted: true
