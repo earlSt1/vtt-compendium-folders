@@ -1,0 +1,13 @@
+{
+    "CF.deleteFolder":"Delete Folder",
+    "CF.folderIcon":"Folder Icon",
+    "CF.textColor":"Text Color",
+    "CF.assigned":"Assigned",
+    "CF.unassigned":"Unassigned",
+    "CF.defaultFolderTitle":"This is the default folder",
+    "CF.defaultFolderDialogDescriptionL1":"Any new compendium(s) will be included in this folder",
+    "CF.defaultFolderDialogDescriptionL2":"Compendiums in this folder will show up as Unassigned",
+    "CF.folderDialogDescriptionL1":"Any marked compendium(s) will be included in this folder.",
+    "CF.folderDialogDescriptionL2":"A compendium can only belong to one folder.",
+    "CF.folderDialogDescriptionL3":"Marking compendiums already assigned to other folders will move them here."
+}

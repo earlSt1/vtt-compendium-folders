@@ -1,7 +1,7 @@
 {
     "name": "compendium-folders",
     "title": "Compendium Folders",
-    "description": "Collapsable folders for compendiums",
+    "description": "Collapsable folders for compendiums - Localization branch",
     "author": "Erceron",
     "version": "1.0.6",
     "minimumCoreVersion": "0.6.5",
@@ -9,8 +9,15 @@
     "esmodules": [
         "./compendium-folders.js"
       ],
+    "languages":[
+      {
+        "lang":"en",
+        "name":"English",
+        "path":"lang/en.json"
+      }
+    ],
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
-    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/1.0.6.zip"
+    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/localization/module.json",
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/localization.zip"
   }
