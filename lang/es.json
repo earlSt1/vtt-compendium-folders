@@ -1,0 +1,13 @@
+{
+    "CF.deleteFolder":"Borrar Directorio",
+    "CF.folderIcon":"Icono del Directorio",
+    "CF.textColor":"Color del Texto",
+    "CF.assigned":"Asignado",
+    "CF.unassigned":"Sin Asignar",
+    "CF.defaultFolderTitle":"Este es el directorio por defecto",
+    "CF.defaultFolderDialogDescriptionL1":"Cuando se cree un compendio, se incluirá en este directorio",
+    "CF.defaultFolderDialogDescriptionL2":"Los compendios que estén en este directorio se mostrarán como Sin Asignar",
+    "CF.folderDialogDescriptionL1":"Los compendio marcados se incluirán en este directorio.",
+    "CF.folderDialogDescriptionL2":"Un compendio solo puede pertenecer a un único directorio.",
+    "CF.folderDialogDescriptionL3":"Marcar compendios ya asignados a otros directorios los moverá aquí."
+}
