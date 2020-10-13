@@ -17,7 +17,7 @@
             <div class='form-header'>
                 <i class='fas fa-search'></i><input type='text' name='search-folders' placeholder='Search'/>
             </div>
-            <h2>Choose Destination Folder</h2>
+            <h2>{{localize "CF.destinationFolder"}}</h2>
             {{#each allFolders}}
                 <div class='flexrow folder-select'>
                     <input type="radio" name='dest-folder' value="{{this.id}}"/>

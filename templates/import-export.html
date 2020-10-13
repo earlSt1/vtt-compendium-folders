@@ -1,7 +1,7 @@
 <form id="import-export" autocomplete="off" onsubmit="event.preventDefault();">
     <div class="form-group">
-        <h2>Export</h2>
-        <h2>Import</h2>
+        <h2>{{localize "CF.exportConfig"}}</h2>
+        <h2>{{localize "CF.importConfig"}}</h2>
     </div>
     <script>
         document.querySelector('#import-export .cfolder-copy').addEventListener('click',function(event){
@@ -10,7 +10,7 @@
             exportText.select();
             exportText.setSelectionRange(0, 99999); /*For mobile devices*/          
             document.execCommand("copy");
-            ui.notifications.info("Copied current folder configuration to clipboard!");
+            ui.notifications.info(game.i18n.localize('CF.clipboardNotification'));
         });
     </script>
     <div class="form-group">
@@ -18,7 +18,7 @@
         <textarea name='importData'></textarea>
     </div>
     <div class='flexrow'>    
-        <button class='cfolder-copy' type="reset"><i class="fas fa-clipboard"></i>Copy to Clipboard</button>
+        <button class='cfolder-copy' type="reset"><i class="fas fa-clipboard"></i>{{localize "CF.clipboard"}}</button>
         <button class='cfolder-submit' type="submit"><i class="fas fa-check"></i> {{submitText}}</button>
     </div>
 </form>
