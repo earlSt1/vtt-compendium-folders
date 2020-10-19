@@ -310,11 +310,10 @@ function filterCompendiumsBySearchTerm(searchTerm){
 }
 function createDirectoryHeader(){
     let tab = document.querySelector("#sidebar .sidebar-tab[data-tab='compendium']");
-    if (tab.querySelector('.directory-header')==null){
-        let header = document.createElement('header');
-        header.classList.add('directory-header','flexrow');
+    if (tab.querySelector('.directory-header > div.header-search')==null){
+       
         let searchDiv = document.createElement('div');
-        searchDiv.classList.add('header-search');
+        searchDiv.classList.add('header-search','flexrow');
 
         let searchIcon = document.createElement('i');
         searchIcon.classList.add('fas','fa-search');
@@ -330,6 +329,7 @@ function createDirectoryHeader(){
 
         let collapseLink = document.createElement('a');
         collapseLink.classList.add('header-control','collapse-all');
+        collapseLink.style.flex='0 0 24px';
         collapseLink.title='Collapse all Folders';
         collapseLink.addEventListener('click',function(){
             document.querySelectorAll('.compendium-folder').forEach(function(folder){
@@ -343,8 +343,14 @@ function createDirectoryHeader(){
         
         searchDiv.appendChild(searchIcon);
         searchDiv.appendChild(searchBar);
+        searchDiv.appendChild(collapseLink);
+        let header = tab.querySelector('.directory-header')
+        if (header == null){
+            header = document.createElement('header');
+            header.classList.add('directory-header','flexrow');          
+        }
         header.appendChild(searchDiv);
-        header.appendChild(collapseLink);
+        
         tab.insertAdjacentElement('afterbegin',header);
     }
 
@@ -624,7 +630,7 @@ function setupFolders(prefix){
         let folderIcon = document.createElement('i')
         folderIcon.classList.add('fas','fa-fw','fa-folder')
         button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
-        document.querySelector(prefix+'#compendium .directory-footer').appendChild(button);
+        document.querySelector(prefix+'#compendium .header-actions.action-buttons').appendChild(button);
     }
     // Hide all empty lists
     for (let element of document.querySelectorAll('.folder-contents > ol')){
