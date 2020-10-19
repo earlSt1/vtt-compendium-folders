@@ -19,7 +19,7 @@
     "CF.moveFolder":"Mover Directorio",
     "CF.createSubfolder":"Crear Subdirectorio",
     "CF.editFolder":"Editar Directorio",
-    "CF.deletePromptL1":"¿Está seguro de querer borrar el directorio?",
+    "CF.deletePromptL1":"¿Está seguro de querer borrar el directorio {folderName}?",
     "CF.deletePromptL2":"Se borrarán <strong>todos</strong> los subdirectorios",
     "CF.deletePromptL3":"Los compendios en estos directorios no serán borrados",
     "CF.deleteNotification":"Borrando el directorio {folderName} y todos sus subdirectorios",
