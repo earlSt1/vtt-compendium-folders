@@ -932,7 +932,7 @@ class CompendiumFolderEditConfig extends FormApplication {
             //do delete stuff
             new Dialog({
                 title: game.i18n.localize("CF.deleteFolder"),
-                content: "<p>"+game.i18n.localize("CF.deletePromptL1")+" <strong>"+this.object.titleText+"?</strong></p>"
+                content: "<p>"+game.i18n.localize("CF.deletePromptL1").replace('{folderName}',this.object.titleText)+"</p>"
                         +"<p>"+game.i18n.localize("CF.deletePromptL2")+"</p>"
                         +"<p><i>"+game.i18n.localize("CF.deletePromptL3")+"</i></p>",
                 buttons: {
