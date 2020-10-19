@@ -59,9 +59,9 @@ li.compendium-folder  label{
   padding:1px 3px;
   font-size:13px;
 }
-button.cfolder-create{
+/* button.cfolder-create{
   margin-top:5px !important;
-}
+} */
 button.cfolder-submit{
   width:50%
 }
@@ -102,9 +102,6 @@ button.cfolder-submit#delete  {
   padding-right:5px !important ;
   margin:0px !important
 }
-#compendium .header-search > input{
-  margin-left:4px;
-}
 #folder-create input[name='search-packs']{
   width: calc(100% - 25px);
 }
@@ -134,4 +131,6 @@ button.cfolder-submit#delete  {
 #import-export textarea{
   height:300px;
 }
-
+button.create-compendium{
+  font-size:12.5px;
+}
