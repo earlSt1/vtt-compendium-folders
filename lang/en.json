@@ -19,7 +19,7 @@
     "CF.moveFolder":"Move Folder",
     "CF.createSubfolder":"Create Subfolder",
     "CF.editFolder":"Edit Folder",
-    "CF.deletePromptL1":"Are you sure you want to delete the folder?",
+    "CF.deletePromptL1":"Are you sure you want to delete the folder <strong>{folderName}</strong>?",
     "CF.deletePromptL2":"This will delete <strong>all</strong> subfolders",
     "CF.deletePromptL3":"Compendiums in these folders will not be deleted",
     "CF.deleteNotification":"Deleting folder {folderName} and all its subfolders",
