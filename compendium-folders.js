@@ -313,7 +313,10 @@ function createDirectoryHeader(){
     if (tab.querySelector('.directory-header > div.header-search')==null){
        
         let searchDiv = document.createElement('div');
-        searchDiv.classList.add('header-search','flexrow');
+        searchDiv.classList.add('header-search');
+        if (game.data.version >= '0.7.3'){
+            searchDiv.classList.add('flexrow');
+        }
 
         let searchIcon = document.createElement('i');
         searchIcon.classList.add('fas','fa-search');
@@ -326,11 +329,13 @@ function createDirectoryHeader(){
         searchBar.addEventListener('keyup',function(event){
             filterCompendiumsBySearchTerm(event.target.value);
         });
-
+        if (game.data.version < '0.7.3'){
+            searchIcon.style.paddingRight='3px';
+        }
         let collapseLink = document.createElement('a');
         collapseLink.classList.add('header-control','collapse-all');
 
-        collapseLink.style.flex='0 0 24px';
+        //collapseLink.style.flex='0 0 24px';
         collapseLink.title=game.i18n.localize('FOLDER.Collapse');
         collapseLink.addEventListener('click',function(){
             document.querySelectorAll('.compendium-folder').forEach(function(folder){
@@ -340,17 +345,27 @@ function createDirectoryHeader(){
         let collapseIcon = document.createElement('i');
         collapseIcon.classList.add('fas','fa-sort-amount-up');
         collapseLink.append(collapseIcon);
-
+        
         
         searchDiv.appendChild(searchIcon);
         searchDiv.appendChild(searchBar);
-        searchDiv.appendChild(collapseLink);
+        
         let header = tab.querySelector('.directory-header')
         if (header == null){
             header = document.createElement('header');
             header.classList.add('directory-header','flexrow');          
         }
-        header.appendChild(searchDiv);
+        if (game.data.version >= '0.7.3'){
+            header.appendChild(searchDiv);
+            searchDiv.appendChild(collapseLink);
+        }else{
+            header.appendChild(searchDiv);
+            header.appendChild(collapseLink);
+        }
+        
+        
+        
+
         
         tab.insertAdjacentElement('afterbegin',header);
     }
@@ -631,7 +646,11 @@ function setupFolders(prefix){
         let folderIcon = document.createElement('i')
         folderIcon.classList.add('fas','fa-fw','fa-folder')
         button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
-        document.querySelector(prefix+'#compendium .header-actions.action-buttons').appendChild(button);
+        if (game.data.version >= '0.7.3'){
+            document.querySelector(prefix+'#compendium .header-actions.action-buttons').appendChild(button);
+        }else{
+            document.querySelector(prefix+'#compendium .directory-footer').appendChild(button);
+        }
     }
     // Hide all empty lists
     for (let element of document.querySelectorAll('.folder-contents > ol')){
