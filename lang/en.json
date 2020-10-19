@@ -33,5 +33,4 @@
     "CF.folderImportMaxDepth":"Imported string contains folders that exceed max folder limit",
     "CF.moveFolderNotification":"Moved folder {src} to {dest}",
     "CF.searchCompendiums":"Search Compendiums"
-
 }
