@@ -11,11 +11,16 @@
       ],
     "languages":[
       {
+        "lang":"de",
+        "name":"German",
+        "path":"lang/de.json"
+      },
+      {
         "lang":"en",
         "name":"English",
         "path":"lang/en.json"
       },
-	  {
+	    {
         "lang":"es",
         "name":"Spanish",
         "path":"lang/es.json"
