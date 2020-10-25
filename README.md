@@ -2,7 +2,7 @@
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system.
 
-Translations provided by lozalojo (Spanish), CarnVanBeck (German), and rinnocent (Portugese)
+Translations provided by lozalojo (Spanish), CarnVanBeck (German), and rinnocent (Brazilian Portugese)
 
 ![](./example.png)
 
