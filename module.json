@@ -24,6 +24,11 @@
         "lang":"es",
         "name":"Spanish",
         "path":"lang/es.json"
+      },
+	    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
       }
     ],
     "styles": ["./styles.css"],
