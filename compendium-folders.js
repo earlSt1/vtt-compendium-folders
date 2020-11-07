@@ -1218,7 +1218,6 @@ Hooks.once('setup',async function(){
 
             Settings.registerSettings()
             
-            await loadTemplates(["modules/compendium-folder/compendium-folder-edit.html"]);
             let isPopout = document.querySelector('#compendium-popout') != null;
             let prefix = '#sidebar '
             if (isPopout){
