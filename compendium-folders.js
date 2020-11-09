@@ -1370,7 +1370,6 @@ async function createFolderPath(path,pColor,entityType,e){
         if (results.length==0 ){
             //Create the folder
             let parentId = null
-            let tColor = '#000000'
             let tContent = [];
             if (index>0){
                 parentId = game.folders.filter(f => f.type===entityType && f.name===segments[index-1] && getFolderPath(f)===segments.slice(0,index).join('/'))[0]
@@ -1596,28 +1595,38 @@ Hooks.once('setup',async function(){
 
     // Adding the export button to all folders
     Hooks.on('renderActorDirectory',async function(){
-        for (let folder of document.querySelectorAll('#actors .directory-item > .folder-header')){
-            addExportButton(folder);
+        for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
+            if (folder.querySelector('a.export-folder')==null){
+                addExportButton(folder);
+            }
         }
     })
     Hooks.on('renderJournalDirectory',async function(){
         for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
-            addExportButton(folder);  
+            if (folder.querySelector('a.export-folder')==null){
+                addExportButton(folder);
+            }
         }
     })
     Hooks.on('renderSceneDirectory',async function(){
         for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
-            addExportButton(folder);  
+            if (folder.querySelector('a.export-folder')==null){
+                addExportButton(folder);
+            } 
         }
     })
     Hooks.on('renderItemDirectory',async function(){
         for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
-            addExportButton(folder);  
+            if (folder.querySelector('a.export-folder')==null){
+                addExportButton(folder);
+            } 
         }
     })
     Hooks.on('renderRollTableDirectory',async function(){
         for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
-            addExportButton(folder);  
+            if (folder.querySelector('a.export-folder')==null){
+                addExportButton(folder);
+            }  
         }
     })
 });
