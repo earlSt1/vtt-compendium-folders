@@ -1189,19 +1189,54 @@ function addEventListeners(prefix){
 /*
 * Exporting Folders into compendiums
 */
+function addExportButton(folder){
+    let newButton = document.createElement('i');
+    newButton.classList.add('fas','fa-upload');
+    let link = document.createElement('a');
+    link.setAttribute('data-folder',folder.parentElement.getAttribute('data-folder-id'));
+    link.classList.add('export-folder');
+    link.appendChild(newButton);
+    link.addEventListener('click',async function(event){
+        event.stopPropagation();
+        await exportFolderStructureToCompendium(this.getAttribute('data-folder'));
+    });
+    folder.insertAdjacentElement('beforeend',link);
+}
 async function exportFolderStructureToCompendium(folderId){
+    let folder = game.folders.get(folderId);
     
-    let pack = game.packs.get('world.argh');
-    let index = await pack.getIndex();
-    let exportedFolderData = game.settings.get(mod,'exported-folder-data');
-    let folderObj = game.folders.get(folderId);
-    const children = folderObj.children;
-
-    let allResults = await recursivelyExportFolders(index,pack,folderObj)
-    for (let result of allResults){
-        exportedFolderData[result.id]=result;
+    let pack = null;
+    // Get eligible pack destinations
+    const packs = game.packs.filter(p => (p.entity === folder.data.type) && !p.locked);
+    if ( !packs.length ) {
+        return ui.notifications.warn(game.i18n.format("FOLDER.ExportWarningNone", {type: folder.data.type}));
     }
-    await game.settings.set(mod,'exported-folder-data',exportedFolderData)
+
+    // Render the HTML form
+    const html = await renderTemplate("templates/sidebar/apps/folder-export.html", {
+        packs: packs.reduce((obj, p) => {
+            obj[p.collection] = p.title;
+            return obj;
+        }, {}),
+        pack: null,
+        merge: true
+    });
+
+    // Display it as a dialog prompt
+    return Dialog.prompt({
+        title: game.i18n.localize("FOLDER.ExportTitle") + `: ${folder.data.name}`,
+        content: html,
+        label: game.i18n.localize("FOLDER.ExportTitle"),
+        callback: async function(html) {
+            const form = html[0].querySelector("form");
+            const pack = game.packs.get(form.pack.value);
+            let index = await pack.getIndex();
+            await recursivelyExportFolders(index,pack,folder)
+        },
+        options:{}
+    });
+
+    
 }
 async function recursivelyExportFolders(index,pack,folderObj){
     if (folderObj.children.length==0){
@@ -1209,16 +1244,11 @@ async function recursivelyExportFolders(index,pack,folderObj){
         let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj)
         return [updatedFolder];
     }
-    let result = null;
     for (let child of folderObj.children){
-        result = await recursivelyExportFolders(index,pack,child)
-        
-        
+        await recursivelyExportFolders(index,pack,child)
     }
     let entities = folderObj.content;
-    let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj)
-    result.push(updatedFolder);
-    return result
+    await exportSingleFolderToCompendium(index,pack,entities,folderObj)
 }
 async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
     let path = getFullPath(folderObj)
@@ -1359,6 +1389,35 @@ async function createFolderPath(path,pColor,entityType,e){
             await e.update({folder:f.id});
         }
         index++;
+    }
+}
+async function importFolderData(e){
+    let pathRegExp = /(?<=name\=\")[\w\/]+(?=\"\,)/
+    let path = pathRegExp.exec(e.name);
+    let colorExp = /(?<=color\=\")#[\w\d]{6}/
+    let color = colorExp.exec(e.name);
+    
+    let correctName = /(?<=\#CF\[.*\]).*/.exec(e.name);
+    if (correctName != null){
+        await e.update({name:correctName});
+    }  
+    
+    console.log(e);
+    //a.data.folder -> id;
+    let foundFolder = null;
+    let folderExists=false;
+    for (let folder of game.folders.values()){
+        if (folder.data.type==e.entity){
+            if (getFolderPath(folder) === path[0]){
+                folderExists=true;
+                foundFolder=folder;
+            }
+        }
+    }
+    if (folderExists){
+        e.update({folder : foundFolder.id})
+    }else{
+        await createFolderPath(path[0],color[0],e.entity,e);
     }
 }
 export class Settings{
@@ -1516,51 +1575,49 @@ Hooks.once('setup',async function(){
             }
         }        
     })
+    // Hooking into the creation methods to remove
+    // folder data from the name of the entity
+    // and create folders based on them
     Hooks.on('createActor',async function(a){
-        console.log(a.name);
-        let pathRegExp = /(?<=name\=\")[\w\/]+(?=\"\,)/
-        let path = pathRegExp.exec(a.name);
-        let directParent = path[0].split('/').pop();
-        let colorExp = /(?<=color\=\")#[\w\d]{6}/
-        let color = colorExp.exec(a.name)[0];
-        //TODO create folders based on data
-        let actorName = /(?<=\#CF\[.*\]).*/.exec(a.name);
-        if (actorName != null){
-            await a.update({name:actorName});
-        }  
-        
-
-        //a.data.folder -> id;
-        let foundFolder = null;
-        let folderExists=false;
-        for (let folder of game.folders.values()){
-            if (folder.data.type=='Actor'){
-                if (getFolderPath(folder) === path[0]){
-                    folderExists=true;
-                    foundFolder=folder;
-                }
-            }
-        }
-        if (folderExists){
-            a.update({folder : foundFolder.id})
-        }else{
-            await createFolderPath(path[0],color,'Actor',a);
-        }
+        importFolderData(a);
     })
+    Hooks.on('createJournalEntry',async function(j){
+        importFolderData(j);
+    })
+    Hooks.on('createScene',async function(s){
+        importFolderData(s);
+    })
+    Hooks.on('createItem',async function(i){
+        importFolderData(i);
+    })
+    Hooks.on('createRollTable',async function(r){
+        importFolderData(r);
+    })
+
+    // Adding the export button to all folders
     Hooks.on('renderActorDirectory',async function(){
         for (let folder of document.querySelectorAll('#actors .directory-item > .folder-header')){
-            let newButton = document.createElement('i');
-            newButton.classList.add('fas','fa-download');
-            let link = document.createElement('a');
-            link.setAttribute('data-folder',folder.parentElement.getAttribute('data-folder-id'));
-            link.classList.add('export-folder');
-            link.appendChild(newButton);
-            link.addEventListener('click',async function(event){
-                event.stopPropagation();
-                await exportFolderStructureToCompendium(this.getAttribute('data-folder'));
-            });
-            folder.insertAdjacentElement('beforeend',link);
-            
+            addExportButton(folder);
+        }
+    })
+    Hooks.on('renderJournalDirectory',async function(){
+        for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
+            addExportButton(folder);  
+        }
+    })
+    Hooks.on('renderSceneDirectory',async function(){
+        for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
+            addExportButton(folder);  
+        }
+    })
+    Hooks.on('renderItemDirectory',async function(){
+        for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
+            addExportButton(folder);  
+        }
+    })
+    Hooks.on('renderRollTableDirectory',async function(){
+        for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
+            addExportButton(folder);  
         }
     })
 });
