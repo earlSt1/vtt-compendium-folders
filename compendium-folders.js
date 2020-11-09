@@ -6,8 +6,17 @@ const FOLDER_LIMIT = 8
 // ==========================
 // Utility functions
 // ==========================
-function generateRandomFolderName(){
-    return Math.random().toString(36).replace('0.','cfolder_' || '');
+function getFolderPath(folder){
+    let path = folder.data.name;
+    let currentFolder = folder;
+    while (currentFolder.parent != null){
+        path = currentFolder.parent.data.name+'/'+path;
+        currentFolder = currentFolder.parent;
+    }
+    return path;
+}
+function generateRandomFolderName(prefix){
+    return Math.random().toString(36).replace('0.',prefix || '');
 }
 Handlebars.registerHelper('ifIn', function(elem, compendiums, options) {
     let packName = elem.package+'.'+elem.name;
@@ -114,7 +123,7 @@ export class CompendiumFolder{
         this.color = color;
         this.compendiums = [];
         this.folders = [];
-        this.uid=generateRandomFolderName();
+        this.uid=generateRandomFolderName('cfolder_');
         this.pathToFolder = path;
         this.icon = null;
         this.fontColor = '#FFFFFF'
@@ -1060,7 +1069,7 @@ function closeFolder(parent,save){
         folderIcon.classList.add('fa-folder') 
     }
     contents.style.display='none'
-    if (game.user.isGM){
+    if (game.user.isGM && cogLink != null && newFolderLink != null && moveFolderLink != null){
         cogLink.style.display='none'
         if (parent.getAttribute('data-cfolder-id')!='default'){
             newFolderLink.style.display='none'
@@ -1087,7 +1096,7 @@ function openFolder(parent,save){
         folderIcon.classList.add('fa-folder-open')
     }
     contents.style.display=''
-    if (game.user.isGM){
+    if (game.user.isGM && cogLink != null && newFolderLink != null && moveFolderLink != null){
         cogLink.style.display=''
         if (parent.getAttribute('data-cfolder-id')!='default'){
             newFolderLink.style.display=''
@@ -1115,6 +1124,18 @@ function toggleFolder(event,parent){
         }
     }
     return success;
+}
+function toggleFolderInsideCompendium(event,parent){
+    event.stopPropagation();
+    let success = true;
+    if (parent.hasAttribute('collapsed')){
+        success = success && openFolder(parent,false);
+    }else{
+        success = success && closeFolder(parent,false);
+        for (let child of parent.querySelectorAll('.compendium-folder')){
+            success = success && closeFolder(child,false);
+        }
+    }
 }
 function showEditDialog(submenu,event){
     event.stopPropagation();
@@ -1163,6 +1184,182 @@ function addEventListeners(prefix){
         eventsSetup.push(prefix+submenu.getAttribute('data-cfolder-id'))
         
     }
+    
+}
+/*
+* Exporting Folders into compendiums
+*/
+async function exportFolderStructureToCompendium(folderId){
+    
+    let pack = game.packs.get('world.argh');
+    let index = await pack.getIndex();
+    let exportedFolderData = game.settings.get(mod,'exported-folder-data');
+    let folderObj = game.folders.get(folderId);
+    const children = folderObj.children;
+
+    let allResults = await recursivelyExportFolders(index,pack,folderObj)
+    for (let result of allResults){
+        exportedFolderData[result.id]=result;
+    }
+    await game.settings.set(mod,'exported-folder-data',exportedFolderData)
+}
+async function recursivelyExportFolders(index,pack,folderObj){
+    if (folderObj.children.length==0){
+        let entities = folderObj.content;
+        let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj)
+        return [updatedFolder];
+    }
+    let result = null;
+    for (let child of folderObj.children){
+        result = await recursivelyExportFolders(index,pack,child)
+        
+        
+    }
+    let entities = folderObj.content;
+    let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj)
+    result.push(updatedFolder);
+    return result
+}
+async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
+    let path = getFullPath(folderObj)
+    for ( let e of entities ) {
+        let data = await e.toCompendium();
+        let color = '#000000'
+        if (folderObj.data.color != null && folderObj.data.color.length>0){
+            color = folderObj.data.color;
+        }
+        data.name =  '#CF[name="'+path+'",color="'+color+'"]'+data.name;
+        let existing = index.find(i => i.name === data.name);
+        if ( existing ) data._id = existing._id;
+        if ( data._id ) await pack.updateEntity(data);
+        else pack.createEntity(data).then(result => {
+            if (result.id != e.id && folderObj.contents != null && folderObj.contents.length>0){
+                folderObj.contents.splice(folderObj.contents.findIndex((x => x.id==e.id)),1,result.id);
+            }
+        });
+        console.log(`Exported ${e.name} to ${pack.collection}`);
+    }
+    return folderObj
+}
+function getFullPath(folderObj){
+    let path = folderObj.name;
+    let currentFolder = folderObj;
+    while (currentFolder.parent != null){
+        currentFolder = currentFolder.parent;
+        path = currentFolder.name+'/'+path;
+    }
+    return path;
+}
+async function recursivelyImportFolders(pack,coll,folder){
+    //First import immediate children
+    for (let entry of folder.querySelectorAll(':scope > .folder-contents > .compendium-list > li.directory-item')){
+        await coll.importFromCollection(pack.collection,entry.getAttribute('data-entry-id'), {}, {renderSheet:false})
+    }
+    //Then loop through individual folders
+    let childFolders = folder.querySelectorAll(':scope > .folder-contents > .folder-list > li.compendium-folder');
+    if (childFolders.length>0){
+        for (let child of childFolders){
+            recursivelyImportFolders(pack,coll,child);
+        }
+    }
+}
+async function importFolderFromCompendium(event,folder){
+    event.stopPropagation();
+    let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
+    let pack = await game.packs.get(packCode);
+    let coll = pack.cls.collection;
+
+    recursivelyImportFolders(pack,coll,folder);
+}
+function createFolderWithinCompendium(folderData,parentId,packCode){
+    //Example of adding folders to compendium view
+    let folder = document.createElement('li')
+    folder.classList.add('compendium-folder');
+    folder.setAttribute('data-folder-id',folderData.id);
+    let header = document.createElement('header');
+    header.classList.add('compendium-folder-header','flexrow')
+    let headerTitle = document.createElement('h3');
+    headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder-open\"></i>"+folderData.name;
+    header.style.color='#ffffff';
+    header.style.backgroundColor=folderData.color
+    let contents = document.createElement('div');
+    contents.classList.add('folder-contents');
+    let folderList = document.createElement('ol');
+    folderList.classList.add('folder-list');
+    let packList = document.createElement('ol');
+    packList.classList.add('compendium-list');
+    
+    let importButton = document.createElement('a');
+    importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
+    importButton.classList.add('import-folder');
+    importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
+
+    folder.appendChild(header);
+    header.appendChild(headerTitle);
+    header.appendChild(importButton)
+    folder.appendChild(contents);
+    contents.appendChild(folderList);
+    contents.appendChild(packList);
+    
+    let directoryList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list');
+    if (parentId != null){
+        directoryList.querySelector('li.compendium-folder[data-folder-id=\''+parentId+'\'] ol.folder-list').insertAdjacentElement('beforeend',folder)
+    }else{
+        directoryList.insertAdjacentElement('beforeend',folder);
+    }
+
+    folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder) },false)
+    for (let pack of directoryList.querySelectorAll('li.directory-item')){
+        pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
+    }
+    for (let existing of directoryList.querySelectorAll('li.directory-item')){
+        let existingId = existing.getAttribute('data-entry-id')
+        if (folderData.children != null && folderData.children.includes(existingId)){
+            packList.appendChild(existing);
+        }
+    }
+}
+async function createFolderPath(path,pColor,entityType,e){
+    let segments = path.split('/');
+    let index = 0;
+    for (let seg of segments){
+        let results = []
+        for (let folder of game.folders.filter(f => f.type === entityType)){
+            if (folder.name === seg){
+                let p = getFolderPath(folder)
+                let q = segments.slice(0,index).join('/')+'/'+seg
+                if (index==0){
+                    q = seg
+                }
+                console.log(p+' : '+q)
+                if (p===q){
+                    results.push(folder);
+                }
+            }
+        }
+        if (results.length==0 ){
+            //Create the folder
+            let parentId = null
+            let tColor = '#000000'
+            let tContent = [];
+            if (index>0){
+                parentId = game.folders.filter(f => f.type===entityType && f.name===segments[index-1] && getFolderPath(f)===segments.slice(0,index).join('/'))[0]
+            }
+            let data = {
+                name:seg,
+                sorting:'a',
+                parent:parentId,
+                type:entityType,
+                content:tContent
+            }
+            if (index == segments.length-1){
+                data.color=pColor;
+            }
+            let f = await Folder.create(data);
+            await e.update({folder:f.id});
+        }
+        index++;
+    }
 }
 export class Settings{
     static registerSettings(){
@@ -1185,6 +1382,13 @@ export class Settings{
             type: Object,
             default:[]
         });
+
+        game.settings.register(mod,'exported-folder-data',{
+            scope: 'world',
+            config: false,
+            type: Object,
+            default:{}
+        });
         
     }
     static updateFolder(folderData){
@@ -1203,6 +1407,9 @@ export class Settings{
     }
     static getFolders(){
         return game.settings.get(mod,'cfolders');
+    }
+    static getFoldersInsideCompendium(packId){
+        return game.settings.get(mod,'exported-folder-data')[packId];
     }
 }
 // ==========================
@@ -1250,4 +1457,110 @@ Hooks.once('setup',async function(){
             }   
         });
     }
+    Hooks.on('renderCompendium',async function(e){
+        let packCode = e.metadata.package+'.'+e.metadata.name;
+        let allFolderData={};
+        //First parse folder data
+        for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
+            let id = entry.getAttribute('data-entry-id');
+            let name = entry.querySelector('h4.entry-name > a').textContent;
+            let pathExp = /(?<=\#CF\[name\=\")[\w\/]+(?=\")/
+            let colorExp = /(?<=\,color\=\")\#[\d\w]{6}/
+            let nameResult = /(?<=\#CF\[.*\]).*/.exec(name);
+            if (nameResult != null){
+                entry.querySelector('h4.entry-name > a').textContent = nameResult[0]
+            }
+            let pathResult = pathExp.exec(name);
+            let colorResult = colorExp.exec(name);
+            if (pathResult != null && colorResult != null){
+                if (allFolderData[pathResult[0]] == null){
+                    allFolderData[pathResult[0]] = {color:colorResult[0], children:[id]}
+                }else{
+                    allFolderData[pathResult[0]].children.push(id);
+                }
+            }
+        }
+        console.log(allFolderData);
+        let createdFolders = []
+        for (let path of Object.keys(allFolderData).sort()){
+            let segments = path.split('/');
+            for (let seg of segments){
+                let index = segments.indexOf(seg)
+                let currentPath = seg
+                if (index>0){
+                    currentPath = segments.slice(0,index).join('/')+'/'+seg;
+                }
+                if (!createdFolders.includes(currentPath)){
+                    //Create folder
+                    let currentId = generateRandomFolderName('temp_cfolder_');
+                    if (allFolderData[currentPath]==null){
+                        //If folderData not provided, create blank folder
+                        allFolderData[currentPath] = {
+                            id:currentId,
+                            color:'#000000',
+                            name:seg
+                        }
+                    }else{
+                        //Update folderData with temp ID and name
+                        allFolderData[currentPath].id=currentId;
+                        allFolderData[currentPath].name=seg;
+                    }
+                    let parentId = null
+                    if (index>0){
+                        parentId = allFolderData[segments.slice(0,index).join('/')].id
+                    }   
+                    createFolderWithinCompendium(allFolderData[currentPath],parentId,packCode)
+                    
+                    createdFolders.push(currentPath);
+                }
+            }
+        }        
+    })
+    Hooks.on('createActor',async function(a){
+        console.log(a.name);
+        let pathRegExp = /(?<=name\=\")[\w\/]+(?=\"\,)/
+        let path = pathRegExp.exec(a.name);
+        let directParent = path[0].split('/').pop();
+        let colorExp = /(?<=color\=\")#[\w\d]{6}/
+        let color = colorExp.exec(a.name)[0];
+        //TODO create folders based on data
+        let actorName = /(?<=\#CF\[.*\]).*/.exec(a.name);
+        if (actorName != null){
+            await a.update({name:actorName});
+        }  
+        
+
+        //a.data.folder -> id;
+        let foundFolder = null;
+        let folderExists=false;
+        for (let folder of game.folders.values()){
+            if (folder.data.type=='Actor'){
+                if (getFolderPath(folder) === path[0]){
+                    folderExists=true;
+                    foundFolder=folder;
+                }
+            }
+        }
+        if (folderExists){
+            a.update({folder : foundFolder.id})
+        }else{
+            await createFolderPath(path[0],color,'Actor',a);
+        }
+    })
+    Hooks.on('renderActorDirectory',async function(){
+        for (let folder of document.querySelectorAll('#actors .directory-item > .folder-header')){
+            let newButton = document.createElement('i');
+            newButton.classList.add('fas','fa-download');
+            let link = document.createElement('a');
+            link.setAttribute('data-folder',folder.parentElement.getAttribute('data-folder-id'));
+            link.classList.add('export-folder');
+            link.appendChild(newButton);
+            link.addEventListener('click',async function(event){
+                event.stopPropagation();
+                await exportFolderStructureToCompendium(this.getAttribute('data-folder'));
+            });
+            folder.insertAdjacentElement('beforeend',link);
+            
+        }
+    })
 });
