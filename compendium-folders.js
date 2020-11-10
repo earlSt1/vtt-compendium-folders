@@ -1240,6 +1240,7 @@ function addExportButton(folder){
     let newButton = document.createElement('i');
     newButton.classList.add('fas','fa-upload');
     let link = document.createElement('a');
+    link.setAttribute('title',"Export Folder Structure")
     link.setAttribute('data-folder',folder.parentElement.getAttribute('data-folder-id'));
     link.classList.add('export-folder');
     link.appendChild(newButton);
@@ -1385,6 +1386,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     let importButton = document.createElement('a');
     importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
     importButton.classList.add('import-folder');
+    importButton.setAttribute('title',"Import Folder Structure")
     importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
 
     folder.appendChild(header);
