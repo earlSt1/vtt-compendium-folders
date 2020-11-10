@@ -1,14 +1,13 @@
 ### This is the testing branch for exporting folder structures to compendiums
-- If you want to test this out, I recommend using Foundry's built-in Export Folder to Compendium option first to backup your entities.
 
 #### Features
-- Folder structure import/export into compendiums.
+- Entity folder structure import/export into compendiums.
 - Folders in the most recently opened compendium with save their open state, so you can easily delete entries within them without having to open everything up.
 - Folders in the compendium with no entities within them (e.g a folder with only folders in it), will always be open.
 - Supports all entity types (Actor,Item,JournalEntry,Scene,Rolltable)
 
 #### Instructions
-- To use the new functionality, each folder has a new button next to the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
+- To use the new functionality, each folder has a new button to the right of the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
 - To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
 
 #### Disclaimers
