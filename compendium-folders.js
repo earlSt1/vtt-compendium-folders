@@ -1,7 +1,9 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
-
+const PATH_EXP = /(?<=name\=\")[\w\/]+(?=\"\,)/
+const COLOR_EXP = /(?<=\,color\=\")\#[\d\w]{6}/
+const NAME_EXP = /(?<=\#CF\[.*\]).*/
 
 // ==========================
 // Utility functions
@@ -1294,12 +1296,24 @@ async function recursivelyImportFolders(pack,coll,folder){
     }
 }
 async function importFolderFromCompendium(event,folder){
+    let folderName = folder.querySelector('h3').textContent;
     event.stopPropagation();
-    let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
-    let pack = await game.packs.get(packCode);
-    let coll = pack.cls.collection;
+    Dialog.confirm({
+        title:'Import Folder: '+folderName,
+        content:`<p>Are you sure you want to import the folder <strong>${folderName}</strong> into your world</p>
+            <p>Existing entities <strong>will not be overwritten</strong>, so will be duplicated</p>
+            <p>Folders will be created as needed. If a folder exists on the path it will be used</p>`,
+        yes: async () => {
+            ui.notifications.notify('Importing folder structure into world...')
+            let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
+            let pack = await game.packs.get(packCode);
+            let coll = pack.cls.collection;
 
-    recursivelyImportFolders(pack,coll,folder);
+            await recursivelyImportFolders(pack,coll,folder);
+            ui.notifications.notify('Importing complete!');
+        }
+    });
+    
 }
 function createFolderWithinCompendium(folderData,parentId,packCode){
     //Example of adding folders to compendium view
@@ -1391,12 +1405,10 @@ async function createFolderPath(path,pColor,entityType,e){
     }
 }
 async function importFolderData(e){
-    let pathRegExp = /(?<=name\=\")[\w\/]+(?=\"\,)/
-    let path = pathRegExp.exec(e.name);
-    let colorExp = /(?<=color\=\")#[\w\d]{6}/
-    let color = colorExp.exec(e.name);
+    let path = PATH_EXP.exec(e.name);
+    let color = COLOR_EXP.exec(e.name);
     
-    let correctName = /(?<=\#CF\[.*\]).*/.exec(e.name);
+    let correctName = NAME_EXP.exec(e.name);
     if (correctName != null){
         await e.update({name:correctName});
     }  
@@ -1522,14 +1534,12 @@ Hooks.once('setup',async function(){
         for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
             let id = entry.getAttribute('data-entry-id');
             let name = entry.querySelector('h4.entry-name > a').textContent;
-            let pathExp = /(?<=\#CF\[name\=\")[\w\/]+(?=\")/
-            let colorExp = /(?<=\,color\=\")\#[\d\w]{6}/
-            let nameResult = /(?<=\#CF\[.*\]).*/.exec(name);
+            let nameResult = NAME_EXP.exec(name);
             if (nameResult != null){
                 entry.querySelector('h4.entry-name > a').textContent = nameResult[0]
             }
-            let pathResult = pathExp.exec(name);
-            let colorResult = colorExp.exec(name);
+            let pathResult = PATH_EXP.exec(name);
+            let colorResult = COLOR_EXP.exec(name);
             if (pathResult != null && colorResult != null){
                 if (allFolderData[pathResult[0]] == null){
                     allFolderData[pathResult[0]] = {color:colorResult[0], children:[id]}
@@ -1538,7 +1548,6 @@ Hooks.once('setup',async function(){
                 }
             }
         }
-        console.log(allFolderData);
         let createdFolders = []
         for (let path of Object.keys(allFolderData).sort()){
             let segments = path.split('/');
@@ -1629,4 +1638,10 @@ Hooks.once('setup',async function(){
             }  
         }
     })
+    // Hooks.on('renderActorSheet',async function(a){
+    //     console.log(a);
+    // })
+    // Hooks.on('closeActorSheet',async function(a){
+    //     console.log(a);
+    // })
 });
