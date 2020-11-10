@@ -1546,7 +1546,8 @@ var eventsSetup = []
 
 Hooks.once('setup',async function(){
     let hooks = ['renderCompendiumDirectory','renderCompendiumDirectoryPF'];
-
+    let post073 = game.data.version >= '0.7.3';
+    let hasFICChanges = game.modules.get(mod).data.version >= '2.0.0';
     for (let hook of hooks){
         Hooks.on(hook, async function() {
 
@@ -1584,134 +1585,136 @@ Hooks.once('setup',async function(){
             }   
         });
     }
-    Hooks.on('renderCompendium',async function(e){
-        let packCode = e.metadata.package+'.'+e.metadata.name;
-        removeStaleFolderSettings(packCode);
-        let allFolderData={};
-        //First parse folder data
-        for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
-            let eId = entry.getAttribute('data-entry-id');
-            let name = entry.querySelector('h4.entry-name > a').textContent;
-            let nameResult = NAME_EXP.exec(name);
-            let folderId = ID_EXP.exec(name);
-            if (nameResult != null){
-                entry.querySelector('h4.entry-name > a').textContent = nameResult[0]
-            }
-            let pathResult = PATH_EXP.exec(name);
-            let colorResult = COLOR_EXP.exec(name);
-            if (pathResult != null && colorResult != null){
-                if (allFolderData[pathResult[0]] == null){
-                    allFolderData[pathResult[0]] = {id:folderId[0],color:colorResult[0], children:[eId]}
-                }else{
-                    allFolderData[pathResult[0]].children.push(eId);
+    if (post073 && hasFICChanges){
+        Hooks.on('renderCompendium',async function(e){
+            let packCode = e.metadata.package+'.'+e.metadata.name;
+            removeStaleFolderSettings(packCode);
+            let allFolderData={};
+            //First parse folder data
+            for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
+                let eId = entry.getAttribute('data-entry-id');
+                let name = entry.querySelector('h4.entry-name > a').textContent;
+                let nameResult = NAME_EXP.exec(name);
+                let folderId = ID_EXP.exec(name);
+                if (nameResult != null){
+                    entry.querySelector('h4.entry-name > a').textContent = nameResult[0]
                 }
-            }
-        }
-        let createdFolders = []
-        let openFolders = await game.settings.get(mod,'open-temp-folders');
-        for (let path of Object.keys(allFolderData).sort()){
-            let segments = path.split('/');
-            for (let seg of segments){
-                let index = segments.indexOf(seg)
-                let currentPath = seg
-                if (index>0){
-                    currentPath = segments.slice(0,index).join('/')+'/'+seg;
-                }
-                if (!createdFolders.includes(currentPath)){
-                    //Create folder
-                    let currentId = 'noid';
-                    if (allFolderData[currentPath]==null){
-                        //If folderData not provided, create blank folder
-                        allFolderData[currentPath] = {
-                            id:currentId,
-                            color:'#000000',
-                            name:seg
-                        }
+                let pathResult = PATH_EXP.exec(name);
+                let colorResult = COLOR_EXP.exec(name);
+                if (pathResult != null && colorResult != null){
+                    if (allFolderData[pathResult[0]] == null){
+                        allFolderData[pathResult[0]] = {id:folderId[0],color:colorResult[0], children:[eId]}
                     }else{
-                        //Update folderData with temp ID and name
-                        allFolderData[currentPath].name=seg;
+                        allFolderData[pathResult[0]].children.push(eId);
                     }
-                    let parentId = null
-                    if (index>0){
-                        parentId = allFolderData[segments.slice(0,index).join('/')].id
-                    }   
-                    createFolderWithinCompendium(allFolderData[currentPath],parentId,packCode,openFolders[packCode])
-                    
-                    createdFolders.push(currentPath);
                 }
             }
-        }        
-    })
-    Hooks.on('renderApplication',async function(a){
-        if (a.template != null && a.template === 'templates/apps/compendium.html'){
-            let window = a._element[0]
-            let searchBar = window.querySelector('input[name=\'search\']')
-            let newSearchBar = document.createElement('input')
-            newSearchBar.name='search2';
-            newSearchBar.placeholder='Search';
-            newSearchBar.type='text';
-            newSearchBar.autocomplete='off';
-            newSearchBar.addEventListener('keyup',async function(event){
-                event.stopPropagation();
-                filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
-            })
-            let header = searchBar.parentElement;
-            header.replaceChild(newSearchBar,searchBar);
-        }
-    });
-    // Hooking into the creation methods to remove
-    // folder data from the name of the entity
-    // and create folders based on them
-    Hooks.on('createActor',async function(a){
-        await importFolderData(a);
-    })
-    Hooks.on('createJournalEntry',async function(j){
-        importFolderData(j);
-    })
-    Hooks.on('createScene',async function(s){
-        importFolderData(s);
-    })
-    Hooks.on('createItem',async function(i){
-        importFolderData(i);
-    })
-    Hooks.on('createRollTable',async function(r){
-        importFolderData(r);
-    })
+            let createdFolders = []
+            let openFolders = await game.settings.get(mod,'open-temp-folders');
+            for (let path of Object.keys(allFolderData).sort()){
+                let segments = path.split('/');
+                for (let seg of segments){
+                    let index = segments.indexOf(seg)
+                    let currentPath = seg
+                    if (index>0){
+                        currentPath = segments.slice(0,index).join('/')+'/'+seg;
+                    }
+                    if (!createdFolders.includes(currentPath)){
+                        //Create folder
+                        let currentId = 'noid';
+                        if (allFolderData[currentPath]==null){
+                            //If folderData not provided, create blank folder
+                            allFolderData[currentPath] = {
+                                id:currentId,
+                                color:'#000000',
+                                name:seg
+                            }
+                        }else{
+                            //Update folderData with temp ID and name
+                            allFolderData[currentPath].name=seg;
+                        }
+                        let parentId = null
+                        if (index>0){
+                            parentId = allFolderData[segments.slice(0,index).join('/')].id
+                        }   
+                        createFolderWithinCompendium(allFolderData[currentPath],parentId,packCode,openFolders[packCode])
+                        
+                        createdFolders.push(currentPath);
+                    }
+                }
+            }        
+        })
+        Hooks.on('renderApplication',async function(a){
+            if (a.template != null && a.template === 'templates/apps/compendium.html'){
+                let window = a._element[0]
+                let searchBar = window.querySelector('input[name=\'search\']')
+                let newSearchBar = document.createElement('input')
+                newSearchBar.name='search2';
+                newSearchBar.placeholder='Search';
+                newSearchBar.type='text';
+                newSearchBar.autocomplete='off';
+                newSearchBar.addEventListener('keyup',async function(event){
+                    event.stopPropagation();
+                    filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
+                })
+                let header = searchBar.parentElement;
+                header.replaceChild(newSearchBar,searchBar);
+            }
+        });
+        // Hooking into the creation methods to remove
+        // folder data from the name of the entity
+        // and create folders based on them
+        Hooks.on('createActor',async function(a){
+            await importFolderData(a);
+        })
+        Hooks.on('createJournalEntry',async function(j){
+            await importFolderData(j);
+        })
+        Hooks.on('createScene',async function(s){
+            await importFolderData(s);
+        })
+        Hooks.on('createItem',async function(i){
+            await importFolderData(i);
+        })
+        Hooks.on('createRollTable',async function(r){
+            await importFolderData(r);
+        })
 
-    // Adding the export button to all folders
-    Hooks.on('renderActorDirectory',async function(){
-        for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
-            if (folder.querySelector('a.export-folder')==null){
-                addExportButton(folder);
+        // Adding the export button to all folders
+        Hooks.on('renderActorDirectory',async function(){
+            for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
+                if (folder.querySelector('a.export-folder')==null){
+                    addExportButton(folder);
+                }
             }
-        }
-    })
-    Hooks.on('renderJournalDirectory',async function(){
-        for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
-            if (folder.querySelector('a.export-folder')==null){
-                addExportButton(folder);
+        })
+        Hooks.on('renderJournalDirectory',async function(){
+            for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
+                if (folder.querySelector('a.export-folder')==null){
+                    addExportButton(folder);
+                }
             }
-        }
-    })
-    Hooks.on('renderSceneDirectory',async function(){
-        for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
-            if (folder.querySelector('a.export-folder')==null){
-                addExportButton(folder);
-            } 
-        }
-    })
-    Hooks.on('renderItemDirectory',async function(){
-        for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
-            if (folder.querySelector('a.export-folder')==null){
-                addExportButton(folder);
-            } 
-        }
-    })
-    Hooks.on('renderRollTableDirectory',async function(){
-        for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
-            if (folder.querySelector('a.export-folder')==null){
-                addExportButton(folder);
-            }  
-        }
-    })
+        })
+        Hooks.on('renderSceneDirectory',async function(){
+            for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
+                if (folder.querySelector('a.export-folder')==null){
+                    addExportButton(folder);
+                } 
+            }
+        })
+        Hooks.on('renderItemDirectory',async function(){
+            for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
+                if (folder.querySelector('a.export-folder')==null){
+                    addExportButton(folder);
+                } 
+            }
+        })
+        Hooks.on('renderRollTableDirectory',async function(){
+            for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
+                if (folder.querySelector('a.export-folder')==null){
+                    addExportButton(folder);
+                }  
+            }
+        })
+    }
 });
