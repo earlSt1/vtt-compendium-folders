@@ -1,6 +1,5 @@
 ### This is the testing branch for exporting folder structures to compendiums
-- There are some issues which still exist (such as the search bar not working in compendium). 
-- If you want to test this out, I recommend using Foundry's built-in Export Folder to Compendium option first to save your entities.
+- If you want to test this out, I recommend using Foundry's built-in Export Folder to Compendium option first to backup your entities.
 
 #### Features
 - Folder structure import/export into compendiums.
