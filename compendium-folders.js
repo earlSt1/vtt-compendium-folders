@@ -1,13 +1,20 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
-const PATH_EXP = /(?<=\#CF\[name\=\").+(?=\"\,color)/
+const PATH_EXP = /(?<= \|\#CF\[.*name\=\").+(?=\"\,color)/
 const COLOR_EXP = /(?<=\,color\=\")\#[\d\w]{6}/
-const NAME_EXP = /.*(?=\#CF\[.*\])/
+const ID_EXP = /(?<= \|\#CF\[id=\")temp_.*(?=\",name)/
+const NAME_EXP = /.*(?= \|\#CF\[.*\])/
 
 // ==========================
 // Utility functions
 // ==========================
+async function removeStaleFolderSettings(packCode){
+    let openFolders = game.settings.get(mod,'open-temp-folders')
+    let newSettings = {}
+    newSettings[packCode]=openFolders[packCode];
+    await game.settings.set(mod,'open-temp-folders',newSettings);
+}
 function getFolderPath(folder){
     let path = folder.data.name;
     let currentFolder = folder;
@@ -1059,7 +1066,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
 // ==========================
 // Event funtions
 // ==========================
-function closeFolder(parent,save){
+async function closeFolder(parent,save,inCompendium){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
@@ -1084,10 +1091,10 @@ function closeFolder(parent,save){
     if (save){
         let openFolders = game.settings.get(mod,'open-folders');
         openFolders.splice(openFolders.indexOf(parent.getAttribute('data-cfolder-id')),1);
-        game.settings.set(mod,'open-folders',openFolders).then(() => {return true;});
+        await game.settings.set(mod,'open-folders',openFolders);
     }
 }
-function openFolder(parent,save){
+async function openFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
@@ -1111,31 +1118,73 @@ function openFolder(parent,save){
     if (save){
         let openFolders = game.settings.get(mod,'open-folders');
         openFolders.push(parent.getAttribute('data-cfolder-id'));
-        game.settings.set(mod,'open-folders',openFolders).then(() => {return true;});
+        await game.settings.set(mod,'open-folders',openFolders)   
     }
 }
-function toggleFolder(event,parent){
+
+async function toggleFolder(event,parent){
     event.stopPropagation();
-    let success = true;
     if (parent.hasAttribute('collapsed')){
-        success = success && openFolder(parent,true);
+        await openFolder(parent,true);
     }else{
-        success = success && closeFolder(parent,true);
+        await closeFolder(parent,true);
         for (let child of parent.querySelectorAll('.compendium-folder')){
-            success = success && closeFolder(child,true);
+            await closeFolder(child,true);
         }
     }
-    return success;
 }
-function toggleFolderInsideCompendium(event,parent){
+async function closeFolderInsideCompendium(parent,pack,save){
+    let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
+    let contents = parent.querySelector('.folder-contents');
+    if (folderIcon != null){
+        //Closing folder
+        folderIcon.classList.remove('fa-folder-open')
+        folderIcon.classList.add('fa-folder') 
+    }
+    contents.style.display='none'
+    parent.setAttribute('collapsed','');
+
+    if (save){
+        let openFolders = game.settings.get(mod,'open-temp-folders');
+        if (Object.keys(openFolders).length===0){
+            openFolders[pack]=[];
+        }else{
+            if (openFolders[pack].includes(parent.getAttribute('data-folder-id'))){
+                openFolders[pack].splice(openFolders[pack].indexOf(parent.getAttribute('data-folder-id')),1);
+            }
+        }
+        await game.settings.set(mod,'open-temp-folders',openFolders);
+    }
+}
+async function openFolderInsideCompendium(parent,pack,save){
+    let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
+    let contents = parent.querySelector('.folder-contents');
+    if (folderIcon != null){
+        folderIcon.classList.remove('fa-folder')
+        folderIcon.classList.add('fa-folder-open')
+    }
+    contents.style.display=''
+    
+    parent.removeAttribute('collapsed');
+    if (save){
+        let openFolders = game.settings.get(mod,'open-temp-folders');
+        if (Object.keys(openFolders).length===0){
+            openFolders[pack]=[];
+        }
+        if (parent.getAttribute('data-folder-id') != 'noid'){
+            openFolders[pack].push(parent.getAttribute('data-folder-id'));
+        }
+        await game.settings.set(mod,'open-temp-folders',openFolders);   
+    }
+}
+async function toggleFolderInsideCompendium(event,parent,pack){
     event.stopPropagation();
-    let success = true;
     if (parent.hasAttribute('collapsed')){
-        success = success && openFolder(parent,false);
+        await openFolderInsideCompendium(parent,pack,true);
     }else{
-        success = success && closeFolder(parent,false);
+        await closeFolderInsideCompendium(parent,pack,true);
         for (let child of parent.querySelectorAll('.compendium-folder')){
-            success = success && closeFolder(child,false);
+            await closeFolderInsideCompendium(child,pack,true);
         }
     }
 }
@@ -1260,7 +1309,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
         if (folderObj.data.color != null && folderObj.data.color.length>0){
             color = folderObj.data.color;
         }
-        data.name =  data.name+'#CF[name="'+path+'",color="'+color+'"]';
+        data.name =  data.name+' |#CF[id=\"'+generateRandomFolderName('temp_')+'\",name="'+path+'",color="'+color+'"]';
         let existing = index.find(i => i.name === data.name);
         if ( existing ) data._id = existing._id;
         if ( data._id ) await pack.updateEntity(data);
@@ -1315,7 +1364,7 @@ async function importFolderFromCompendium(event,folder){
     });
     
 }
-function createFolderWithinCompendium(folderData,parentId,packCode){
+function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     //Example of adding folders to compendium view
     let folder = document.createElement('li')
     folder.classList.add('compendium-folder');
@@ -1323,12 +1372,12 @@ function createFolderWithinCompendium(folderData,parentId,packCode){
     let header = document.createElement('header');
     header.classList.add('compendium-folder-header','flexrow')
     let headerTitle = document.createElement('h3');
-    headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder\"></i>"+folderData.name;
+    
     header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
     let contents = document.createElement('div');
     contents.classList.add('folder-contents');
-    contents.style.display = 'none';
+    
     let folderList = document.createElement('ol');
     folderList.classList.add('folder-list');
     let packList = document.createElement('ol');
@@ -1345,15 +1394,24 @@ function createFolderWithinCompendium(folderData,parentId,packCode){
     folder.appendChild(contents);
     contents.appendChild(folderList);
     contents.appendChild(packList);
-    
+
+    //If no folder data, or folder is in open folders AND folder has an id
+    if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
+        contents.style.display = 'none';
+        folder.setAttribute('collapsed','');
+        headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder\"></i>"+folderData.name;
+    }else{
+        headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder-open\"></i>"+folderData.name;
+    }
+
     let directoryList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list');
     if (parentId != null){
         directoryList.querySelector('li.compendium-folder[data-folder-id=\''+parentId+'\'] ol.folder-list').insertAdjacentElement('beforeend',folder)
     }else{
         directoryList.insertAdjacentElement('beforeend',folder);
     }
-    folder.setAttribute('collapsed','');
-    folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder) },false)
+    
+    folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder,packCode) },false)
     for (let pack of directoryList.querySelectorAll('li.directory-item')){
         pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
     }
@@ -1453,6 +1511,12 @@ export class Settings{
             type: Object,
             default:[]
         });     
+        game.settings.register(mod,'open-temp-folders',{
+            scope: 'client',
+            config:false,
+            type:Object,
+            default:{}
+        });
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -1519,12 +1583,14 @@ Hooks.once('setup',async function(){
     }
     Hooks.on('renderCompendium',async function(e){
         let packCode = e.metadata.package+'.'+e.metadata.name;
+        removeStaleFolderSettings(packCode);
         let allFolderData={};
         //First parse folder data
         for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
-            let id = entry.getAttribute('data-entry-id');
+            let eId = entry.getAttribute('data-entry-id');
             let name = entry.querySelector('h4.entry-name > a').textContent;
             let nameResult = NAME_EXP.exec(name);
+            let folderId = ID_EXP.exec(name);
             if (nameResult != null){
                 entry.querySelector('h4.entry-name > a').textContent = nameResult[0]
             }
@@ -1532,13 +1598,14 @@ Hooks.once('setup',async function(){
             let colorResult = COLOR_EXP.exec(name);
             if (pathResult != null && colorResult != null){
                 if (allFolderData[pathResult[0]] == null){
-                    allFolderData[pathResult[0]] = {color:colorResult[0], children:[id]}
+                    allFolderData[pathResult[0]] = {id:folderId[0],color:colorResult[0], children:[eId]}
                 }else{
-                    allFolderData[pathResult[0]].children.push(id);
+                    allFolderData[pathResult[0]].children.push(eId);
                 }
             }
         }
         let createdFolders = []
+        let openFolders = await game.settings.get(mod,'open-temp-folders');
         for (let path of Object.keys(allFolderData).sort()){
             let segments = path.split('/');
             for (let seg of segments){
@@ -1549,7 +1616,7 @@ Hooks.once('setup',async function(){
                 }
                 if (!createdFolders.includes(currentPath)){
                     //Create folder
-                    let currentId = generateRandomFolderName('temp_cfolder_');
+                    let currentId = 'noid';
                     if (allFolderData[currentPath]==null){
                         //If folderData not provided, create blank folder
                         allFolderData[currentPath] = {
@@ -1559,14 +1626,13 @@ Hooks.once('setup',async function(){
                         }
                     }else{
                         //Update folderData with temp ID and name
-                        allFolderData[currentPath].id=currentId;
                         allFolderData[currentPath].name=seg;
                     }
                     let parentId = null
                     if (index>0){
                         parentId = allFolderData[segments.slice(0,index).join('/')].id
                     }   
-                    createFolderWithinCompendium(allFolderData[currentPath],parentId,packCode)
+                    createFolderWithinCompendium(allFolderData[currentPath],parentId,packCode,openFolders[packCode])
                     
                     createdFolders.push(currentPath);
                 }
