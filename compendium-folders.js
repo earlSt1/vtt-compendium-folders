@@ -9,6 +9,15 @@ const NAME_EXP = /.*(?= \|\#CF\[.*\])/
 // ==========================
 // Utility functions
 // ==========================
+function getFullPath(folderObj){
+    let path = folderObj.name;
+    let currentFolder = folderObj;
+    while (currentFolder.parent != null){
+        currentFolder = currentFolder.parent;
+        path = currentFolder.name+'/'+path;
+    }
+    return path;
+}
 async function removeStaleFolderSettings(packCode){
     let openFolders = game.settings.get(mod,'open-temp-folders')
     let newSettings = {}
@@ -45,9 +54,6 @@ function deleteExistingRules(){
 }
 
 function alphaSortFolders(folders){
-    // let items = Object.keys(folders).map(function(key) {
-    //     return [key, folders[key]];
-    //   });
     folders.sort(function(first,second){
         if (first['titleText']<second['titleText']){
             return -1;
@@ -57,10 +63,6 @@ function alphaSortFolders(folders){
         }
         return 0;
     })
-    // let sortedFolders = {}
-    // for (let item of items){
-    //     sortedFolders[item[0]]=item[1];
-    // }
     return folders
 }
 
@@ -77,12 +79,6 @@ function alphaSortCompendiums(compendiums){
         }
     });
     return compendiums;
-}
-function waitForAllCompendiumsToRender(){
-    let packs = document.querySelectorAll('li.compendium-pack');
-    while (game.packs.entries.length != packs.length){
-        setTimeout(function(){packs = document.querySelectorAll('li.compendium-pack')},500)
-    }
 }
 function checkForDeletedCompendiums(){
     let allFolders = game.settings.get(mod,'cfolders');
@@ -1237,9 +1233,9 @@ function addEventListeners(prefix){
     }
     
 }
-/*
-* Exporting Folders into compendiums
-*/
+// ==========================
+// Exporting Folders to compendiums
+// ==========================
 function addExportButton(folder){
     let newButton = document.createElement('i');
     newButton.classList.add('fas','fa-upload');
@@ -1249,6 +1245,7 @@ function addExportButton(folder){
     link.appendChild(newButton);
     link.addEventListener('click',async function(event){
         event.stopPropagation();
+        
         await exportFolderStructureToCompendium(this.getAttribute('data-folder'));
     });
     folder.insertAdjacentElement('beforeend',link);
@@ -1256,7 +1253,6 @@ function addExportButton(folder){
 async function exportFolderStructureToCompendium(folderId){
     let folder = game.folders.get(folderId);
     
-    let pack = null;
     // Get eligible pack destinations
     const packs = game.packs.filter(p => (p.entity === folder.data.type) && !p.locked);
     if ( !packs.length ) {
@@ -1281,27 +1277,30 @@ async function exportFolderStructureToCompendium(folderId){
         callback: async function(html) {
             const form = html[0].querySelector("form");
             const pack = game.packs.get(form.pack.value);
+            ui.notifications.notify('Exporting folder structure into '+form.pack.value+'...')
             let index = await pack.getIndex();
-            await recursivelyExportFolders(index,pack,folder)
+            await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'))
+            ui.notifications.notify('Exporting complete!');
         },
         options:{}
     });
 
     
 }
-async function recursivelyExportFolders(index,pack,folderObj){
+async function recursivelyExportFolders(index,pack,folderObj,folderId){
     if (folderObj.children.length==0){
         let entities = folderObj.content;
-        let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj)
+        let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId)
         return [updatedFolder];
     }
     for (let child of folderObj.children){
-        await recursivelyExportFolders(index,pack,child)
+        await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'))
     }
     let entities = folderObj.content;
-    await exportSingleFolderToCompendium(index,pack,entities,folderObj)
+    
+    await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId)
 }
-async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
+async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId){
     let path = getFullPath(folderObj)
     for ( let e of entities ) {
         let data = await e.toCompendium();
@@ -1309,7 +1308,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
         if (folderObj.data.color != null && folderObj.data.color.length>0){
             color = folderObj.data.color;
         }
-        data.name =  data.name+' |#CF[id=\"'+generateRandomFolderName('temp_')+'\",name="'+path+'",color="'+color+'"]';
+        data.name =  data.name+' |#CF[id=\"'+folderId+'\",name="'+path+'",color="'+color+'"]';
         let existing = index.find(i => i.name === data.name);
         if ( existing ) data._id = existing._id;
         if ( data._id ) await pack.updateEntity(data);
@@ -1322,25 +1321,22 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
     }
     return folderObj
 }
-function getFullPath(folderObj){
-    let path = folderObj.name;
-    let currentFolder = folderObj;
-    while (currentFolder.parent != null){
-        currentFolder = currentFolder.parent;
-        path = currentFolder.name+'/'+path;
-    }
-    return path;
-}
+
+// ==========================
+// Importing folders from compendiums
+// ==========================
 async function recursivelyImportFolders(pack,coll,folder){
     //First import immediate children
-    for (let entry of folder.querySelectorAll(':scope > .folder-contents > .compendium-list > li.directory-item')){
+    for (let entry of folder.querySelectorAll(':scope > .folder-contents > .entry-list > li.directory-item')){
+        // Will invoke importFolderData()
         await coll.importFromCollection(pack.collection,entry.getAttribute('data-entry-id'), {}, {renderSheet:false})
+        
     }
     //Then loop through individual folders
     let childFolders = folder.querySelectorAll(':scope > .folder-contents > .folder-list > li.compendium-folder');
     if (childFolders.length>0){
         for (let child of childFolders){
-            recursivelyImportFolders(pack,coll,child);
+            await recursivelyImportFolders(pack,coll,child);
         }
     }
 }
@@ -1351,7 +1347,7 @@ async function importFolderFromCompendium(event,folder){
         title:'Import Folder: '+folderName,
         content:`<p>Are you sure you want to import the folder <strong>${folderName}</strong> into your world</p>
             <p>Existing entities <strong>will not be overwritten</strong>, so will be duplicated</p>
-            <p>Folders will be created as needed. If a folder exists on the path it will be used</p>`,
+            <ul><li>Folders will be created as needed.</li><li>If a folder exists on the path it will be used</li></ul>`,
         yes: async () => {
             ui.notifications.notify('Importing folder structure into world...')
             let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
@@ -1364,6 +1360,9 @@ async function importFolderFromCompendium(event,folder){
     });
     
 }
+// ==========================
+// Folder creation inside compendiums
+// ==========================
 function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     //Example of adding folders to compendium view
     let folder = document.createElement('li')
@@ -1422,26 +1421,51 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
         }
     }
 }
+
+//==========================
+// Used to update entity when imported from compendium
+// To keep folder parent and remove folderdata from name
+// ==========================
+async function importFolderData(e){
+    let path = PATH_EXP.exec(e.name);
+    let color = COLOR_EXP.exec(e.name);
+    
+    if (path != null && color != null){
+        let correctName = NAME_EXP.exec(e.name);
+        if (correctName != null){
+            await e.update({name:correctName});
+        }  
+        
+        console.log(e);
+        //a.data.folder -> id;
+        let foundFolder = null;
+        let folderExists=false;
+        for (let folder of game.folders.values()){
+            if (folder.data.type==e.entity){
+                if (getFolderPath(folder) === path[0]){
+                    folderExists=true;
+                    foundFolder=folder;
+                }
+            }
+        }
+        if (folderExists){
+            await e.update({folder : foundFolder.id})
+        }else{
+            await createFolderPath(path[0],color[0],e.entity,e);
+        }
+    }
+}
 async function createFolderPath(path,pColor,entityType,e){
     let segments = path.split('/');
     let index = 0;
     for (let seg of segments){
-        let results = []
-        for (let folder of game.folders.filter(f => f.type === entityType)){
-            if (folder.name === seg){
-                let p = getFolderPath(folder)
-                let q = segments.slice(0,index).join('/')+'/'+seg
-                if (index==0){
-                    q = seg
-                }
-                console.log(p+' : '+q)
-                if (p===q){
-                    results.push(folder);
-                }
-            }
+        let folderPath = segments.slice(0,index).join('/')+'/'+seg
+        if (index==0){
+            folderPath = seg
         }
+        let results = game.folders.filter(f => f.type === entityType && getFolderPath(f) === folderPath)
         if (results.length==0 ){
-            //Create the folder
+            //Create the folder if it does not exist
             let parentId = null
             let tContent = [];
             if (index>0){
@@ -1456,40 +1480,19 @@ async function createFolderPath(path,pColor,entityType,e){
             }
             if (index == segments.length-1){
                 data.color=pColor;
+                
             }
             let f = await Folder.create(data);
-            await e.update({folder:f.id});
+            if (index == segments.length-1){
+                await e.update({folder:f.id});
+            }
         }
         index++;
     }
 }
-async function importFolderData(e){
-    let path = PATH_EXP.exec(e.name);
-    let color = COLOR_EXP.exec(e.name);
-    
-    let correctName = NAME_EXP.exec(e.name);
-    if (correctName != null){
-        await e.update({name:correctName});
-    }  
-    
-    console.log(e);
-    //a.data.folder -> id;
-    let foundFolder = null;
-    let folderExists=false;
-    for (let folder of game.folders.values()){
-        if (folder.data.type==e.entity){
-            if (getFolderPath(folder) === path[0]){
-                folderExists=true;
-                foundFolder=folder;
-            }
-        }
-    }
-    if (folderExists){
-        e.update({folder : foundFolder.id})
-    }else{
-        await createFolderPath(path[0],color[0],e.entity,e);
-    }
-}
+//==========================
+// Settings utilities
+//==========================
 export class Settings{
     static registerSettings(){
         game.settings.registerMenu(mod,'settingsMenu',{
@@ -1660,7 +1663,7 @@ Hooks.once('setup',async function(){
     // folder data from the name of the entity
     // and create folders based on them
     Hooks.on('createActor',async function(a){
-        importFolderData(a);
+        await importFolderData(a);
     })
     Hooks.on('createJournalEntry',async function(j){
         importFolderData(j);
