@@ -2,13 +2,20 @@
 - There are some issues which still exist (such as the search bar not working in compendium). 
 - If you want to test this out, I recommend using Foundry's built-in Export Folder to Compendium option first to save your entities.
 
+#### Features
+- Folder structure import/export into compendiums.
+- Folders in the most recently opened compendium with save their open state, so you can easily delete entries within them without having to open everything up.
+- Folders in the compendium with no entities within them (e.g a folder with only folders in it), will always be open.
+- Supports all entity types (Actor,Item,JournalEntry,Scene,Rolltable)
+
 #### Instructions
-- To use the new functionality, each folder has a new button next to the Create Entity button (looking like an arrow pointing down). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
+- To use the new functionality, each folder has a new button next to the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
 - To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
 
 #### Disclaimers
 - This module works by appending folder data to the name of each entity. *In theory* this will not break any entities, as this data is cleeaned up when you import entities into your world. However this is still in a testing phase, so be warned.
-- This also means that the actor/scene/journal/rolltable/item name will be a bit garbled when you open it in the compendium. If you remove the folder data at the start of the name this can cause unexpected behaviours.
+- To get this to work, I've added the folder data to the end of the name attribute of the entity. You can still edit the entity name just fine from the compendium view, the folderdata part starts with `|#CF[ ... ]`. Editing anything before that works just fine, in addition to editing anything elsewhere in the sheet.
+- One main limitation to this is that you cannot have multiple folders with the same name in the same directory (although I have *no idea* why you would want to), so expect the unexpected if you want to do that.
 
 # Compendium Folders
 
