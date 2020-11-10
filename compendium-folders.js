@@ -1352,7 +1352,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode){
     }else{
         directoryList.insertAdjacentElement('beforeend',folder);
     }
-
+    folder.setAttribute('collapsed','');
     folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder) },false)
     for (let pack of directoryList.querySelectorAll('li.directory-item')){
         pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
