@@ -279,19 +279,19 @@ function createFolderObjectForSubmenu(submenu,titleText){
 // ==========================
 // Directory header functions
 // ==========================
-function filterCompendiumsBySearchTerm(searchTerm){
+function filterSelectorBySearchTerm(parent,searchTerm,selector){
     if (searchTerm == null || searchTerm.length==0){
-        for (let compendium of document.querySelectorAll('.compendium-pack')){
+        for (let compendium of parent.querySelectorAll(selector)){
             //Show all
             compendium.style.display='';
             compendium.removeAttribute('search-failed')
         }
-        document.querySelectorAll('.compendium-folder').forEach(function(folder){
+        parent.querySelectorAll('.compendium-folder').forEach(function(folder){
             folder.style.display='';
             closeFolder(folder);
         });
     }else{
-        for (let compendium of document.querySelectorAll('.compendium-pack')){
+        for (let compendium of parent.querySelectorAll(selector)){
             if (!compendium.innerText.toLowerCase().includes(searchTerm.toLowerCase())){
                 //Hide not matching
                 compendium.style.display='none';
@@ -302,9 +302,9 @@ function filterCompendiumsBySearchTerm(searchTerm){
                 compendium.removeAttribute('search-failed')
             }
         }
-        document.querySelectorAll('.compendium-folder').forEach(function(folder){
+        parent.querySelectorAll('.compendium-folder').forEach(function(folder){
             let shouldHide = true;
-            folder.querySelectorAll('.compendium-pack').forEach(function(comp){
+            folder.querySelectorAll(selector).forEach(function(comp){
                 if (!comp.hasAttribute('search-failed')){
                     shouldHide = false;
                 }
@@ -338,7 +338,7 @@ function createDirectoryHeader(){
         searchBar.setAttribute('autocomplete','off');
 
         searchBar.addEventListener('keyup',function(event){
-            filterCompendiumsBySearchTerm(event.target.value);
+            filterSelectorBySearchTerm(tab,event.target.value,'.compendium-pack');
         });
         if (game.data.version < '0.7.3'){
             searchIcon.style.paddingRight='3px';
@@ -1332,7 +1332,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode){
     let folderList = document.createElement('ol');
     folderList.classList.add('folder-list');
     let packList = document.createElement('ol');
-    packList.classList.add('compendium-list');
+    packList.classList.add('entry-list');
     
     let importButton = document.createElement('a');
     importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
@@ -1573,6 +1573,23 @@ Hooks.once('setup',async function(){
             }
         }        
     })
+    Hooks.on('renderApplication',async function(a){
+        if (a.template != null && a.template === 'templates/apps/compendium.html'){
+            let window = a._element[0]
+            let searchBar = window.querySelector('input[name=\'search\']')
+            let newSearchBar = document.createElement('input')
+            newSearchBar.name='search2';
+            newSearchBar.placeholder='Search';
+            newSearchBar.type='text';
+            newSearchBar.autocomplete='off';
+            newSearchBar.addEventListener('keyup',async function(event){
+                event.stopPropagation();
+                filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
+            })
+            let header = searchBar.parentElement;
+            header.replaceChild(newSearchBar,searchBar);
+        }
+    });
     // Hooking into the creation methods to remove
     // folder data from the name of the entity
     // and create folders based on them

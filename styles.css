@@ -80,7 +80,7 @@ button.cfolder-submit#delete  {
   padding:0px;
   position:relative !important;
 }
-.compendium-list{
+.compendium-list,.entry-list{
   margin-left:3px !important;
   position:relative !important;
 }
@@ -102,6 +102,7 @@ button.cfolder-submit#delete  {
   padding-right:5px !important ;
   margin:0px !important
 }
+
 #folder-create input[name='search-packs']{
   width: calc(100% - 25px);
 }
@@ -135,7 +136,7 @@ button.create-compendium{
   font-size:12.5px;
 }
 /*Inside Compendiums*/
-.sidebar-tab.compendium li.compendium-folder >.folder-contents > .compendium-list{
+.sidebar-tab.compendium li.compendium-folder >.folder-contents > .entry-list{
   padding:0;
   margin:0;
 }
