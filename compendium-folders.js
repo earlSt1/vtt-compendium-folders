@@ -1323,11 +1323,12 @@ function createFolderWithinCompendium(folderData,parentId,packCode){
     let header = document.createElement('header');
     header.classList.add('compendium-folder-header','flexrow')
     let headerTitle = document.createElement('h3');
-    headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder-open\"></i>"+folderData.name;
+    headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder\"></i>"+folderData.name;
     header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
     let contents = document.createElement('div');
     contents.classList.add('folder-contents');
+    contents.style.display = 'none';
     let folderList = document.createElement('ol');
     folderList.classList.add('folder-list');
     let packList = document.createElement('ol');
