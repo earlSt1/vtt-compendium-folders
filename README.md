@@ -1,3 +1,15 @@
+### This is the testing branch for exporting folder structures to compendiums
+- There are some issues which still exist (such as the search bar not working in compendium). 
+- If you want to test this out, I recommend using Foundry's built-in Export Folder to Compendium option first to save your entities.
+
+#### Instructions
+- To use the new functionality, each folder has a new button next to the Create Entity button (looking like an arrow pointing down). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
+- To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
+
+#### Disclaimers
+- This module works by appending folder data to the name of each entity. *In theory* this will not break any entities, as this data is cleeaned up when you import entities into your world. However this is still in a testing phase, so be warned.
+- This also means that the actor/scene/journal/rolltable/item name will be a bit garbled when you open it in the compendium. If you remove the folder data at the start of the name this can cause unexpected behaviours.
+
 # Compendium Folders
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system.
