@@ -1,7 +1,7 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
-const PATH_EXP = /(?<=\#CF\[name\=\")[\w\/]+(?=\"\,)/
+const PATH_EXP = /(?<=\#CF\[name\=\").+(?=\"\,color)/
 const COLOR_EXP = /(?<=\,color\=\")\#[\d\w]{6}/
 const NAME_EXP = /.*(?=\#CF\[.*\])/
 
