@@ -1,9 +1,9 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
-const PATH_EXP = /(?<=name\=\")[\w\/]+(?=\"\,)/
+const PATH_EXP = /(?<=\#CF\[name\=\")[\w\/]+(?=\"\,)/
 const COLOR_EXP = /(?<=\,color\=\")\#[\d\w]{6}/
-const NAME_EXP = /(?<=\#CF\[.*\]).*/
+const NAME_EXP = /.*(?=\#CF\[.*\])/
 
 // ==========================
 // Utility functions
@@ -1260,7 +1260,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj){
         if (folderObj.data.color != null && folderObj.data.color.length>0){
             color = folderObj.data.color;
         }
-        data.name =  '#CF[name="'+path+'",color="'+color+'"]'+data.name;
+        data.name =  data.name+'#CF[name="'+path+'",color="'+color+'"]';
         let existing = index.find(i => i.name === data.name);
         if ( existing ) data._id = existing._id;
         if ( data._id ) await pack.updateEntity(data);
@@ -1451,15 +1451,7 @@ export class Settings{
             config:false,
             type: Object,
             default:[]
-        });
-
-        game.settings.register(mod,'exported-folder-data',{
-            scope: 'world',
-            config: false,
-            type: Object,
-            default:{}
-        });
-        
+        });     
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -1477,9 +1469,6 @@ export class Settings{
     }
     static getFolders(){
         return game.settings.get(mod,'cfolders');
-    }
-    static getFoldersInsideCompendium(packId){
-        return game.settings.get(mod,'exported-folder-data')[packId];
     }
 }
 // ==========================
@@ -1638,10 +1627,4 @@ Hooks.once('setup',async function(){
             }  
         }
     })
-    // Hooks.on('renderActorSheet',async function(a){
-    //     console.log(a);
-    // })
-    // Hooks.on('closeActorSheet',async function(a){
-    //     console.log(a);
-    // })
 });
