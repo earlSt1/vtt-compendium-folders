@@ -2,10 +2,6 @@
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system.
 
-With v1.0.0 I've introduced the ability to nest folders (with a max depth of 8), move nested folders and their children, and import/export folder configurations!
-
-NOTE This latest update makes my previous module Compendium Hider redundant. You can now hide compendiums by removing a compendium from a folder.
-
 ![](./example.png)
 
 ## Instructions
@@ -30,9 +26,16 @@ I would recommend once you are happy with your layout, to save your folder confi
 7. ~~Default folder for new compendiums~~
 8. ~~Default open/close state for folders~~
 9. ~~Custom folder and icon text color~~ Now in 1.0.6!
-10. ???
+10. Drag/Drop functionality
+11. Context menu right-click instead of buttons on the folder when open.
 
 Any issues feel free to ping me on Discord (@Erceron#0370)
+
+## Localization
+Special thanks to the translators who contributed to this project:
+- lozalojo (Spanish)
+- CarnVanBeck (German)
+- rinnocent (Brazilian Portugese)
 
 ## Contribution
 If you'd like to support my work, feel free to leave a tip through [my paypal](http://paypal.me/cre463)

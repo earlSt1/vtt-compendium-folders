@@ -646,7 +646,14 @@ function setupFolders(prefix){
         let folderIcon = document.createElement('i')
         folderIcon.classList.add('fas','fa-fw','fa-folder')
         button.innerHTML = folderIcon.outerHTML+game.i18n.localize("FOLDER.Create");
-        if (game.data.version >= '0.7.3'){
+        if (game.system.id == "pf1"){
+            //For pf1, always place next to create compendium button at the bottom
+            let flexdiv = document.createElement('div');
+            flexdiv.classList.add('flexrow');
+            document.querySelector(prefix+'#compendium .directory-footer').insertAdjacentElement('afterbegin',flexdiv);
+            flexdiv.appendChild(document.querySelector('button.create-compendium'));
+            flexdiv.appendChild(button);
+        } else if (game.data.version >= '0.7.3'){
             document.querySelector(prefix+'#compendium .header-actions.action-buttons').appendChild(button);
         }else{
             document.querySelector(prefix+'#compendium .directory-footer').appendChild(button);
@@ -1204,46 +1211,43 @@ export class Settings{
 var eventsSetup = []
 
 Hooks.once('setup',async function(){
-    let hook = 'renderCompendiumDirectory';
+    let hooks = ['renderCompendiumDirectory','renderCompendiumDirectoryPF'];
 
-    //Fix for pf1 system
-    if (game.system.id === 'pf1'){
-        hook = 'renderCompendiumDirectoryPF';
-    }
-    Hooks.on(hook, async function() {
+    for (let hook of hooks){
+        Hooks.on(hook, async function() {
 
-        Settings.registerSettings()
-        
-        await loadTemplates(["modules/compendium-folder/compendium-folder-edit.html"]);
-        let isPopout = document.querySelector('#compendium-popout') != null;
-        let prefix = '#sidebar '
-        if (isPopout){
-            prefix = '#compendium-popout '
-        }
-        let allFolders = game.settings.get(mod,'cfolders')
-        let toReturn = allFolders['hidden']==null || allFolders['default']==null;
-        if (allFolders['hidden']==null){
-            allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums','_id':'hidden'};
-        }
-        if (allFolders['default']==null){
-            allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
-        }
-        if (toReturn){
-            game.settings.set(mod,'cfolders',allFolders).then(function(){
+            Settings.registerSettings()
+            
+            let isPopout = document.querySelector('#compendium-popout') != null;
+            let prefix = '#sidebar '
+            if (isPopout){
+                prefix = '#compendium-popout '
+            }
+            let allFolders = game.settings.get(mod,'cfolders')
+            let toReturn = allFolders['hidden']==null || allFolders['default']==null;
+            if (allFolders['hidden']==null){
+                allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums','_id':'hidden'};
+            }
+            if (allFolders['default']==null){
+                allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
+            }
+            if (toReturn){
+                game.settings.set(mod,'cfolders',allFolders).then(function(){
+                    if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
+                        convertExistingSubmenusToFolder(prefix);
+                    }else{
+                        setupFolders(prefix)
+                    }
+                    addEventListeners(prefix)
+                });
+            }else{
                 if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
                     convertExistingSubmenusToFolder(prefix);
                 }else{
                     setupFolders(prefix)
                 }
                 addEventListeners(prefix)
-            });
-        }else{
-            if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
-                convertExistingSubmenusToFolder(prefix);
-            }else{
-                setupFolders(prefix)
-            }
-            addEventListeners(prefix)
-        }   
-    });
+            }   
+        });
+    }
 });
