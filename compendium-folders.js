@@ -1,10 +1,6 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
-const PATH_EXP = /(?<= \|\#CF\[.*name\=\").+(?=\"\,color)/
-const COLOR_EXP = /(?<=\,color\=\")\#[\d\w]{6}/
-const ID_EXP = /(?<= \|\#CF\[id=\")temp_.*(?=\",name)/
-const NAME_EXP = /.*(?= \|\#CF\[.*\])/
 
 // ==========================
 // Utility functions
@@ -1310,12 +1306,19 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         return null;
     }
     for ( let e of entities ) {
-        let data = await e.toCompendium();
         let color = '#000000'
+        e.data.flags.cf={
+            id:folderId,
+            path:path,
+            color:color
+        }
+        let data = await e.toCompendium();
+        
         if (folderObj.data.color != null && folderObj.data.color.length>0){
             color = folderObj.data.color;
         }
-        data.name =  data.name+' |#CF[id=\"'+folderId+'\",name="'+path+'",color="'+color+'"]';
+
+        //data.name =  data.name+' |#CF[id=\"'+folderId+'\",name="'+path+'",color="'+color+'"]';
         let existing = index.find(i => i.name === data.name);
         if ( existing ) data._id = existing._id;
         if ( data._id ) await pack.updateEntity(data);
@@ -1440,22 +1443,15 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
 // To keep folder parent and remove folderdata from name
 // ==========================
 async function importFolderData(e){
-    let path = PATH_EXP.exec(e.name);
-    let color = COLOR_EXP.exec(e.name);
-    
-    if (path != null && color != null){
-        let correctName = NAME_EXP.exec(e.name);
-        if (correctName != null){
-            await e.update({name:correctName});
-        }  
-        
-        console.log(e);
+    if (e.data.flags.cf != null){
+        let path = e.data.flags.cf.path;
+        let color = e.data.flags.cf.color;
         //a.data.folder -> id;
         let foundFolder = null;
         let folderExists=false;
         for (let folder of game.folders.values()){
             if (folder.data.type==e.entity){
-                if (getFolderPath(folder) === path[0]){
+                if (getFolderPath(folder) === path){
                     folderExists=true;
                     foundFolder=folder;
                 }
@@ -1464,7 +1460,7 @@ async function importFolderData(e){
         if (folderExists){
             await e.update({folder : foundFolder.id})
         }else{
-            await createFolderPath(path[0],color[0],e.entity,e);
+            await createFolderPath(path,color,e.entity,e);
         }
     }
 }
@@ -1506,12 +1502,20 @@ async function createFolderPath(path,pColor,entityType,e){
 
 async function cleanupCompendium(pack){
     ui.notifications.notify(game.i18n.format("CF.cleanupNotificationStart"),{pack:pack})
-    let allData = await game.packs.get(pack).getData();
-    for (let entry of allData.index){
-        if (PATH_EXP.exec(entry.name) != null){
-            entry.name = NAME_EXP.exec(entry.name)[0];
-            await game.packs.get(pack).updateEntity(entry);
+    let p = game.packs.get(pack);
+    let index = await p.getIndex();
+    let allData = await p.getContent();
+    for (let entry of allData){
+
+        let matchingIndex = index.find(i => i._id === entry.id);
+        let data = await entry.toCompendium();
+        if (data.flags.cf != null){
+            data.flags['cf'] = null
         }
+        if (matchingIndex){
+            data._id = matchingIndex._id;
+        }
+        await p.updateEntity(data)
     }
     ui.notifications.notify(game.i18n.localize("CF.cleanupNotificationFinish"))
 }
@@ -1648,23 +1652,22 @@ Hooks.once('setup',async function(){
         Hooks.on('renderCompendium',async function(e){
             let packCode = e.metadata.package+'.'+e.metadata.name;
             removeStaleFolderSettings(packCode);
+            let pack = game.packs.get(packCode)
             let allFolderData={};
             //First parse folder data
             for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
                 let eId = entry.getAttribute('data-entry-id');
-                let name = entry.querySelector('h4.entry-name > a').textContent;
-                let nameResult = NAME_EXP.exec(name);
-                let folderId = ID_EXP.exec(name);
-                if (nameResult != null){
-                    entry.querySelector('h4.entry-name > a').textContent = nameResult[0]
-                }
-                let pathResult = PATH_EXP.exec(name);
-                let colorResult = COLOR_EXP.exec(name);
-                if (pathResult != null && colorResult != null){
-                    if (allFolderData[pathResult[0]] == null){
-                        allFolderData[pathResult[0]] = {id:folderId[0],color:colorResult[0], children:[eId]}
+                
+                let entity = await pack.getEntry(eId);
+
+                if (entity.flags.cf != null){
+                    let path = entity.flags.cf.path;
+                    let color = entity.flags.cf.color;
+                    let folderId = entity.flags.cf.id;
+                    if (allFolderData[path] == null){
+                        allFolderData[path] = {id:folderId,color:color, children:[eId]}
                     }else{
-                        allFolderData[pathResult[0]].children.push(eId);
+                        allFolderData[path].children.push(eId);
                     }
                 }
             }
