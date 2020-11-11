@@ -1,4 +1,7 @@
 {
+    "I18N.LANGUAGE": "Español",
+    "I18N.MAINTAINERS": "@Viriato139ac#0342",
+  
     "CF.deleteFolder":"Borrar Directorio",
     "CF.folderIcon":"Icono del Directorio",
     "CF.textColor":"Color del Texto",
@@ -32,5 +35,29 @@
     "CF.folderImportFailure":"La importación de la configuración de directorios ha fallado",
     "CF.folderImportMaxDepth":"La cadena importada contiene directorios que exceden la profundidad máxima permitida",
     "CF.moveFolderNotification":"Directorio movideo de {src} a {dest}",
-    "CF.searchCompendiums":"Buscar Compendios"
+    "CF.searchCompendiums":"Buscar Compendios",
+    "CF.configuration":"Configuración",
+
+    "CF.cleanup":"Limpiar",
+    "CF.cleanupHint":"Quitar los Datos del Directorio de un Compendio",
+    "CF.cleanupTitle":"Limpiar Compendio",
+    "CF.cleanupL1":"Se borratán todos los datos del directorio del compendio",
+    "CF.cleanupL2":"AVISO: Esta acción es permanente y no se puede deshacer",
+    "CF.cleanupNotificationStart":"Eliminando datos del directorio de {pack}",
+    "CF.cleanupNotificationFinish":"¡Limpieza completada con éxito!",
+
+    "CF.exportFolderHint":"Exportar Estructura de Directorios",
+    "CF.exportFolderL1":"Puede exportar las entidades incluidas en este directorio a un paquete de Compendios que no esté bloqueado y sea del tipo apropiado.",
+    "CF.exportFolderDestPack":"Paquete de Destino",
+    "CF.exportFolderSubmit":"Exportar Contenido",
+    "CF.exportFolderNotificationStart":"Exportando estructura de directorios a {pack}...",
+    "CF.exportFolderNotificationFinish":"¡Exportación completada con éxito!",
+    
+    "CF.importFolderHint":"Importar Estructura de Directorios",
+    "CF.importFolderL1":"¿Está seguro de que quiere importar a su mundo el directorio <strong>{folder}</strong>?",
+    "CF.importFolderL2":"Las entidades que ya existan <strong>no se sobrescribirán</strong>, si no que serán duplicadas en caso de coincidencia",
+    "CF.importFolderL3":"Se crearán los directorios que sean necesarios",
+    "CF.importFolderL4":"Si ya existe un directorio en el mismo lugar, será utilizado en lugar de crear uno nuevo",
+    "CF.importFolderNotificationStart":"Importando en el mundo la estructura de directorios...",
+    "CF.importFolderNotificationFinish":"¡Importación completada con éxito!" 
 }

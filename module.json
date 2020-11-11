@@ -4,7 +4,7 @@
     "description": "Collapsable folders for compendiums - Folders To Compendium branch",
     "author": "Erceron",
     "version": "2.0.0",
-    "minimumCoreVersion": "0.6.5",
+    "minimumCoreVersion": "0.7.3",
     "compatibleCoreVersion":"0.7.6",
     "esmodules": [
         "./compendium-folders.js"
@@ -22,7 +22,7 @@
       },
 	    {
         "lang":"es",
-        "name":"Spanish",
+        "name":"Español",
         "path":"lang/es.json"
       },
 	    {
