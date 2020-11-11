@@ -1062,7 +1062,7 @@ async function updateFolders(packsToAdd,packsToRemove,folder){
 // ==========================
 // Event funtions
 // ==========================
-async function closeFolder(parent,save,inCompendium){
+async function closeFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
     let cogLink = parent.querySelector('a.edit-folder')
     let newFolderLink = parent.querySelector('a.create-folder');
@@ -1492,6 +1492,45 @@ async function createFolderPath(path,pColor,entityType,e){
         index++;
     }
 }
+
+async function cleanupCompendium(pack){
+    ui.notifications.notify('Removing folder data from '+pack)
+    let allData = await game.packs.get(pack).getData();
+    for (let entry of allData.index){
+        if (PATH_EXP.exec(entry.name) != null){
+            entry.name = NAME_EXP.exec(entry.name)[0];
+            await game.packs.get(pack).updateEntity(entry);
+        }
+    }
+    ui.notifications.notify('Cleanup complete!')
+}
+class CleanupPackConfig extends FormApplication{
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "cleanup-compendium";
+        options.template = "modules/compendium-folders/templates/cleanup-compendium.html";
+        //options.width = 500;
+        return options;
+    }
+    get title() {
+        return "Cleanup Compendium";
+    }
+    /** @override */
+    async getData(options) { 
+        return {
+            packs : game.packs.values()
+        }
+    }
+    
+    /** @override */
+    async _updateObject(event,formData){
+        let pack = formData.pack;
+        if (pack != null){
+            await cleanupCompendium(pack);
+        }
+        //do cleanup pack
+    }
+}
 //==========================
 // Settings utilities
 //==========================
@@ -1516,6 +1555,13 @@ export class Settings{
             type: Object,
             default:[]
         });     
+        game.settings.registerMenu(mod,'cleanupCompendiums',{
+            name:'Cleanup',
+            icon:'fas fa-atlas',
+            label:'Remove Folder Data from a Compendium',
+            type: CleanupPackConfig,
+            restricted:true,
+        })
         game.settings.register(mod,'open-temp-folders',{
             scope: 'client',
             config:false,
