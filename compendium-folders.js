@@ -1278,10 +1278,10 @@ async function exportFolderStructureToCompendium(folderId){
         callback: async function(html) {
             const form = html[0].querySelector("form");
             const pack = game.packs.get(form.pack.value);
-            ui.notifications.notify('Exporting folder structure into '+form.pack.value+'...')
+            ui.notifications.notify(game.i18n.format('CF.exportFolderNotificationStart',{pack:form.pack.value}));
             let index = await pack.getIndex();
             await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'))
-            ui.notifications.notify('Exporting complete!');
+            ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
         },
         options:{}
     });
@@ -1344,19 +1344,23 @@ async function recursivelyImportFolders(pack,coll,folder){
 async function importFolderFromCompendium(event,folder){
     let folderName = folder.querySelector('h3').textContent;
     event.stopPropagation();
+    let l1 = game.i18n.format("CF.importFolderL1",{folder:folderName})
+    let l2 = game.i18n.localize("CF.importFolderL2");
+    let l3 = game.i18n.localize("CF.importFolderL3");
+    let l4 = game.i18n.localize("CF.importFolderL4");
     Dialog.confirm({
         title:'Import Folder: '+folderName,
-        content:`<p>Are you sure you want to import the folder <strong>${folderName}</strong> into your world</p>
-            <p>Existing entities <strong>will not be overwritten</strong>, so will be duplicated</p>
-            <ul><li>Folders will be created as needed.</li><li>If a folder exists on the path it will be used</li></ul>`,
+        content: `<p>${l1}</p>
+            <p>${l2}</p>
+            <ul><li>${l3}</li><li>${l4}</li></ul>`,
         yes: async () => {
-            ui.notifications.notify('Importing folder structure into world...')
+            ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"))
             let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
             let pack = await game.packs.get(packCode);
             let coll = pack.cls.collection;
 
             await recursivelyImportFolders(pack,coll,folder);
-            ui.notifications.notify('Importing complete!');
+            ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
         }
     });
     
@@ -1386,7 +1390,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     let importButton = document.createElement('a');
     importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
     importButton.classList.add('import-folder');
-    importButton.setAttribute('title',"Import Folder Structure")
+    importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
     importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
 
     folder.appendChild(header);
@@ -1494,7 +1498,7 @@ async function createFolderPath(path,pColor,entityType,e){
 }
 
 async function cleanupCompendium(pack){
-    ui.notifications.notify('Removing folder data from '+pack)
+    ui.notifications.notify(game.i18n.format("CF.cleanupNotificationStart"),{pack:pack})
     let allData = await game.packs.get(pack).getData();
     for (let entry of allData.index){
         if (PATH_EXP.exec(entry.name) != null){
@@ -1502,7 +1506,7 @@ async function cleanupCompendium(pack){
             await game.packs.get(pack).updateEntity(entry);
         }
     }
-    ui.notifications.notify('Cleanup complete!')
+    ui.notifications.notify(game.i18n.localize("CF.cleanupNotificationFinish"))
 }
 class CleanupPackConfig extends FormApplication{
     static get defaultOptions() {
@@ -1513,7 +1517,7 @@ class CleanupPackConfig extends FormApplication{
         return options;
     }
     get title() {
-        return "Cleanup Compendium";
+        return game.i18n.localize("CF.cleanupTitle");
     }
     /** @override */
     async getData(options) { 
@@ -1537,7 +1541,7 @@ class CleanupPackConfig extends FormApplication{
 export class Settings{
     static registerSettings(){
         game.settings.registerMenu(mod,'settingsMenu',{
-            name: 'Configuration',
+            name: game.i18n.localize('CF.configuration'),
             label: game.i18n.localize('CF.importExportLabel'),
             icon: 'fas fa-wrench',
             type: ImportExportConfig,
@@ -1556,9 +1560,9 @@ export class Settings{
             default:[]
         });     
         game.settings.registerMenu(mod,'cleanupCompendiums',{
-            name:'Cleanup',
+            name:game.i18n.localize('CF.cleanup'),
             icon:'fas fa-atlas',
-            label:'Remove Folder Data from a Compendium',
+            label: game.i18n.localize('CF.cleanupHint'),
             type: CleanupPackConfig,
             restricted:true,
         })

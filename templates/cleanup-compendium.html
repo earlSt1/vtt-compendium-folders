@@ -1,6 +1,9 @@
 <form id="cleanup-compendium" autocomplete="off" onsubmit="event.preventDefault();">
     <div class="form-group">
-        <p>This will clean all folder data from a compendium</br><strong>WARNING: This action is irreversible</strong></p>
+        <p>{{localize "CF.cleanupL1"}}</p>
+    </div>
+    <div class="form-group">
+        <p><strong>{{localize "CF.cleanupL2"}}</strong></p>
     </div>
     <div class="form-group">
         <select name='pack'>
@@ -9,5 +12,5 @@
             {{/each}}
         </select>
     </div>
-    <button class='cleanup-submit' type="submit"><i class="fas fa-check"></i> Cleanup </button>
+    <button class='cleanup-submit' type="submit"><i class="fas fa-check"></i> {{localize "CF.cleanup"}} </button>
 </form>
