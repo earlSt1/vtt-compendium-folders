@@ -1,5 +1,5 @@
 ### This is the testing branch for exporting folder structures to compendiums
-_This only works for FVTT 0.7.3_
+_This only works for FVTT 0.7.3+_
 
 ##### Exporting a folder
 ![Exporting a folder](./cf_export1.gif)
