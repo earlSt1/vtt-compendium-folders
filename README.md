@@ -11,7 +11,7 @@
 - To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
 
 #### Disclaimers
-- This module works by appending folder data to the name of each entity. *In theory* this will not break any entities, as this data is cleeaned up when you import entities into your world. However this is still in a testing phase, so be warned.
+- This module works by appending folder data to the name of each entity. *In theory* this will not break any entities, as this data is cleaned up when you import entities into your world. However this is still in a testing phase, so be warned.
 - To get this to work, I've added the folder data to the end of the name attribute of the entity. You can still edit the entity name just fine from the compendium view, the folderdata part starts with `|#CF[ ... ]`. Editing anything before that works just fine, in addition to editing anything elsewhere in the sheet.
 - One main limitation to this is that you cannot have multiple folders with the same name in the same directory (although I have *no idea* why you would want to), so expect the unexpected if you want to do that.
 
