@@ -1381,6 +1381,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     header.style.backgroundColor=folderData.color
     let contents = document.createElement('div');
     contents.classList.add('folder-contents');
+    contents.setAttribute("data-pack",packCode);
     
     let folderList = document.createElement('ol');
     folderList.classList.add('folder-list');
