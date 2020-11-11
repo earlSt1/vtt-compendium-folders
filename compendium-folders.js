@@ -1292,7 +1292,10 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId){
     if (folderObj.children.length==0){
         let entities = folderObj.content;
         let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId)
-        return [updatedFolder];
+        if (updatedFolder != null){
+            return [updatedFolder];
+        }
+        return []
     }
     for (let child of folderObj.children){
         await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'))
@@ -1303,6 +1306,9 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId){
 }
 async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId){
     let path = getFullPath(folderObj)
+    if (entities.length == 0){
+        return null;
+    }
     for ( let e of entities ) {
         let data = await e.toCompendium();
         let color = '#000000'
@@ -1736,35 +1742,40 @@ Hooks.once('setup',async function(){
         // Adding the export button to all folders
         Hooks.on('renderActorDirectory',async function(){
             for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null){
+                if (folder.querySelector('a.export-folder')==null //
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
                     addExportButton(folder);
                 }
             }
         })
         Hooks.on('renderJournalDirectory',async function(){
             for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null){
+                if (folder.querySelector('a.export-folder')==null//
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
                     addExportButton(folder);
                 }
             }
         })
         Hooks.on('renderSceneDirectory',async function(){
             for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null){
+                if (folder.querySelector('a.export-folder')==null//
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
                     addExportButton(folder);
                 } 
             }
         })
         Hooks.on('renderItemDirectory',async function(){
             for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null){
+                if (folder.querySelector('a.export-folder')==null//
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
                     addExportButton(folder);
                 } 
             }
         })
         Hooks.on('renderRollTableDirectory',async function(){
             for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null){
+                if (folder.querySelector('a.export-folder')==null//
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
                     addExportButton(folder);
                 }  
             }
