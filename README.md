@@ -1,5 +1,8 @@
 ### This is the testing branch for exporting folder structures to compendiums
 
+![Exporting a folder](./cf_export1.gif)
+![Importing a folder](./cf_import1.gif)
+
 #### Features
 - Entity folder structure import/export into compendiums.
 - Folders in the most recently opened compendium with save their open state, so you can easily delete entries within them without having to open everything up.
