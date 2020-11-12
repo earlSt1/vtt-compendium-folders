@@ -5,6 +5,73 @@ const FOLDER_LIMIT = 8
 // ==========================
 // Utility functions
 // ==========================
+function closeContextMenu(){
+    let contextMenu = document.querySelector('nav#folder-context-menu');
+    if (contextMenu!=null)
+        contextMenu.parentNode.removeChild(contextMenu);
+}
+function createContextMenu(header,event){
+    let folder = header.parentElement
+    let packCode = event.currentTarget.closest('.sidebar-tab.compendium').getAttribute('data-pack')
+    let folderN = event.currentTarget;
+    let posX = event.pageX;
+    let posY = event.pageY;
+    if (document.querySelector('nav#folder-context-menu')!=null){
+        closeContextMenu()
+    }
+    let contextMenu = document.createElement('nav');
+    contextMenu.classList.add('expand-down');
+
+
+    let contextMenuList = document.createElement('ol');
+    contextMenuList.classList.add('context-items');
+
+    let deleteOption = document.createElement('li');
+    deleteOption.classList.add('context-item')
+    let deleteIcon = document.createElement('i');
+    deleteIcon.classList.add('fas','fa-trash');
+    deleteOption.innerHTML=deleteIcon.outerHTML+"Delete";
+    deleteOption.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        closeContextMenu();
+        let folderId = folder.querySelector('h3').innerText
+        new Dialog({
+            title: game.i18n.localize('CF.deleteFolder'),
+            content: "<p>"+game.i18n.format('CF.deletePromptL1',{folderName:folderId})+"</p>",
+            buttons: {
+                deleteFolder: {
+                    icon: '<i class="fas fa-folder"></i>',
+                    label: "Delete Folder",
+                    callback: () => deleteFolderWithinCompendium(packCode,folder,false)
+                },
+                deleteAll:{
+                    icon: '<i class="fas fa-trash"></i>',
+                    label: "Delete All",
+                    callback: ( )=> deleteFolderWithinCompendium(packCode,folder,true)
+                }
+            }
+        }).render(true);
+    })
+    contextMenuList.appendChild(deleteOption);
+    
+    
+    
+    contextMenu.appendChild(contextMenuList);
+    
+    document.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        if (ev.target!=folder){
+            closeContextMenu()
+        }
+    });
+
+
+    contextMenu.id='folder-context-menu';
+    contextMenu.style.marginTop="30px"; //48
+    //contextMenu.style.left='px'; //140
+    
+    header.insertAdjacentElement('afterbegin',contextMenu);
+}
 function getFullPath(folderObj){
     let path = folderObj.name;
     let currentFolder = folderObj;
@@ -715,6 +782,52 @@ async function deleteAllChildFolders(folder){
     await game.settings.set(mod,'cfolders',allFolders);
     ui.notifications.notify(game.i18n.localize('CF.deleteNotification').replace('{folderName}',folder.titleText));
     refreshFolders()
+    
+}
+async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
+    ui.notifications.notify("Deleting folder ...")
+    let pack = game.packs.get(packCode);
+    let folderId = folderElement.getAttribute('data-folder-id')
+    let folderPath = getRenderedFolderPath(folderElement);
+    let folderName = folderElement.querySelector('h3').innerText;
+    let contents = await pack.getContent();
+    for (let entity of contents){
+        if (entity.data.flags != null && entity.data.flags.cf != null){
+            let entityPath = entity.data.flags.cf.path;
+            if (entityPath.startsWith(folderPath)){
+                if (deleteAll){
+                    //anything starting with path is deleted
+                    await pack.deleteEntity(entity.id);
+                }else{
+                    //anything starting with path removes folderName and update
+                    let newName = entityPath.replace(folderName,'').replace(/\/\//,'/');
+                    if (newName.length>0){
+
+                        if (newName[0]==='/'){
+                            newName = newName.slice(1);
+                        }
+                        if (newName[newName.length-1]==='/'){
+                            newName = newName.slice(0,newName.length-1)
+                        }
+                    }
+                    
+                    let data = {
+                        flags:{
+                            cf:{
+                                path:newName
+                            }
+                        }
+                    }
+
+                    
+                    data._id = entity._id;
+                                                    
+                    await pack.updateEntity(data)
+                }
+            }
+        }
+    }
+    ui.notifications.notify("Deleting complete!");
     
 }
 // Edit functions
@@ -1440,6 +1553,10 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     
     header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
+    header.addEventListener('contextmenu',function(event){
+        console.log(event);
+        createContextMenu(header,event);
+    });
     let contents = document.createElement('div');
     contents.classList.add('folder-contents');
     contents.setAttribute("data-pack",packCode);
@@ -1481,6 +1598,7 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     }
     
     folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder,packCode) },false)
+
     for (let pack of directoryList.querySelectorAll('li.directory-item')){
         pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
     }
@@ -1747,8 +1865,8 @@ Hooks.once('setup',async function(){
                 let eId = entry.getAttribute('data-entry-id');
                 
                 let entity = await pack.getEntry(eId);
-
-                if (entity.flags.cf != null){
+                
+                if (entity != null && entity.flags.cf != null){
                     let path = entity.flags.cf.path;
                     let color = entity.flags.cf.color;
                     let folderId = entity.flags.cf.id;

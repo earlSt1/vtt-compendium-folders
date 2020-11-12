@@ -146,3 +146,34 @@ button.create-compendium{
     color: #CCC;
     font-size: 14px;
 }
+/*Context menu*/
+.compendium-folder > #folder-context-menu{
+  margin-top:-7px
+}
+#folder-context-menu{
+  width: 32px;
+  height: max-content;
+  min-width: 150px;
+  max-width: 360px;
+  position: absolute;
+  background: #23221d;
+  border: 1px solid #000;
+  border-radius: 5px;
+  color: #EEE;
+  z-index:99999;
+}
+#folder-context-menu ol.context-items{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#folder-context-menu  li.context-item{
+  padding: 0 5px;
+  line-height: 32px;
+}
+#folder-context-menu li.context-item > i{
+  margin-right:5px;
+}
+button.dialog-button.deleteAll  {
+  background-color:#c51c1c
+}
