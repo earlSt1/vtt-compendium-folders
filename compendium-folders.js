@@ -1307,6 +1307,9 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     }
     for ( let e of entities ) {
         let color = '#000000'
+        if (folderObj.data.color != null && folderObj.data.color.length>0){
+            color = folderObj.data.color;
+        }
         e.data.flags.cf={
             id:folderId,
             path:path,
@@ -1314,9 +1317,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         }
         let data = await e.toCompendium();
         
-        if (folderObj.data.color != null && folderObj.data.color.length>0){
-            color = folderObj.data.color;
-        }
+        
 
         //data.name =  data.name+' |#CF[id=\"'+folderId+'\",name="'+path+'",color="'+color+'"]';
         let existing = index.find(i => i.name === data.name);
@@ -1543,7 +1544,6 @@ class CleanupPackConfig extends FormApplication{
         if (pack != null){
             await cleanupCompendium(pack);
         }
-        //do cleanup pack
     }
 }
 //==========================
