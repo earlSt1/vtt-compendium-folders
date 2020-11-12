@@ -1802,9 +1802,9 @@ Hooks.once('setup',async function(){
                       
                         let matchingIndex = index.find(i => i._id === entry.id);
                         let data = await entry.toCompendium();
-                        if (data.flags.cf != null){
-                            data.flags['cf'] = folderData
-                        }
+                        if (data.flags != null){
+                            data.flags.cf = folderData
+                        } 
                         data._id = matchingIndex._id;
                                                         
                         await p.updateEntity(data)
