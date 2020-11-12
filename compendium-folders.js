@@ -1301,6 +1301,7 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId){
     await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId)
 }
 async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId){
+    //Exporting issue with 2-deep folders
     let path = getFullPath(folderObj)
     if (entities.length == 0){
         return null;
@@ -1310,16 +1311,12 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         if (folderObj.data.color != null && folderObj.data.color.length>0){
             color = folderObj.data.color;
         }
-        e.data.flags.cf={
+        let data = await e.toCompendium();
+        data.flags.cf={
             id:folderId,
             path:path,
             color:color
         }
-        let data = await e.toCompendium();
-        
-        
-
-        //data.name =  data.name+' |#CF[id=\"'+folderId+'\",name="'+path+'",color="'+color+'"]';
         let existing = index.find(i => i.name === data.name);
         if ( existing ) data._id = existing._id;
         if ( data._id ) await pack.updateEntity(data);
@@ -1378,7 +1375,7 @@ async function importFolderFromCompendium(event,folder){
 // ==========================
 // Folder creation inside compendiums
 // ==========================
-function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
+function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     //Example of adding folders to compendium view
     let folder = document.createElement('li')
     folder.classList.add('compendium-folder');
@@ -1404,6 +1401,8 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
     importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
 
+
+
     folder.appendChild(header);
     header.appendChild(headerTitle);
     header.appendChild(importButton)
@@ -1421,8 +1420,18 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     }
 
     let directoryList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list');
-    if (parentId != null){
-        directoryList.querySelector('li.compendium-folder[data-folder-id=\''+parentId+'\'] ol.folder-list').insertAdjacentElement('beforeend',folder)
+    if (parent != null){
+        let allParents = directoryList.querySelectorAll('li.compendium-folder[data-folder-id=\''+parent.id+'\']')
+        if (allParents != null && allParents.length==1){
+            allParents[0].querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
+        }else{
+            for (let p of allParents){
+                if (p.querySelector('h3').innerText === parent.name){
+                    p.querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
+                    break;
+                }
+            }
+        }
     }else{
         directoryList.insertAdjacentElement('beforeend',folder);
     }
@@ -1651,11 +1660,12 @@ Hooks.once('setup',async function(){
     if (post073 && hasFICChanges){
         Hooks.on('renderCompendium',async function(e){
             let packCode = e.metadata.package+'.'+e.metadata.name;
+            let window = e._element[0]
             removeStaleFolderSettings(packCode);
             let pack = game.packs.get(packCode)
             let allFolderData={};
             //First parse folder data
-            for (let entry of document.querySelectorAll('.sidebar-tab.compendium .directory-item')){
+            for (let entry of window.querySelectorAll('.sidebar-tab.compendium .directory-item')){
                 let eId = entry.getAttribute('data-entry-id');
                 
                 let entity = await pack.getEntry(eId);
@@ -1695,16 +1705,77 @@ Hooks.once('setup',async function(){
                             //Update folderData with temp ID and name
                             allFolderData[currentPath].name=seg;
                         }
-                        let parentId = null
+                        let parent = null
                         if (index>0){
-                            parentId = allFolderData[segments.slice(0,index).join('/')].id
+                            parent = allFolderData[segments.slice(0,index).join('/')]
                         }   
-                        createFolderWithinCompendium(allFolderData[currentPath],parentId,packCode,openFolders[packCode])
+                        createFolderWithinCompendium(allFolderData[currentPath],parent,packCode,openFolders[packCode])
                         
                         createdFolders.push(currentPath);
                     }
                 }
-            }        
+            } 
+
+            // Moving between folders
+            
+
+            let hiddenMoveField = document.createElement('input');
+            hiddenMoveField.type='hidden'
+            hiddenMoveField.style.display='none';
+            hiddenMoveField.classList.add('folder-to-move');
+            window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
+            
+            for (let entity of window.querySelectorAll('.directory-item')){
+                entity.addEventListener('dragstart',async function(){
+                    let currentId = this.getAttribute('data-entry-id');
+                    this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
+                })
+            }
+            for (let folder of window.querySelectorAll('.compendium-folder')){
+                folder.addEventListener('drop',async function(event){
+                    console.log(event.target.tagName);
+                    console.log(event);
+                    let movingId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
+                    if (movingId.length>0){
+                        let folderId = null
+                        let folderName = null;
+ 
+                        folderId = this.getAttribute('data-folder-id');
+                        folderName = this.querySelector('h3').innerText;
+   
+                        console.log("'"+folderName+"'")
+                        //if (!event.target.tag)
+                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
+                        let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
+                        let p = game.packs.get(packCode);
+                        let entries = await p.getContent();
+                        let toMove = await p.getEntity(movingId);
+                        let allInNewFolder = entries.filter(x => x.data.flags.cf != null && x.data.flags.cf.id === folderId);
+                        let folderData = null;
+                        if (folderId != 'noid'){
+                            folderData = allInNewFolder[0].data.flags.cf;
+                        }else{
+                            //Create new folder
+                            folderData = {
+                                id:generateRandomFolderName('temp_'),
+                                path:folderName,
+                                color:'#000000'
+                            }
+                        }                             
+                        let index = await p.getIndex();
+                        let entry = await p.getEntity(movingId);
+                      
+                        let matchingIndex = index.find(i => i._id === entry.id);
+                        let data = await entry.toCompendium();
+                        if (data.flags.cf != null){
+                            data.flags['cf'] = folderData
+                        }
+                        data._id = matchingIndex._id;
+                                                        
+                        await p.updateEntity(data)
+                    }
+                })
+            }
         })
         Hooks.on('renderApplication',async function(a){
             if (a.template != null && a.template === 'templates/apps/compendium.html'){
