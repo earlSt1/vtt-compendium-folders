@@ -29,6 +29,16 @@ function getFolderPath(folder){
     }
     return path;
 }
+function getRenderedFolderPath(folder){
+    let path = folder.querySelector('h3').innerText;
+    let currentFolder = folder;
+
+    while (currentFolder.parentElement.parentElement.parentElement.tagName === 'LI'){
+        path = currentFolder.parentElement.parentElement.parentElement.querySelector('h3').innerText + '/' + path;
+        currentFolder = currentFolder.parentElement.parentElement.parentElement
+    }
+    return path;
+}
 function generateRandomFolderName(prefix){
     return Math.random().toString(36).replace('0.',prefix || '');
 }
@@ -1227,7 +1237,51 @@ function addEventListeners(prefix){
         eventsSetup.push(prefix+submenu.getAttribute('data-cfolder-id'))
         
     }
+    setupDragEventListeners();
+}
+function setupDragEventListeners(){
+    let window = document.querySelector('section#compendium')
+    let hiddenMoveField = document.createElement('input');
+    hiddenMoveField.type='hidden'
+    hiddenMoveField.style.display='none';
+    hiddenMoveField.classList.add('pack-to-move');
+    window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
     
+    for (let entity of window.querySelectorAll('.compendium-pack')){
+        entity.setAttribute('draggable','true')
+        entity.addEventListener('dragstart',async function(){
+            let currentPack = this.getAttribute('data-pack');
+            this.closest('ol.directory-list').querySelector('input.pack-to-move').value = currentPack
+        })
+    }
+    for (let folder of window.querySelectorAll('.compendium-folder')){
+        folder.addEventListener('drop',async function(event){
+            let movingId = this.closest('ol.directory-list').querySelector('input.pack-to-move').value;
+            let folderId = this.getAttribute('data-cfolder-id');
+            if (movingId.length>0){
+                this.closest('ol.directory-list').querySelector('input.pack-to-move').value = ''
+                let allSettings = game.settings.get(mod,'cfolders');
+                if (!allSettings[folderId].compendiumList.includes(movingId) && folderId!='default'){
+                    
+                    for (let key of Object.keys(allSettings)){
+                        let currentFolder = allSettings[key];
+                        let cList = currentFolder.compendiumList;
+                        if (cList.includes(movingId)){
+                            console.log(currentFolder);
+                            console.log(movingId);
+                            allSettings[key].compendiumList = cList.filter(c => c != movingId);
+                            console.log(allSettings[key]);
+                        }
+                        
+                    }
+                    allSettings[folderId].compendiumList.push(movingId);
+                    await game.settings.set(mod,'cfolders',allSettings)
+                    refreshFolders();
+                }
+            }
+        
+        });
+    }
 }
 // ==========================
 // Exporting Folders to compendiums
@@ -1421,17 +1475,7 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
 
     let directoryList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list');
     if (parent != null){
-        let allParents = directoryList.querySelectorAll('li.compendium-folder[data-folder-id=\''+parent.id+'\']')
-        if (allParents != null && allParents.length==1){
-            allParents[0].querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
-        }else{
-            for (let p of allParents){
-                if (p.querySelector('h3').innerText === parent.name){
-                    p.querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
-                    break;
-                }
-            }
-        }
+        parent.querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
     }else{
         directoryList.insertAdjacentElement('beforeend',folder);
     }
@@ -1446,6 +1490,40 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
             packList.appendChild(existing);
         }
     }
+    return folder;
+}
+function createFoldersWithinCompendium(allFolderData,packCode,openFolders){
+    let createdFolders = {}
+    for (let path of Object.keys(allFolderData).sort()){
+        let segments = path.split('/');
+        for (let seg of segments){
+            let index = segments.indexOf(seg)
+            let currentPath = seg
+            if (index>0){
+                currentPath = segments.slice(0,index).join('/')+'/'+seg;
+            }
+            if (!Object.keys(createdFolders).includes(currentPath)){
+                //Create folder
+                let currentId = 'noid';
+                if (allFolderData[currentPath]==null){
+                    //If folderData not provided, create blank folder
+                    allFolderData[currentPath] = {
+                        id:currentId,
+                        color:'#000000',
+                        name:seg
+                    }
+                }else{
+                    //Update folderData with temp ID and name
+                    allFolderData[currentPath].name=seg;
+                }
+                let parent = null
+                if (index>0){
+                    parent = createdFolders[segments.slice(0,index).join('/')]
+                }                   
+                createdFolders[currentPath]=createFolderWithinCompendium(allFolderData[currentPath],parent,packCode,openFolders[packCode]);
+            }
+        }
+    } 
 }
 
 //==========================
@@ -1681,44 +1759,10 @@ Hooks.once('setup',async function(){
                     }
                 }
             }
-            let createdFolders = []
             let openFolders = await game.settings.get(mod,'open-temp-folders');
-            for (let path of Object.keys(allFolderData).sort()){
-                let segments = path.split('/');
-                for (let seg of segments){
-                    let index = segments.indexOf(seg)
-                    let currentPath = seg
-                    if (index>0){
-                        currentPath = segments.slice(0,index).join('/')+'/'+seg;
-                    }
-                    if (!createdFolders.includes(currentPath)){
-                        //Create folder
-                        let currentId = 'noid';
-                        if (allFolderData[currentPath]==null){
-                            //If folderData not provided, create blank folder
-                            allFolderData[currentPath] = {
-                                id:currentId,
-                                color:'#000000',
-                                name:seg
-                            }
-                        }else{
-                            //Update folderData with temp ID and name
-                            allFolderData[currentPath].name=seg;
-                        }
-                        let parent = null
-                        if (index>0){
-                            parent = allFolderData[segments.slice(0,index).join('/')]
-                        }   
-                        createFolderWithinCompendium(allFolderData[currentPath],parent,packCode,openFolders[packCode])
-                        
-                        createdFolders.push(currentPath);
-                    }
-                }
-            } 
+            createFoldersWithinCompendium(allFolderData,packCode,openFolders);
 
             // Moving between folders
-            
-
             let hiddenMoveField = document.createElement('input');
             hiddenMoveField.type='hidden'
             hiddenMoveField.style.display='none';
@@ -1733,23 +1777,14 @@ Hooks.once('setup',async function(){
             }
             for (let folder of window.querySelectorAll('.compendium-folder')){
                 folder.addEventListener('drop',async function(event){
-                    console.log(event.target.tagName);
-                    console.log(event);
                     let movingId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
                     if (movingId.length>0){
-                        let folderId = null
-                        let folderName = null;
- 
-                        folderId = this.getAttribute('data-folder-id');
-                        folderName = this.querySelector('h3').innerText;
-   
-                        console.log("'"+folderName+"'")
-                        //if (!event.target.tag)
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
+                        let folderId = this.getAttribute('data-folder-id');
+
                         let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
                         let p = game.packs.get(packCode);
                         let entries = await p.getContent();
-                        let toMove = await p.getEntity(movingId);
                         let allInNewFolder = entries.filter(x => x.data.flags.cf != null && x.data.flags.cf.id === folderId);
                         let folderData = null;
                         if (folderId != 'noid'){
@@ -1758,7 +1793,7 @@ Hooks.once('setup',async function(){
                             //Create new folder
                             folderData = {
                                 id:generateRandomFolderName('temp_'),
-                                path:folderName,
+                                path:getRenderedFolderPath(this),
                                 color:'#000000'
                             }
                         }                             
