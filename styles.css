@@ -68,9 +68,10 @@ button.cfolder-submit{
 button.cfolder-submit#delete  {
   background-color:#c51c1c
 }
-.compendium-folder-header > .create-folder,.move-folder{
+.compendium-folder-header > .create-folder,.move-folder,.edit-folder{
   flex:none;
   padding-right:3px;
+  color: #CCC;
 }
 .compendium-folder-header > .create-folder {
   padding-right:0px !important;
