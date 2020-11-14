@@ -5,6 +5,11 @@ const FOLDER_LIMIT = 8
 // ==========================
 // Utility functions
 // ==========================
+async function findEntryInFolder(packCode,folderId){
+    let pack = game.packs.get(packCode)
+    let contents = await pack.getContent();
+    return contents.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.id != null && x.data.flags.cf.id === folderId)
+}
 function closeContextMenu(){
     let contextMenu = document.querySelector('nav#folder-context-menu');
     if (contextMenu!=null)
@@ -12,6 +17,8 @@ function closeContextMenu(){
 }
 function createContextMenu(header,event){
     let folder = header.parentElement
+    let folderName = folder.querySelector('h3').innerText
+    let folderId = folder.getAttribute('data-folder-id');
     let packCode = event.currentTarget.closest('.sidebar-tab.compendium').getAttribute('data-pack')
     if (document.querySelector('nav#folder-context-menu')!=null){
         closeContextMenu()
@@ -22,6 +29,30 @@ function createContextMenu(header,event){
     let contextMenuList = document.createElement('ol');
     contextMenuList.classList.add('context-items');
 
+    if (header.parentElement.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item') != null){
+        let editOption = document.createElement('li');
+        editOption.classList.add('context-item')
+        let editIcon = document.createElement('i');
+        editIcon.classList.add('fas','fa-edit');
+        editOption.innerHTML=editIcon.outerHTML+game.i18n.localize("CF.editFolder");
+        editOption.addEventListener('click',async function(ev){
+            ev.stopPropagation();
+            closeContextMenu();
+            let path = getRenderedFolderPath(folder);
+            let entry = await findEntryInFolder(packCode,folderId)
+            if (entry != null){
+                let formObj = {
+                    id:folderId,
+                    name:folderName,
+                    color:entry.data.flags.cf.color,
+                    path:path,
+                    packCode:packCode
+                }
+                new FICFolderEditDialog(formObj).render(true);
+            }
+        })
+        contextMenuList.appendChild(editOption);
+    }
     let deleteOption = document.createElement('li');
     deleteOption.classList.add('context-item')
     let deleteIcon = document.createElement('i');
@@ -30,10 +61,10 @@ function createContextMenu(header,event){
     deleteOption.addEventListener('click',function(ev){
         ev.stopPropagation();
         closeContextMenu();
-        let folderId = folder.querySelector('h3').innerText
+        
         new Dialog({
             title: game.i18n.localize('CF.deleteFolder'),
-            content: "<p>"+game.i18n.format('CF.deletePromptL1',{folderName:folderId})+"</p>",
+            content: "<p>"+game.i18n.format('CF.deletePromptL1',{folderName:folderName})+"</p>",
             buttons: {
                 deleteFolder: {
                     icon: '<i class="fas fa-folder"></i>',
@@ -806,6 +837,50 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
     pack.render(true);
 }
+async function updateFolderWithinCompendium(folderObj){
+    ui.notifications.notify("Updating folder ...")
+    let packCode = folderObj.packCode;
+    let pack = game.packs.get(packCode);
+    await pack.close();
+    let folderPath = folderObj.path;
+    let oldFolderName = folderObj.oldName;
+    let newFolderName = folderObj.newName;
+    newFolderName = newFolderName.replace('/','');
+    let newColor = folderObj.newColor;
+    let contents = await pack.getContent();
+    for (let entity of contents){
+        if (entity.data.flags != null && entity.data.flags.cf != null){
+            let entityPath = entity.data.flags.cf.path;
+            if (entityPath != null && entityPath.startsWith(folderPath)){
+                //anything starting with path replaces folderName and update
+                // Remove double slash, leading slash, and following slash
+                let newPath = entityPath.replace(oldFolderName,newFolderName).replace(/\/\//,'/').replace(/^\//,'').replace(/\/$/,'');
+                
+                let data = {
+                    flags:{
+                        cf:{
+                            path:newPath
+                        }
+                    }
+                }
+                // If path matches current folder, set color
+                if (entity.data.flags.cf.id === folderObj.id){
+                    data.flags.cf.color = newColor;
+                }
+                if (newPath.length === 0){
+                    data.flags.cf = null;
+                }
+
+                data._id = entity._id;
+                                                
+                await pack.updateEntity(data)   
+            }
+        }
+    }
+    ui.notifications.notify("Updating complete!");
+    document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
+    pack.render(true);
+}
 // Edit functions
 class ImportExportConfig extends FormApplication {
     static get defaultOptions() {
@@ -1096,6 +1171,38 @@ class CompendiumFolderEditConfig extends FormApplication {
     }
 }
 
+class FICFolderEditDialog extends FormApplication{
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "fic-folder-edit";
+        options.template = "modules/compendium-folders/templates/fic-folder-edit.html";
+
+        return options;
+    }
+  
+    get title() {
+        return `${game.i18n.localize("FOLDER.Update")}: ${this.object.name}`;
+    }
+    async getData(options){
+        return {
+            name:this.object.name,
+            color:this.object.color,
+            id:this.object.id
+        };
+    }
+    async _updateObject(options,formData){
+        let folderObj = {
+            id:this.object.id,
+            oldName:this.object.name,
+            newName:formData.name,
+            newColor:formData.color,
+            path:this.object.path,
+            packCode:this.object.packCode
+        }
+        updateFolderWithinCompendium(folderObj);
+                
+    }
+}
 function refreshFolders(){  
     if (document.querySelector('section#compendium') != null){
         setupFolders('#sidebar ');
