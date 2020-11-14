@@ -1,7 +1,7 @@
 {
     "name": "compendium-folders",
     "title": "Compendium Folders",
-    "description": "Collapsable folders for compendiums - Folders To Compendium branch",
+    "description": "Collapsable folders for compendiums",
     "author": "Erceron",
     "version": "2.0.0",
     "minimumCoreVersion": "0.6.5",
@@ -33,6 +33,6 @@
     ],
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
-    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/folders-to-compendium/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/folders-to-compendium.zip"
+    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/module.json",
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/2.0.0.zip"
   }
