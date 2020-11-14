@@ -1,6 +1,6 @@
 # Compendium Folders
 
-This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used for compendiums in addition to *inside* compendiums.
+This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used to organize compendiums in the directory, in addition to organize entries *inside* compendiums.
 
 ## Folders In Compendiums
 
