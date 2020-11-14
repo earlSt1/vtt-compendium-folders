@@ -1,5 +1,10 @@
-### This is the testing branch for exporting folder structures to compendiums
-_This only works for FVTT 0.7.3+_
+# Compendium Folders
+
+This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used for compendiums in addition to *inside* compendiums.
+
+## Folders In Compendiums
+
+_This feature only works for FVTT 0.7.3+_
 
 ##### Exporting a folder
 ![Exporting a folder](./cf_export1.gif)
@@ -11,19 +16,18 @@ _This only works for FVTT 0.7.3+_
 - Folders in the most recently opened compendium with save their open state, so you can easily delete entries within them without having to open everything up.
 - Folders in the compendium with no entities within them (e.g a folder with only folders in it), will always be open.
 - Supports all entity types (Actor,Item,JournalEntry,Scene,Rolltable)
+- Delete Folders inside the compendium (which move all entries up into the parent folder), or Delete All (which deletes the folder and all entries inside it)
+- Edit the name and colour of the folder, so long as it has entries inside it (see Limitations below).
 
 #### Instructions
 - To use the new functionality, each folder has a new button to the right of the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
 - To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
 
-#### Disclaimers
-- This module works by appending folder data to the name of each entity. *In theory* this will not break any entities, as this data is cleaned up when you import entities into your world. However this is still in a testing phase, so be warned.
-- To get this to work, I've added the folder data to the end of the name attribute of the entity. You can still edit the entity name just fine from the compendium view, the folderdata part starts with `|#CF[ ... ]`. Editing anything before that works just fine, in addition to editing anything elsewhere in the sheet.
-- One main limitation to this is that you cannot have multiple folders with the same name in the same directory (although I have *no idea* why you would want to), so expect the unexpected if you want to do that.
+#### Limitations
+- One main limitation to this is that you cannot easily construct a folder structure inside the compendium. If you want to export a new folder you will have to create a new folder in the same path as inside the compendium, place the entities you would like to export in there, then Export the folder structure of that new folder.
+- The way this works is that folder data is stored in entities. This means you cannot have empty folders, and a folder without entities in it, but with a folder inside it, cannot be modified.
 
-# Compendium Folders
-
-This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system.
+## Folders for Compendiums
 
 ![](./example.png)
 
