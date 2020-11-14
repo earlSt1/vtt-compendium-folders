@@ -13,15 +13,11 @@ function closeContextMenu(){
 function createContextMenu(header,event){
     let folder = header.parentElement
     let packCode = event.currentTarget.closest('.sidebar-tab.compendium').getAttribute('data-pack')
-    let folderN = event.currentTarget;
-    let posX = event.pageX;
-    let posY = event.pageY;
     if (document.querySelector('nav#folder-context-menu')!=null){
         closeContextMenu()
     }
     let contextMenu = document.createElement('nav');
     contextMenu.classList.add('expand-down');
-
 
     let contextMenuList = document.createElement('ol');
     contextMenuList.classList.add('context-items');
@@ -30,7 +26,7 @@ function createContextMenu(header,event){
     deleteOption.classList.add('context-item')
     let deleteIcon = document.createElement('i');
     deleteIcon.classList.add('fas','fa-trash');
-    deleteOption.innerHTML=deleteIcon.outerHTML+"Delete";
+    deleteOption.innerHTML=deleteIcon.outerHTML+game.i18n.localize("CF.deleteFolder");
     deleteOption.addEventListener('click',function(ev){
         ev.stopPropagation();
         closeContextMenu();
@@ -53,9 +49,7 @@ function createContextMenu(header,event){
         }).render(true);
     })
     contextMenuList.appendChild(deleteOption);
-    
-    
-    
+        
     contextMenu.appendChild(contextMenuList);
     
     document.addEventListener('click',function(ev){
@@ -65,11 +59,9 @@ function createContextMenu(header,event){
         }
     });
 
-
     contextMenu.id='folder-context-menu';
-    contextMenu.style.marginTop="30px"; //48
-    //contextMenu.style.left='px'; //140
-    
+    contextMenu.style.marginTop="30px"; 
+
     header.insertAdjacentElement('afterbegin',contextMenu);
 }
 function getFullPath(folderObj){
@@ -180,17 +172,6 @@ function checkForDeletedCompendiums(){
         game.settings.set(mod,'cfolders',allFolders).then(() => {return allFolders});
     }
     return allFolders;
-}
-function getMaxDepth(){
-    let allFolders = game.settings.get(mod,'cfolders');
-    let maxDepth = 1;
-    Object.keys(allFolders).forEach(function(key){
-        if (allFolders[key].pathToFolder != null
-            && allFolders[key].pathToFolder.length > maxDepth){
-                maxDepth = allFolders[key].pathToFolder.length;
-        };
-    });
-    return maxDepth;
 }
 // ==========================
 // Folder object structure
@@ -344,7 +325,6 @@ function convertSubmenuToFolder(submenu,uid){
 
 function createFolderObjectForSubmenu(submenu,titleText){
     let compendiums = submenu.querySelector('ol').querySelectorAll('li.compendium-pack')
-    let compendiumNames = []
     let folderObject = new CompendiumFolder(titleText,"#000000",[])
     for (let compendium of compendiums){
         folderObject.addCompendium(compendium.getAttribute('data-pack'))
@@ -786,30 +766,23 @@ async function deleteAllChildFolders(folder){
 }
 async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     ui.notifications.notify("Deleting folder ...")
+    
     let pack = game.packs.get(packCode);
-    let folderId = folderElement.getAttribute('data-folder-id')
+    await pack.close();
     let folderPath = getRenderedFolderPath(folderElement);
     let folderName = folderElement.querySelector('h3').innerText;
     let contents = await pack.getContent();
     for (let entity of contents){
         if (entity.data.flags != null && entity.data.flags.cf != null){
             let entityPath = entity.data.flags.cf.path;
-            if (entityPath.startsWith(folderPath)){
+            if (entityPath != null && entityPath.startsWith(folderPath)){
                 if (deleteAll){
                     //anything starting with path is deleted
                     await pack.deleteEntity(entity.id);
                 }else{
                     //anything starting with path removes folderName and update
-                    let newName = entityPath.replace(folderName,'').replace(/\/\//,'/');
-                    if (newName.length>0){
-
-                        if (newName[0]==='/'){
-                            newName = newName.slice(1);
-                        }
-                        if (newName[newName.length-1]==='/'){
-                            newName = newName.slice(0,newName.length-1)
-                        }
-                    }
+                    // Remove double slash, leading slash, and following slash
+                    let newName = entityPath.replace(folderName,'').replace(/\/\//,'/').replace(/^\//,'').replace(/\/$/,'');
                     
                     let data = {
                         flags:{
@@ -818,8 +791,10 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
                             }
                         }
                     }
+                    if (newName.length === 0){
+                        data.flags.cf = null;
+                    }
 
-                    
                     data._id = entity._id;
                                                     
                     await pack.updateEntity(data)
@@ -828,7 +803,8 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
         }
     }
     ui.notifications.notify("Deleting complete!");
-    
+    document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
+    pack.render(true);
 }
 // Edit functions
 class ImportExportConfig extends FormApplication {
@@ -1414,7 +1390,9 @@ function addExportButton(folder){
     });
     folder.insertAdjacentElement('beforeend',link);
 }
+// Mostly taken from foundry.js 
 async function exportFolderStructureToCompendium(folderId){
+    
     let folder = game.folders.get(folderId);
     
     // Get eligible pack destinations
@@ -1572,8 +1550,6 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
     importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
 
-
-
     folder.appendChild(header);
     header.appendChild(headerTitle);
     header.appendChild(importButton)
@@ -1581,7 +1557,7 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     contents.appendChild(folderList);
     contents.appendChild(packList);
 
-    //If no folder data, or folder is in open folders AND folder has an id
+    //If no folder data, or folder is in open folders AND folder has an id, close folder by default
     if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
         contents.style.display = 'none';
         folder.setAttribute('collapsed','');
@@ -1705,7 +1681,10 @@ async function createFolderPath(path,pColor,entityType,e){
         index++;
     }
 }
-
+// ==========================
+// For cleaning folder data from a compendium pack
+// This is accessible from the module settings
+// ==========================
 async function cleanupCompendium(pack){
     ui.notifications.notify(game.i18n.format("CF.cleanupNotificationStart"),{pack:pack})
     let p = game.packs.get(pack);
@@ -1931,6 +1910,7 @@ Hooks.once('setup',async function(){
             }
         })
         Hooks.on('renderApplication',async function(a){
+            //When compendium window renders, recreate the search bar and register custom listener
             if (a.template != null && a.template === 'templates/apps/compendium.html'){
                 let window = a._element[0]
                 let searchBar = window.querySelector('input[name=\'search\']')
@@ -1947,8 +1927,8 @@ Hooks.once('setup',async function(){
                 header.replaceChild(newSearchBar,searchBar);
             }
         });
-        // Hooking into the creation methods to remove
-        // folder data from the name of the entity
+        // Hooking into the creation methods to extract
+        // folder data from the entity
         // and create folders based on them
         Hooks.on('createActor',async function(a){
             await importFolderData(a);
@@ -1967,6 +1947,7 @@ Hooks.once('setup',async function(){
         })
 
         // Adding the export button to all folders
+        // ONLY if it contains an entity (either direct child or in child folder)
         Hooks.on('renderActorDirectory',async function(){
             for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null //
