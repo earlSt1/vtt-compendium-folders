@@ -1639,7 +1639,6 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
     header.addEventListener('contextmenu',function(event){
-        console.log(event);
         createContextMenu(header,event);
     });
     let contents = document.createElement('div');
