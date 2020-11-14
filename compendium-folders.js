@@ -104,7 +104,7 @@ function getFullPath(folderObj){
     }
     return path;
 }
-async function removeStaleFolderSettings(packCode){
+async function removeStaleOpenFolderSettings(packCode){
     let openFolders = game.settings.get(mod,'open-temp-folders')
     let newSettings = {}
     newSettings[packCode]=openFolders[packCode];
@@ -461,9 +461,9 @@ function createDirectoryHeader(){
             header.appendChild(collapseLink);
         }
         
-        
-        
 
+      
+        
         
         tab.insertAdjacentElement('afterbegin',header);
     }
@@ -923,6 +923,36 @@ class ImportExportConfig extends FormApplication {
         }
     }
 }
+async function moveFolder(srcFolderId,destFolderId,showNotification=false){
+    let allFolders = game.settings.get(mod,'cfolders');
+
+    let success = false;
+    if (destFolderId != null && destFolderId.length>0){
+        let notificationDest = ""
+        let srcFolderName = ""
+        if (destFolderId=='root'){
+            allFolders[srcFolderId]['pathToFolder'] = []
+            success = CompendiumFolderMoveDialog.updateFullPathForChildren(allFolders,srcFolderId,[])
+            notificationDest="Root";
+        }else{
+            let destParentPath = (allFolders[destFolderId]['pathToFolder']==null)?[]:allFolders[destFolderId]['pathToFolder']
+            let fullPath = destParentPath.concat([destFolderId]);
+            allFolders[srcFolderId]['pathToFolder'] = fullPath;
+            success = CompendiumFolderMoveDialog.updateFullPathForChildren(allFolders,srcFolderId,fullPath)
+            notificationDest = allFolders[destFolderId].titleText;
+            srcFolderName = allFolders[srcFolderId].titleText;
+        }
+        if (success==true){
+            if (showNotification){
+                ui.notifications.info(game.i18n.localize('CF.moveFolderNotification').replace('{src}',srcFolderName).replace('{dest}',notificationDest))
+            }
+            await game.settings.set(mod,'cfolders',allFolders);
+            refreshFolders();
+        }else{
+            ui.notifications.error(game.i18n.localize('CF.folderDepthError')+" ("+FOLDER_LIMIT+")")
+        }
+    }
+}
 class CompendiumFolderMoveDialog extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
@@ -1004,7 +1034,7 @@ class CompendiumFolderMoveDialog extends FormApplication {
             submitText: game.i18n.localize("CF.moveFolder")
         }
     }
-    updateFullPathForChildren(allFolders,parentFolderId,fullPath){
+    static updateFullPathForChildren(allFolders,parentFolderId,fullPath){
         let success = true;
         Object.keys(allFolders).forEach(function(key){
             if (allFolders[key].pathToFolder != null
@@ -1029,31 +1059,8 @@ class CompendiumFolderMoveDialog extends FormApplication {
                 destFolderId=e.value;
                 return;} 
         });
-
-        let allFolders = game.settings.get(mod,'cfolders');
-        let success = false;
-        if (destFolderId != null && destFolderId.length>0){
-            let notificationDest = ""
-            if (destFolderId=='root'){
-                allFolders[this.object._id]['pathToFolder'] = []
-                success = this.updateFullPathForChildren(allFolders,this.object._id,[])
-                notificationDest="Root";
-            }else{
-                let destParentPath = (allFolders[destFolderId]['pathToFolder']==null)?[]:allFolders[destFolderId]['pathToFolder']
-                let fullPath = destParentPath.concat([destFolderId]);
-                allFolders[this.object._id]['pathToFolder'] = fullPath;
-                success = this.updateFullPathForChildren(allFolders,this.object._id,fullPath)
-                notificationDest = allFolders[destFolderId].titleText;
-            }
-            if (success==true){
-                ui.notifications.info(game.i18n.localize('CF.moveFolderNotification').replace('{src}',this.object.titleText).replace('{dest}',notificationDest))
-                await game.settings.set(mod,'cfolders',allFolders);
-                refreshFolders();
-            }else{
-                ui.notifications.error(game.i18n.localize('CF.folderDepthError')+" ("+FOLDER_LIMIT+")")
-            }
-        }
-        
+        moveFolder(this.object._id,destFolderId,true);
+        return;       
     }
 }
     
@@ -1452,30 +1459,25 @@ function setupDragEventListeners(){
     }
     for (let folder of window.querySelectorAll('.compendium-folder')){
         folder.addEventListener('drop',async function(event){
+            event.stopPropagation();
             let movingId = this.closest('ol.directory-list').querySelector('input.pack-to-move').value;
             let folderId = this.getAttribute('data-cfolder-id');
             if (movingId.length>0){
                 this.closest('ol.directory-list').querySelector('input.pack-to-move').value = ''
                 let allSettings = game.settings.get(mod,'cfolders');
                 if (!allSettings[folderId].compendiumList.includes(movingId) && folderId!='default'){
-                    
                     for (let key of Object.keys(allSettings)){
                         let currentFolder = allSettings[key];
                         let cList = currentFolder.compendiumList;
                         if (cList.includes(movingId)){
-                            console.log(currentFolder);
-                            console.log(movingId);
                             allSettings[key].compendiumList = cList.filter(c => c != movingId);
-                            console.log(allSettings[key]);
                         }
-                        
                     }
                     allSettings[folderId].compendiumList.push(movingId);
                     await game.settings.set(mod,'cfolders',allSettings)
                     refreshFolders();
                 }
             }
-        
         });
     }
 }
@@ -1945,7 +1947,7 @@ Hooks.once('setup',async function(){
         Hooks.on('renderCompendium',async function(e){
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
-            removeStaleFolderSettings(packCode);
+            removeStaleOpenFolderSettings(packCode);
             let pack = game.packs.get(packCode)
             let allFolderData={};
             //First parse folder data
@@ -1983,8 +1985,9 @@ Hooks.once('setup',async function(){
             }
             for (let folder of window.querySelectorAll('.compendium-folder')){
                 folder.addEventListener('drop',async function(event){
-                    let movingId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                    if (movingId.length>0){
+                    let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
+                    let movingFolderId = document.querySelector('input.cfolder-to-move').value;
+                    if (movingItemId.length>0){
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
                         let folderId = this.getAttribute('data-folder-id');
 
@@ -2004,7 +2007,7 @@ Hooks.once('setup',async function(){
                             }
                         }                             
                         let index = await p.getIndex();
-                        let entry = await p.getEntity(movingId);
+                        let entry = await p.getEntity(movingItemId);
                       
                         let matchingIndex = index.find(i => i._id === entry.id);
                         let data = await entry.toCompendium();
