@@ -1528,31 +1528,33 @@ async function exportFolderStructureToCompendium(folderId){
             const pack = game.packs.get(form.pack.value);
             ui.notifications.notify(game.i18n.format('CF.exportFolderNotificationStart',{pack:form.pack.value}));
             let index = await pack.getIndex();
-            await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'))
+            await pack.close();
+            await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'),form.merge.checked)
             ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
+            pack.render(true);
         },
         options:{}
     });
 
     
 }
-async function recursivelyExportFolders(index,pack,folderObj,folderId){
+async function recursivelyExportFolders(index,pack,folderObj,folderId,merge){
     if (folderObj.children.length==0){
         let entities = folderObj.content;
-        let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId)
+        let updatedFolder = await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,merge)
         if (updatedFolder != null){
             return [updatedFolder];
         }
         return []
     }
     for (let child of folderObj.children){
-        await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'))
+        await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'),merge)
     }
     let entities = folderObj.content;
     
-    await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId)
+    await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,merge)
 }
-async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId){
+async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,merge){
     //Exporting issue with 2-deep folders
     let path = getFullPath(folderObj)
     if (entities.length == 0){
@@ -1569,7 +1571,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
             path:path,
             color:color
         }
-        let existing = index.find(i => i.name === data.name);
+        let existing = merge ? index.find(i => i.name === data.name) : index.find(i => i._id === e.id);
         if ( existing ) data._id = existing._id;
         if ( data._id ) await pack.updateEntity(data);
         else pack.createEntity(data).then(result => {
@@ -1750,6 +1752,7 @@ async function importFolderData(e){
         }else{
             await createFolderPath(path,color,e.entity,e);
         }
+        e.data.flags.cf = null;
     }
 }
 async function createFolderPath(path,pColor,entityType,e){
