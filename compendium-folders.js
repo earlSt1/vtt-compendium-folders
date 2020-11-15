@@ -1986,7 +1986,6 @@ Hooks.once('setup',async function(){
             for (let folder of window.querySelectorAll('.compendium-folder')){
                 folder.addEventListener('drop',async function(event){
                     let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                    let movingFolderId = document.querySelector('input.cfolder-to-move').value;
                     if (movingItemId.length>0){
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
                         let folderId = this.getAttribute('data-folder-id');
