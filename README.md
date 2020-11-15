@@ -28,11 +28,17 @@ _This feature only works for FVTT 0.7.3+_
 - The way this works is that folder data is stored in entities. This means you cannot have empty folders, and a folder without entities in it, but with a folder inside it, cannot be modified.
 - Folders containing slashes `/` will likely break when exported. This is something I'll need to look into in the future. For now you will have to use another character.
 
+#### Future
+- Fix search bar not repopulating when you view a compendium entry
+- Fix path separator so folders containing slashes `/` can be used
+- Create folder in compendium?
+- Drag+drop folders into eachother
+
 ## Folders for Compendiums
 
 ![](./example.png)
 
-## Instructions
+#### Instructions
 Once the module initially runs, it will convert your existing submenus into folders.
 Each folder has 3 icons. Starting from the right
 - The Gear icon allows you to edit the compendiums inside a folder. They are grouped by Assigned (already in folders) and Unassigned (not in folders). You can also Delete a folder through this dialog, which will delete all child folders and move all compendiums within to Unassigned
@@ -43,7 +49,7 @@ You can also import and export your folder configuration, to share with others o
 
 I would recommend once you are happy with your layout, to save your folder configuration. This will also be useful if you are going to submit an issue or bug on GitHub.
 
-## Future
+#### Future
 
 1. ~~Move compendiums between folders~~ Now in 0.1.4!
 2. ~~Create/Rename/Update/Delete folders~~ Now in 0.1.4!
