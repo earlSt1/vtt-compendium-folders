@@ -26,6 +26,7 @@ _This feature only works for FVTT 0.7.3+_
 #### Limitations
 - One main limitation to this is that you cannot easily construct a folder structure inside the compendium. If you want to export a new folder you will have to create a new folder in the same path as inside the compendium, place the entities you would like to export in there, then Export the folder structure of that new folder.
 - The way this works is that folder data is stored in entities. This means you cannot have empty folders, and a folder without entities in it, but with a folder inside it, cannot be modified.
+- Folders containing slashes `/` will likely break when exported. This is something I'll need to look into in the future. For now you will have to use another character.
 
 ## Folders for Compendiums
 
