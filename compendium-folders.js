@@ -602,13 +602,15 @@ function createHiddenFolder(prefix,hiddenFolder,remainingElements){
 }
 function insertDefaultFolder(prefix,defaultFolder,folderObject){
     let allFolders = game.settings.get(mod,'cfolders');
-    for (let folder of document.querySelectorAll(prefix+'.sidebar-tab[data-tab=compendium] > ol > li.compendium-folder')){
+    let allElements = document.querySelectorAll(prefix+'.sidebar-tab[data-tab=compendium] > ol > li.compendium-folder')
+    for (let folder of allElements){
         let folderId = folder.getAttribute('data-cfolder-id');
         if (allFolders[folderId].titleText > defaultFolder.titleText){
             folder.insertAdjacentElement('beforebegin',folderObject);
             return;
         }
     }
+    allElements[allElements.length - 1].insertAdjacentElement('afterend',folderObject);
 }
 function createDefaultFolder(prefix,defaultFolder,hiddenFolder,remainingElements){
     let tab = document.querySelector(prefix+'.sidebar-tab[data-tab=compendium] > ol.directory-list')
