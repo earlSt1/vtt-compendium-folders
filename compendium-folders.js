@@ -1951,7 +1951,9 @@ Hooks.once('setup',async function(){
     }
     if (post073 && hasFICChanges){
         Hooks.on('renderCompendium',async function(e){
-            ui.notifications.notify('Creating folder structure. Please be patient...')
+            if (e.index.length>1000)
+                ui.notifications.notify('Creating folder structure. Please be patient...')
+            console.log(modName+' | Creating folder structure inside compendium.')
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
@@ -1991,7 +1993,7 @@ Hooks.once('setup',async function(){
                 folder.addEventListener('drop',async function(event){
                     let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
                     if (movingItemId.length>0){
-                        console.log(modName+'| Moving item '+movingItemId+'to new folder...')
+                        console.log(modName+' | Moving entry '+movingItemId+' to new folder.')
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
                         let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
 
@@ -2022,6 +2024,10 @@ Hooks.once('setup',async function(){
                     }
                 })
             }
+            let newSearchBar = window.querySelector('input[name=\'search2\']')
+            if (newSearchBar.value.length>0){
+                filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
+            }
         })
         Hooks.on('renderApplication',async function(a){
             //When compendium window renders, recreate the search bar and register custom listener
@@ -2034,6 +2040,7 @@ Hooks.once('setup',async function(){
                 newSearchBar.type='text';
                 newSearchBar.autocomplete='off';
                 newSearchBar.value = game.settings.get(mod,'last-search')
+                
                 newSearchBar.addEventListener('keyup',async function(event){
                     event.stopPropagation();
                     game.settings.set(mod,'last-search',event.currentTarget.value);
