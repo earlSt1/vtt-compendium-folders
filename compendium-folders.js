@@ -806,14 +806,14 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     for (let entity of contents){
         if (entity.data.flags != null && entity.data.flags.cf != null){
             let entityPath = entity.data.flags.cf.path;
-            if (entityPath != null && entityPath.startsWith(folderPath)){
+            if (entityPath != null && entityPath.startsWith(folderPath+'/') || entityPath === folderPath){
                 if (deleteAll){
                     //anything starting with path is deleted
                     await pack.deleteEntity(entity.id);
                 }else{
                     //anything starting with path removes folderName and update
                     // Remove double slash, leading slash, and following slash
-                    let newName = entityPath.replace(folderName,'').replace(/\/\//,'/').replace(/^\//,'').replace(/\/$/,'');
+                    let newName = entityPath.replace(folderName+'/','').replace(/\/\//,'/').replace(/^\//,'').replace(/\/$/,'');
                     
                     let data = {
                         flags:{
@@ -1878,6 +1878,12 @@ export class Settings{
             type:Object,
             default:{}
         });
+        game.settings.register(mod,'last-search',{
+            scope:'client',
+            config:false,
+            type:String,
+            default:""
+        });
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -1945,29 +1951,27 @@ Hooks.once('setup',async function(){
     }
     if (post073 && hasFICChanges){
         Hooks.on('renderCompendium',async function(e){
+            ui.notifications.notify('Creating folder structure. Please be patient...')
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
-            let pack = game.packs.get(packCode)
+            let contents = await e.getContent();
             let allFolderData={};
             //First parse folder data
-            for (let entry of window.querySelectorAll('.sidebar-tab.compendium .directory-item')){
-                let eId = entry.getAttribute('data-entry-id');
-                
-                let entity = await pack.getEntry(eId);
-                
-                if (entity != null && entity.flags.cf != null){
-                    let path = entity.flags.cf.path;
-                    let color = entity.flags.cf.color;
-                    let folderId = entity.flags.cf.id;
+            for (let entry of contents){
+                if (entry != null && entry.data.flags.cf != null){
+                    let path = entry.data.flags.cf.path;
+                    let color = entry.data.flags.cf.color;
+                    let folderId = entry.data.flags.cf.id;
+                    let entryId = entry._id
                     if (allFolderData[path] == null){
-                        allFolderData[path] = {id:folderId,color:color, children:[eId]}
+                        allFolderData[path] = {id:folderId,color:color, children:[entryId]}
                     }else{
-                        allFolderData[path].children.push(eId);
+                        allFolderData[path].children.push(entryId);
                     }
                 }
             }
-            let openFolders = await game.settings.get(mod,'open-temp-folders');
+            let openFolders = game.settings.get(mod,'open-temp-folders');
             createFoldersWithinCompendium(allFolderData,packCode,openFolders);
 
             // Moving between folders
@@ -1987,16 +1991,17 @@ Hooks.once('setup',async function(){
                 folder.addEventListener('drop',async function(event){
                     let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
                     if (movingItemId.length>0){
+                        console.log(modName+'| Moving item '+movingItemId+'to new folder...')
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
-                        let folderId = this.getAttribute('data-folder-id');
+                        let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
 
                         let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
                         let p = game.packs.get(packCode);
-                        let entries = await p.getContent();
-                        let allInNewFolder = entries.filter(x => x.data.flags.cf != null && x.data.flags.cf.id === folderId);
+   
                         let folderData = null;
-                        if (folderId != 'noid'){
-                            folderData = allInNewFolder[0].data.flags.cf;
+                        if (entryInFolderElement != null){
+                            let entryInFolder = await p.getEntry(entryInFolderElement.getAttribute('data-entry-id'));
+                            folderData = entryInFolder.flags.cf;
                         }else{
                             //Create new folder
                             folderData = {
@@ -2005,16 +2010,14 @@ Hooks.once('setup',async function(){
                                 color:'#000000'
                             }
                         }                             
-                        let index = await p.getIndex();
-                        let entry = await p.getEntity(movingItemId);
-                      
-                        let matchingIndex = index.find(i => i._id === entry.id);
-                        let data = await entry.toCompendium();
-                        if (data.flags != null){
-                            data.flags.cf = folderData
-                        } 
-                        data._id = matchingIndex._id;
-                                                        
+
+                        let data = {
+                            _id:movingItemId,
+                            flags:{
+                                cf:folderData
+                            }
+                        }
+                                                       
                         await p.updateEntity(data)
                     }
                 })
@@ -2030,8 +2033,10 @@ Hooks.once('setup',async function(){
                 newSearchBar.placeholder='Search';
                 newSearchBar.type='text';
                 newSearchBar.autocomplete='off';
+                newSearchBar.value = game.settings.get(mod,'last-search')
                 newSearchBar.addEventListener('keyup',async function(event){
                     event.stopPropagation();
+                    game.settings.set(mod,'last-search',event.currentTarget.value);
                     filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
                 })
                 let header = searchBar.parentElement;
