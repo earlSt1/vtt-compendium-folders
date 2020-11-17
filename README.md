@@ -1,4 +1,4 @@
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/earlSt1/vtt-compendium-folders) ![GitHub issues](https://img.shields.io/github/issues-raw/earlSt1/vtt-compendium-folders)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/earlSt1/vtt-compendium-folders) ![GitHub issues](https://img.shields.io/github/issues-raw/earlSt1/vtt-compendium-folders) ![GitHub all releases](https://img.shields.io/github/downloads/earlSt1/vtt-compendium-folders/total)
 
 # Compendium Folders
 
