@@ -34,5 +34,5 @@
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
     "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/2.0.2.zip"
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/releases/download/2.0.2/vtt-compendium-folders-2.0.2.zip"
   }
