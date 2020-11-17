@@ -1,3 +1,5 @@
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/earlSt1/vtt-compendium-folders) ![GitHub issues](https://img.shields.io/github/issues-raw/earlSt1/vtt-compendium-folders) ![GitHub all releases](https://img.shields.io/github/downloads/earlSt1/vtt-compendium-folders/total)
+
 # Compendium Folders
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used to organize compendiums in the directory, in addition to organize entries *inside* compendiums.
