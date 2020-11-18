@@ -1960,9 +1960,6 @@ Hooks.once('setup',async function(){
     }
     if (post073 && hasFICChanges){
         Hooks.on('renderCompendium',async function(e){
-            if (e.index.length>1000)
-                ui.notifications.notify('Creating folder structure. Please be patient...')
-            console.log(modName+' | Creating folder structure inside compendium.')
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
@@ -1982,6 +1979,10 @@ Hooks.once('setup',async function(){
                     }
                 }
             }
+            if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
+                return;
+            }
+            console.log(modName+' | Creating folder structure inside compendium.')
             let openFolders = game.settings.get(mod,'open-temp-folders');
             createFoldersWithinCompendium(allFolderData,packCode,openFolders);
 
