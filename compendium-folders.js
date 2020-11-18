@@ -1445,42 +1445,44 @@ function addEventListeners(prefix){
     setupDragEventListeners();
 }
 function setupDragEventListeners(){
-    let window = document.querySelector('section#compendium')
-    let hiddenMoveField = document.createElement('input');
-    hiddenMoveField.type='hidden'
-    hiddenMoveField.style.display='none';
-    hiddenMoveField.classList.add('pack-to-move');
-    window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
-    
-    for (let entity of window.querySelectorAll('.compendium-pack')){
-        entity.setAttribute('draggable','true')
-        entity.addEventListener('dragstart',async function(){
-            let currentPack = this.getAttribute('data-pack');
-            this.closest('ol.directory-list').querySelector('input.pack-to-move').value = currentPack
-        })
-    }
-    for (let folder of window.querySelectorAll('.compendium-folder')){
-        folder.addEventListener('drop',async function(event){
-            event.stopPropagation();
-            let movingId = this.closest('ol.directory-list').querySelector('input.pack-to-move').value;
-            let folderId = this.getAttribute('data-cfolder-id');
-            if (movingId.length>0){
-                this.closest('ol.directory-list').querySelector('input.pack-to-move').value = ''
-                let allSettings = game.settings.get(mod,'cfolders');
-                if (!allSettings[folderId].compendiumList.includes(movingId) && folderId!='default'){
-                    for (let key of Object.keys(allSettings)){
-                        let currentFolder = allSettings[key];
-                        let cList = currentFolder.compendiumList;
-                        if (cList.includes(movingId)){
-                            allSettings[key].compendiumList = cList.filter(c => c != movingId);
+    if (game.user.isGM){
+        let window = document.querySelector('section#compendium')
+        let hiddenMoveField = document.createElement('input');
+        hiddenMoveField.type='hidden'
+        hiddenMoveField.style.display='none';
+        hiddenMoveField.classList.add('pack-to-move');
+        window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
+        
+        for (let entity of window.querySelectorAll('.compendium-pack')){
+            entity.setAttribute('draggable','true')
+            entity.addEventListener('dragstart',async function(){
+                let currentPack = this.getAttribute('data-pack');
+                this.closest('ol.directory-list').querySelector('input.pack-to-move').value = currentPack
+            })
+        }
+        for (let folder of window.querySelectorAll('.compendium-folder')){
+            folder.addEventListener('drop',async function(event){
+                event.stopPropagation();
+                let movingId = this.closest('ol.directory-list').querySelector('input.pack-to-move').value;
+                let folderId = this.getAttribute('data-cfolder-id');
+                if (movingId.length>0){
+                    this.closest('ol.directory-list').querySelector('input.pack-to-move').value = ''
+                    let allSettings = game.settings.get(mod,'cfolders');
+                    if (!allSettings[folderId].compendiumList.includes(movingId) && folderId!='default'){
+                        for (let key of Object.keys(allSettings)){
+                            let currentFolder = allSettings[key];
+                            let cList = currentFolder.compendiumList;
+                            if (cList.includes(movingId)){
+                                allSettings[key].compendiumList = cList.filter(c => c != movingId);
+                            }
                         }
+                        allSettings[folderId].compendiumList.push(movingId);
+                        await game.settings.set(mod,'cfolders',allSettings)
+                        refreshFolders();
                     }
-                    allSettings[folderId].compendiumList.push(movingId);
-                    await game.settings.set(mod,'cfolders',allSettings)
-                    refreshFolders();
                 }
-            }
-        });
+            });
+        }
     }
 }
 // ==========================
@@ -1644,9 +1646,11 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     
     header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
-    header.addEventListener('contextmenu',function(event){
-        createContextMenu(header,event);
-    });
+    if (game.user.isGM){
+        header.addEventListener('contextmenu',function(event){
+            createContextMenu(header,event);
+        });
+    }
     let contents = document.createElement('div');
     contents.classList.add('folder-contents');
     contents.setAttribute("data-pack",packCode);
@@ -1656,18 +1660,21 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     let packList = document.createElement('ol');
     packList.classList.add('entry-list');
     
-    let importButton = document.createElement('a');
-    importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
-    importButton.classList.add('import-folder');
-    importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
-    importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
-
     folder.appendChild(header);
     header.appendChild(headerTitle);
-    header.appendChild(importButton)
     folder.appendChild(contents);
     contents.appendChild(folderList);
     contents.appendChild(packList);
+
+    if (game.user.isGM){
+        let importButton = document.createElement('a');
+        importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
+        importButton.classList.add('import-folder');
+        importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
+        importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
+
+        header.appendChild(importButton);
+    }
 
     //If no folder data, or folder is in open folders AND folder has an id, close folder by default
     if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
@@ -1978,59 +1985,63 @@ Hooks.once('setup',async function(){
             let openFolders = game.settings.get(mod,'open-temp-folders');
             createFoldersWithinCompendium(allFolderData,packCode,openFolders);
 
-            // Moving between folders
-            let hiddenMoveField = document.createElement('input');
-            hiddenMoveField.type='hidden'
-            hiddenMoveField.style.display='none';
-            hiddenMoveField.classList.add('folder-to-move');
-            window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
-            
-            for (let entity of window.querySelectorAll('.directory-item')){
-                entity.addEventListener('dragstart',async function(){
-                    let currentId = this.getAttribute('data-entry-id');
-                    this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
-                })
-            }
-            for (let folder of window.querySelectorAll('.compendium-folder')){
-                folder.addEventListener('drop',async function(event){
-                    let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                    if (movingItemId.length>0){
-                        console.log(modName+' | Moving entry '+movingItemId+' to new folder.')
-                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
-                        let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
+            if (game.user.isGM){
+                // Moving between folders
+                let hiddenMoveField = document.createElement('input');
+                hiddenMoveField.type='hidden'
+                hiddenMoveField.style.display='none';
+                hiddenMoveField.classList.add('folder-to-move');
+                window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
+                
+                for (let entity of window.querySelectorAll('.directory-item')){
+                    entity.addEventListener('dragstart',async function(){
+                        let currentId = this.getAttribute('data-entry-id');
+                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
+                    })
+                }
+                for (let folder of window.querySelectorAll('.compendium-folder')){
+                    folder.addEventListener('drop',async function(event){
+                        let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
+                        if (movingItemId.length>0){
+                            console.log(modName+' | Moving entry '+movingItemId+' to new folder.')
+                            this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
+                            let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
 
-                        let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
-                        let p = game.packs.get(packCode);
-   
-                        let folderData = null;
-                        if (entryInFolderElement != null){
-                            let entryInFolder = await p.getEntry(entryInFolderElement.getAttribute('data-entry-id'));
-                            folderData = entryInFolder.flags.cf;
-                        }else{
-                            //Create new folder
-                            folderData = {
-                                id:generateRandomFolderName('temp_'),
-                                path:getRenderedFolderPath(this),
-                                color:'#000000'
-                            }
-                        }                             
+                            let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
+                            let p = game.packs.get(packCode);
+    
+                            let folderData = null;
+                            if (entryInFolderElement != null){
+                                let entryInFolder = await p.getEntry(entryInFolderElement.getAttribute('data-entry-id'));
+                                folderData = entryInFolder.flags.cf;
+                            }else{
+                                //Create new folder
+                                folderData = {
+                                    id:generateRandomFolderName('temp_'),
+                                    path:getRenderedFolderPath(this),
+                                    color:'#000000'
+                                }
+                            }                             
 
-                        let data = {
-                            _id:movingItemId,
-                            flags:{
-                                cf:folderData
+                            let data = {
+                                _id:movingItemId,
+                                flags:{
+                                    cf:folderData
+                                }
                             }
+                                                        
+                            await p.updateEntity(data)
                         }
-                                                       
-                        await p.updateEntity(data)
-                    }
-                })
+                    })
+                }
             }
             let newSearchBar = window.querySelector('input[name=\'search2\']')
             if (newSearchBar.value.length>0){
                 filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
             }
+            
         })
+
         Hooks.on('renderApplication',async function(a){
             //When compendium window renders, recreate the search bar and register custom listener
             if (a.template != null && a.template === 'templates/apps/compendium.html'){
@@ -2076,7 +2087,8 @@ Hooks.once('setup',async function(){
         Hooks.on('renderActorDirectory',async function(){
             for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null //
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
+                    && game.user.isGM){
                     addExportButton(folder);
                 }
             }
@@ -2084,7 +2096,8 @@ Hooks.once('setup',async function(){
         Hooks.on('renderJournalDirectory',async function(){
             for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
+                    && game.user.isGM){
                     addExportButton(folder);
                 }
             }
@@ -2092,7 +2105,8 @@ Hooks.once('setup',async function(){
         Hooks.on('renderSceneDirectory',async function(){
             for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
+                    && game.user.isGM){
                     addExportButton(folder);
                 } 
             }
@@ -2100,7 +2114,8 @@ Hooks.once('setup',async function(){
         Hooks.on('renderItemDirectory',async function(){
             for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
+                    && game.user.isGM){
                     addExportButton(folder);
                 } 
             }
@@ -2108,7 +2123,8 @@ Hooks.once('setup',async function(){
         Hooks.on('renderRollTableDirectory',async function(){
             for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null){
+                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
+                    && game.user.isGM){
                     addExportButton(folder);
                 }  
             }
