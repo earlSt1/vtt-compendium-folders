@@ -31,7 +31,7 @@ _This feature only works for FVTT 0.7.3+_
 - Folders containing slashes `/` will likely break when exported. This is something I'll need to look into in the future. For now you will have to use another character.
 
 #### Future
-- Fix search bar not repopulating when you view a compendium entry
+- ~~Fix search bar not repopulating when you view a compendium entry~~ Now in 2.0.3!
 - Fix path separator so folders containing slashes `/` can be used
 - Create folder in compendium?
 - Drag+drop folders into eachother
