@@ -75,3 +75,5 @@ Special thanks to the translators who contributed to this project:
 
 ## Contribution
 If you'd like to support my work, feel free to leave a tip through [my paypal](http://paypal.me/cre463)
+
+This project is licensed under the CC-BY-NC license. Visit https://creativecommons.org/licenses/by-nc/4.0/ for more information.
