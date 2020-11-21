@@ -1599,7 +1599,7 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
 
     // Prepare the source data from which to create the Entity
     const source = await pack.getEntity(entryId);
-    const createData = mergeObject(clsColl.fromCompendium(source.data), updateData);
+    let createData = mergeObject(clsColl.fromCompendium(source.data), updateData);
     delete createData._id;
 
     // Create the Entity
@@ -1623,8 +1623,9 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
         clsColl.directory.activate();
         return await clsColl.object.create(createData, options);
     }
-    console.log(`${modName} | ${entName} ${source.name} already exists on correct path`);
-    return search[0];
+    console.log(`${modName} | ${entName} ${source.name} already exists on correct path. Updating`);
+    createData._id = search[0].id;
+    return await clsColl.object.update(createData,options);
   }
 // ==========================
 // Importing folders from compendiums
@@ -2102,7 +2103,7 @@ Hooks.once('setup',async function(){
                 header.replaceChild(newSearchBar,searchBar);
             }
         });
-        // Hooking into the creation methods to extract
+        // Hooking into the update/create methods to extract
         // folder data from the entity
         // and create folders based on them
         Hooks.on('createActor',async function(a){
@@ -2118,6 +2119,22 @@ Hooks.once('setup',async function(){
             await importFolderData(i);
         })
         Hooks.on('createRollTable',async function(r){
+            await importFolderData(r);
+        })
+        
+        Hooks.on('updateActor',async function(a){
+            await importFolderData(a);
+        })
+        Hooks.on('updateJournalEntry',async function(j){
+            await importFolderData(j);
+        })
+        Hooks.on('updateScene',async function(s){
+            await importFolderData(s);
+        })
+        Hooks.on('updateItem',async function(i){
+            await importFolderData(i);
+        })
+        Hooks.on('updateRollTable',async function(r){
             await importFolderData(r);
         })
 
