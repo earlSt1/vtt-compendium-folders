@@ -1949,9 +1949,6 @@ export class Settings{
     static getFolders(){
         return game.settings.get(mod,'cfolders');
     }
-    static addImportedFolder(){
-        
-    }
 }
 // ==========================
 // Main hook setup
