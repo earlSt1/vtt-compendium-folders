@@ -1613,7 +1613,7 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
                         break;
             case 'JournalEntry':search = game.journal.entities.filter(j => j.name === source.name && getFolderPath(j.folder)===folderPath)
                         break;
-            case 'Scene':search = game.scene.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
+            case 'Scene':search = game.scenes.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
                         break;
             case 'RollTable':search = game.tables.entities.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
         }
