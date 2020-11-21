@@ -32,6 +32,7 @@ _This feature only works for FVTT 0.7.3+_
 
 #### Future
 - ~~Fix search bar not repopulating when you view a compendium entry~~ Now in 2.0.2!
+- Merge-by-name tickbox on Import process
 - Fix path separator so folders containing slashes `/` can be used
 - Create folder in compendium?
 - Drag+drop folders into eachother
