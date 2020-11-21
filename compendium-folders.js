@@ -840,7 +840,7 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     pack.render(true);
 }
 async function updateFolderWithinCompendium(folderObj){
-    ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))
+    ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationStart'))
     let packCode = folderObj.packCode;
     let pack = game.packs.get(packCode);
     await pack.close();
@@ -879,7 +879,7 @@ async function updateFolderWithinCompendium(folderObj){
             }
         }
     }
-    ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationFinish'));
+    ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationFinish'));
     document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
     pack.render(true);
 }
