@@ -111,6 +111,9 @@ async function removeStaleOpenFolderSettings(packCode){
     await game.settings.set(mod,'open-temp-folders',newSettings);
 }
 function getFolderPath(folder){
+    if (folder === null){
+        return '';
+    }
     let path = folder.data.name;
     let currentFolder = folder;
     while (currentFolder.parent != null){
@@ -1589,22 +1592,56 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     }
     return folderObj
 }
+async function importFromCollectionWithMerge(clsColl,collection, entryId, folderPath, updateData={}, options={},merge=false) {
+    const entName = clsColl.object.entity;
+    const pack = game.packs.get(collection);
+    if (pack.metadata.entity !== entName) return;
 
+    // Prepare the source data from which to create the Entity
+    const source = await pack.getEntity(entryId);
+    const createData = mergeObject(clsColl.fromCompendium(source.data), updateData);
+    delete createData._id;
+
+    // Create the Entity
+    
+    let search = null
+    if (merge){
+        switch (entName){
+            case 'Actor':search = game.actors.entities.filter(a => a.name === source.name && getFolderPath(a.folder)===folderPath)
+                        break;
+            case 'Item':search = game.items.entities.filter(i => i.name === source.name && getFolderPath(i.folder)===folderPath)
+                        break;
+            case 'JournalEntry':search = game.journal.entities.filter(j => j.name === source.name && getFolderPath(j.folder)===folderPath)
+                        break;
+            case 'Scene':search = game.scene.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
+                        break;
+            case 'RollTable':search = game.tables.entities.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
+        }
+    }
+    if (search === null || search.length === 0){
+        console.log(`${modName} | Importing ${entName} ${source.name} from ${collection}`);
+        clsColl.directory.activate();
+        return await clsColl.object.create(createData, options);
+    }
+    console.log(`${modName} | ${entName} ${source.name} already exists on correct path`);
+    return search[0];
+  }
 // ==========================
 // Importing folders from compendiums
 // ==========================
-async function recursivelyImportFolders(pack,coll,folder){
+async function recursivelyImportFolders(pack,coll,folder,merge){
     //First import immediate children
     for (let entry of folder.querySelectorAll(':scope > .folder-contents > .entry-list > li.directory-item')){
         // Will invoke importFolderData()
-        await coll.importFromCollection(pack.collection,entry.getAttribute('data-entry-id'), {}, {renderSheet:false})
-        
+        await importFromCollectionWithMerge(coll,pack.collection,entry.getAttribute('data-entry-id'),getRenderedFolderPath(folder), {}, {renderSheet:false},merge)
+        // Wait a short amount of time for folder to fully create
+        await new Promise(res => setTimeout(res,50));
     }
     //Then loop through individual folders
     let childFolders = folder.querySelectorAll(':scope > .folder-contents > .folder-list > li.compendium-folder');
     if (childFolders.length>0){
         for (let child of childFolders){
-            await recursivelyImportFolders(pack,coll,child);
+            await recursivelyImportFolders(pack,coll,child,merge);
         }
     }
 }
@@ -1617,16 +1654,17 @@ async function importFolderFromCompendium(event,folder){
     let l4 = game.i18n.localize("CF.importFolderL4");
     Dialog.confirm({
         title:'Import Folder: '+folderName,
-        content: `<p>${l1}</p>
-            <p>${l2}</p>
-            <ul><li>${l3}</li><li>${l4}</li></ul>`,
-        yes: async () => {
+        content: `<form id='importFolder'><p>${l1}</p>
+            <ul><li>${l3}</li><li>${l4}</li></ul>
+            <div class='form-group'><label for='merge'>Merge by name</label><input type='checkbox' name='merge' checked/></div></form>`,
+        yes: async (h) => {
+            let merge = h[0].querySelector('input[name=\'merge\']').checked
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"))
             let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
             let pack = await game.packs.get(packCode);
             let coll = pack.cls.collection;
 
-            await recursivelyImportFolders(pack,coll,folder);
+            await recursivelyImportFolders(pack,coll,folder,merge);
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
         }
     });
@@ -1910,6 +1948,9 @@ export class Settings{
     }
     static getFolders(){
         return game.settings.get(mod,'cfolders');
+    }
+    static addImportedFolder(){
+        
     }
 }
 // ==========================
