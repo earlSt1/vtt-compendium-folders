@@ -128,7 +128,6 @@ function getTempEntityData(entityType,folder){
 }
 async function removeTempEntities(entityType){
     let collection = null
-    let cls = null
     switch (entityType){
         case 'Actor': collection = game.actors;
             break;
@@ -2109,6 +2108,12 @@ export class Settings{
             type:String,
             default:""
         });
+        game.settings.register(mod,'converted-folders',{
+            scope:'world',
+            config:false,
+            type:Boolean,
+            default:false
+        })
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -2127,6 +2132,65 @@ export class Settings{
     static getFolders(){
         return game.settings.get(mod,'cfolders');
     }
+    static async doFolderConversions(){
+        let needsToConvert = !game.settings.get(mod,'converted-folders');
+        if (needsToConvert){
+            ui.notifications.notify(modName + ' | Converting folders in compendiums to new format. Please wait...')
+            for (let packCode of game.packs.keys()){
+                let allFolderData = {}
+                let content = await game.packs.get(packCode).getContent()
+                let folderEntities = content.filter(x => x.data.flags != null && x.data.flags.cf != null);
+                for (let entry of folderEntities){
+                    let path = entry.data.flags.cf.path;
+                    let name = path.split('/')[path.split('/').length-1]
+                    let color = entry.data.flags.cf.color;
+                    let folderId = entry.data.flags.cf.id;
+                    let entryId = entry._id
+                    if (allFolderData[path] == null){
+                        allFolderData[path] = {id:folderId,color:color, children:[entryId],name:name}
+                    }else{
+                        allFolderData[path].children.push(entryId);
+                    }
+                }
+                let finishedPaths = [];
+                for (let path of Object.keys(allFolderData).sort()){
+                    let segments = path.split('/');
+                    for (let seg of segments){
+                        let index = segments.indexOf(seg)
+                        let currentPath = seg
+                        if (index>0){
+                            currentPath = segments.slice(0,index).join('/')+'/'+seg;
+                        }
+                        let tempEntity = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath && x.name === TEMP_ENTITY_NAME)
+                        let entities = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath)
+                        if (tempEntity == null && !finishedPaths.includes(currentPath)){
+                            let pack = game.packs.get(packCode);
+                            
+                            let tempData = getTempEntityData(pack.entity);
+                            let folderId = generateRandomFolderName('temp_');
+                            let folderColor = '#000000'
+                            let folderName = seg;
+                            if (entities != null && entities.data.flags.cf.id != null){
+                                folderId = entities.data.flags.cf.id;
+                                folderColor = entities.data.flags.cf.color;
+                            }
+                            tempData.flags.cf={
+                                id:folderId,
+                                path:currentPath,
+                                color:folderColor,
+                                name:folderName
+                            }
+                            await pack.createEntity(tempData);
+                            console.log(`Created temp entity for folder ${folderName} in ${pack.collection}`);
+                            finishedPaths.push(currentPath);
+                        }
+                    }
+                } 
+            }
+            ui.notifications.notify(modName+' | Conversion complete!')
+        }
+        await game.settings.set(mod,'converted-folders',true);
+    }
 }
 // ==========================
 // Main hook setup
@@ -2137,11 +2201,9 @@ Hooks.once('setup',async function(){
     let hooks = ['renderCompendiumDirectory','renderCompendiumDirectoryPF'];
     let post073 = game.data.version >= '0.7.3';
     let hasFICChanges = game.modules.get(mod).data.version >= '2.0.0';
+    Settings.registerSettings()
     for (let hook of hooks){
         Hooks.on(hook, async function() {
-
-            Settings.registerSettings()
-            
             let isPopout = document.querySelector('#compendium-popout') != null;
             let prefix = '#sidebar '
             if (isPopout){
@@ -2175,6 +2237,9 @@ Hooks.once('setup',async function(){
         });
     }
     if (post073 && hasFICChanges){
+        Hooks.on('ready',async function(){
+            await Settings.doFolderConversions();
+        })
         Hooks.on('renderCompendium',async function(e){
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
