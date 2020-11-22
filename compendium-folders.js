@@ -115,7 +115,7 @@ function getTempEntityData(entityType,folder){
     switch (entityType){
         case 'Actor': return {name:TEMP_ENTITY_NAME,type:'npc',flags:{cf:folder}}
 
-        case 'Item': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
+        case 'Item': return {name:TEMP_ENTITY_NAME,type:'weapon',flags:{cf:folder}}
  
         case 'JournalEntry': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
 
