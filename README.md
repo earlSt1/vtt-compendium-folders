@@ -26,10 +26,9 @@ A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/
 #### Instructions
 - To use the new functionality, each folder has a new button to the right of the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
 - To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
+- As of v2.0.8 you can now create folders in compendiums. Next to the search bar there is a button to Create Folder at Root, and next to each rendered folder there is a similar Create Subfolder button to what you will see in the core application.
 
 #### Limitations
-- One main limitation to this is that you cannot easily construct a folder structure inside the compendium. If you want to export a new folder you will have to create a new folder in the same path as inside the compendium, place the entities you would like to export in there, then Export the folder structure of that new folder.
-- The way this works is that folder data is stored in entities. This means you cannot have empty folders, and a folder without entities in it, but with a folder inside it, cannot be modified.
 - Folders containing slashes `/` will likely break when exported. This is something I'll need to look into in the future. For now you will have to use another character.
 
 #### Future
