@@ -925,6 +925,23 @@ async function updateFolderWithinCompendium(folderObj){
     document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
     pack.render(true);
 }
+async function createNewFolderWithinCompendium(folderObj){
+     // Exporting temp entity to allow for empty folders being editable
+     let pack = game.packs.get(folderObj.packCode);
+     let path = folderObj.name;
+     if (folderObj.path != null && folderObj.path.length>0){
+         path = folderObj.path+'/'+folderObj.name
+     }
+     let tempData = getTempEntityData(pack.entity);
+     tempData.flags.cf={
+         id:folderObj.id,
+         path:path,
+         color:folderObj.color,
+         name:folderObj.name
+     }
+     await pack.createEntity(tempData);
+     console.log(`Created temp entity for folder in ${pack.collection}`);
+}
 // Edit functions
 class ImportExportConfig extends FormApplication {
     static get defaultOptions() {
@@ -1252,6 +1269,36 @@ class FICFolderEditDialog extends FormApplication{
         }
         updateFolderWithinCompendium(folderObj);
                 
+    }
+}
+class FICFolderCreateDialog extends FormApplication{
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "fic-folder-create";
+        options.template = "modules/compendium-folders/templates/fic-folder-create.html";
+
+        return options;
+    }
+  
+    get title() {
+        return `${game.i18n.localize("FOLDER.Create")}: ${this.object.name}`;
+    }
+    async getData(options){
+        return {
+            name:this.object.name,
+            color:this.object.color,
+            id:this.object.id
+        };
+    }
+    async _updateObject(options,formData){
+        let folderObj = {
+            id:this.object.id,
+            name:formData.name.replace('/','|'),
+            color:formData.color,
+            path:this.object.path,
+            packCode:this.object.packCode
+        }
+        createNewFolderWithinCompendium(folderObj);        
     }
 }
 function refreshFolders(){  
@@ -1732,11 +1779,13 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     
     header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
-    if (game.user.isGM){
+    if (game.user.isGM && !game.packs.get(packCode).locked){
         header.addEventListener('contextmenu',function(event){
             createContextMenu(header,event);
         });
     }
+
+
     let contents = document.createElement('div');
     contents.classList.add('folder-contents');
     contents.setAttribute("data-pack",packCode);
@@ -1753,6 +1802,30 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     contents.appendChild(packList);
 
     if (game.user.isGM){
+        if (game.user.isGM && !game.packs.get(packCode).locked){
+            let newFolderLabel = document.createElement('label');
+            let newFolderIcon = document.createElement('i');
+            let newFolderLink = document.createElement('a');
+            
+            newFolderLabel.setAttribute('title',game.i18n.localize('CF.createSubfolder'));
+            newFolderIcon.classList.add('fas','fa-folder-plus','fa-fw');
+            newFolderLink.classList.add('create-fic');
+            
+    
+            newFolderLabel.appendChild(newFolderIcon);
+            newFolderLink.appendChild(newFolderLabel);
+            header.appendChild(newFolderLink)
+            newFolderLink.addEventListener('click',(e) => {
+                e.stopPropagation();
+                new FICFolderCreateDialog({
+                    parentId:folderData.id,
+                    name:'New Folder',
+                    id:generateRandomFolderName('temp_'),
+                    path:getRenderedFolderPath(folder),
+                    packCode:packCode
+                }).render(true)
+            });
+        }
         let importButton = document.createElement('a');
         importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
         importButton.classList.add('import-folder');
@@ -1777,7 +1850,7 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     }else{
         directoryList.insertAdjacentElement('beforeend',folder);
     }
-    
+
     folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder,packCode) },false)
 
     for (let pack of directoryList.querySelectorAll('li.directory-item')){
@@ -1827,6 +1900,33 @@ async function createFoldersWithinCompendium(allFolderData,packCode,openFolders,
             }
         }
     } 
+}
+function createNewFolderButtonWithinCompendium(window,packCode){
+    let directoryHeader = window.querySelector('header.directory-header');
+    let button = document.createElement('button');
+    button.classList.add('fic-create')
+    button.type='submit';
+    button.addEventListener('click',(e) => {
+        e.stopPropagation();
+        new FICFolderCreateDialog({
+            parentId:null,
+            name:'New Folder',
+            id:generateRandomFolderName('temp_'),
+            path:"",
+            packCode:packCode
+        }).render(true)
+    });
+    let folderIcon = document.createElement('i')
+    folderIcon.classList.add('fas','fa-fw','fa-folder-plus')
+    button.innerHTML = folderIcon.outerHTML;
+    button.title = 'Create Folder at Root'
+    
+
+    let headerActions = document.createElement('div');
+    headerActions.classList.add('header-actions','action-buttons','flexrow');
+    headerActions.appendChild(button);
+    headerActions.style.flex='0'
+    directoryHeader.insertAdjacentElement('beforeend',headerActions)
 }
 
 //==========================
@@ -2077,7 +2177,7 @@ Hooks.once('setup',async function(){
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await createFoldersWithinCompendium(allFolderData,packCode,openFolders,tempEntities);
-
+            createNewFolderButtonWithinCompendium(window,packCode);
             if (game.user.isGM){
                 // Moving between folders
                 let hiddenMoveField = document.createElement('input');

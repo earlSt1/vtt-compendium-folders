@@ -60,5 +60,6 @@
     "CF.deleteFolderNotificationStart":"Deleting folder ...",
     "CF.deleteFolderNotificationFinish":"Deleting complete!",
     "CF.updateFolderNotificationStart":"Updating folder ...",
-    "CF.updateFolderNotificationFinish":"Updating complete!"
+    "CF.updateFolderNotificationFinish":"Updating complete!",
+    "CF.createFolderWithinCompendiumL1":"Folder name must be unique, else it will update existing folders on the same path"
 }

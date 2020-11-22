@@ -141,7 +141,7 @@ button.create-compendium{
   padding:0;
   margin:0;
 }
-.folder-header a.export-folder,a.import-folder{
+.folder-header a.export-folder,a.import-folder,a.create-fic{
   flex: 0 0 20px;
     text-align: center;
     color: #CCC;
