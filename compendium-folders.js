@@ -1745,9 +1745,7 @@ async function importAllParentFolders(pack,coll,folder,merge){
         let parent = folder
         while (!parent.parentElement.classList.contains('directory-list')){
             parent = parent.parentElement.parentElement.parentElement
-            parentList.push(parent);
-            await new Promise(res => setTimeout(res,100));
-            
+            parentList.push(parent);            
         }
         parentList.push(parent);
 
