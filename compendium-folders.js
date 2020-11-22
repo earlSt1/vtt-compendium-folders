@@ -412,8 +412,10 @@ function filterSelectorBySearchTerm(parent,searchTerm,selector){
     if (searchTerm == null || searchTerm.length==0){
         for (let compendium of parent.querySelectorAll(selector)){
             //Show all
-            compendium.style.display='';
-            compendium.removeAttribute('search-failed')
+            if (!compendium.classList.contains('hidden')){
+                compendium.style.display='';
+                compendium.removeAttribute('search-failed')
+            }
         }
         parent.querySelectorAll('.compendium-folder').forEach(function(folder){
             folder.style.display='';
@@ -427,8 +429,10 @@ function filterSelectorBySearchTerm(parent,searchTerm,selector){
                 compendium.setAttribute('search-failed','')
             }else{
                 //Show matching
-                compendium.style.display='';
-                compendium.removeAttribute('search-failed')
+                if (!compendium.classList.contains('hidden')){
+                    compendium.style.display='';
+                    compendium.removeAttribute('search-failed')
+                }
             }
         }
         parent.querySelectorAll('.compendium-folder').forEach(function(folder){
