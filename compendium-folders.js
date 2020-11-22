@@ -1729,13 +1729,38 @@ async function recursivelyImportFolders(pack,coll,folder,merge){
         // Will invoke importFolderData()
         await importFromCollectionWithMerge(coll,pack.collection,entry.getAttribute('data-entry-id'),getRenderedFolderPath(folder), {}, {renderSheet:false},merge)
         // Wait a short amount of time for folder to fully create
-        await new Promise(res => setTimeout(res,50));
+        await new Promise(res => setTimeout(res,100));
     }
     //Then loop through individual folders
     let childFolders = folder.querySelectorAll(':scope > .folder-contents > .folder-list > li.compendium-folder');
     if (childFolders.length>0){
         for (let child of childFolders){
             await recursivelyImportFolders(pack,coll,child,merge);
+        }
+    }
+}
+async function importAllParentFolders(pack,coll,folder,merge){
+    if (!folder.parentElement.classList.contains('directory-list')){
+        let parentList = []
+        let parent = folder
+        while (!parent.parentElement.classList.contains('directory-list')){
+            parent = parent.parentElement.parentElement.parentElement
+            parentList.push(parent);
+            await new Promise(res => setTimeout(res,100));
+            
+        }
+        parentList.push(parent);
+
+        for (let p of parentList.reverse()){
+            await importFromCollectionWithMerge(coll,
+                pack.collection,
+                p.querySelector(':scope > .folder-contents > .entry-list > li.directory-item.hidden').getAttribute('data-entry-id'),
+                getRenderedFolderPath(p),
+                {},
+                {renderSheet:false},
+                merge);
+
+            await new Promise(res => setTimeout(res,100));
         }
     }
 }
@@ -1757,7 +1782,7 @@ async function importFolderFromCompendium(event,folder){
             let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
             let pack = await game.packs.get(packCode);
             let coll = pack.cls.collection;
-
+            await importAllParentFolders(pack,coll,folder,merge);
             await recursivelyImportFolders(pack,coll,folder,merge);
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
             removeTempEntities(pack.entity);
