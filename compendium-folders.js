@@ -1288,8 +1288,8 @@ class FICFolderCreateDialog extends FormApplication{
     }
     async getData(options){
         return {
-            name:this.object.name,
-            color:this.object.color,
+            name:'New Folder',
+            color:'#000000',
             id:this.object.id
         };
     }
@@ -2133,13 +2133,15 @@ export class Settings{
         return game.settings.get(mod,'cfolders');
     }
     static async doFolderConversions(){
-        let needsToConvert = !game.settings.get(mod,'converted-folders');
-        if (needsToConvert){
-            ui.notifications.notify(modName + ' | Converting folders in compendiums to new format. Please wait...')
-            for (let packCode of game.packs.keys()){
+        console.log(modName + ' | Checking for old compendium folder formats...')
+        for (let packCode of game.packs.keys()){
+            if (game.user.isGM && !game.packs.get(packCode).locked){
                 let allFolderData = {}
                 let content = await game.packs.get(packCode).getContent()
                 let folderEntities = content.filter(x => x.data.flags != null && x.data.flags.cf != null);
+                if (folderEntities.length === 0){
+                    continue;
+                }
                 for (let entry of folderEntities){
                     let path = entry.data.flags.cf.path;
                     let name = path.split('/')[path.split('/').length-1]
@@ -2181,15 +2183,14 @@ export class Settings{
                                 name:folderName
                             }
                             await pack.createEntity(tempData);
-                            console.log(`Created temp entity for folder ${folderName} in ${pack.collection}`);
+                            console.log(`${modName} | Created temp entity for folder ${folderName} in ${pack.collection}`);
                             finishedPaths.push(currentPath);
                         }
                     }
-                } 
-            }
-            ui.notifications.notify(modName+' | Conversion complete!')
+                }
+            } 
         }
-        await game.settings.set(mod,'converted-folders',true);
+        console.log(modName+' | Check complete!')
     }
 }
 // ==========================
@@ -2279,7 +2280,7 @@ Hooks.once('setup',async function(){
                 window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
                 
                 for (let entity of window.querySelectorAll('.directory-item')){
-                    if (entity.querySelector('h4').innerText === TEMP_ENTITY_NAME){
+                    if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
                         entity.style.display = 'none';
                         entity.classList.add('hidden')
                     }
