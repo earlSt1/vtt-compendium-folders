@@ -140,7 +140,7 @@ async function removeTempEntities(entityType){
         case 'Scene':collection = game.scenes;           
     }
     if (collection != null){
-        let tempEntities = collection.entries.filter(x => x.name === TEMP_ENTITY_NAME);
+        let tempEntities = collection.entries.filter(x => x.name.includes(TEMP_ENTITY_NAME));
         for (let tempEntity of tempEntities){
             const entity = collection.apps[0].constructor.collection.get(tempEntity.id);
             await entity.delete(entity)
