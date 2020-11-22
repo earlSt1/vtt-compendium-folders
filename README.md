@@ -8,6 +8,8 @@ This is a module for FoundryVTT which allows you to manage compendiums a bit eas
 
 _This feature only works for FVTT 0.7.3+_
 
+A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/packages/moar-folders/). I recommend installing this if you don't have it already.
+
 ##### Exporting a folder
 ![Exporting a folder](./cf_export1.gif)
 ##### Importing a folder
@@ -34,7 +36,7 @@ _This feature only works for FVTT 0.7.3+_
 - ~~Fix search bar not repopulating when you view a compendium entry~~ Now in 2.0.2!
 - ~~Merge-by-name tickbox on Import process~~ Now in 2.0.7!
 - Fix path separator so folders containing slashes `/` can be used
-- Create folder in compendium?
+- ~~Create folder in compendium?~~ Now in 2.0.8!
 - Drag+drop folders into eachother
 
 ## Folders for Compendiums
