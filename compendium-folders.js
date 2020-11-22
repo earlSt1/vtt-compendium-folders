@@ -1,6 +1,7 @@
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
+const TEMP_ENTITY_NAME = '#[CF_tempEntity]'
 
 // ==========================
 // Utility functions
@@ -109,6 +110,44 @@ async function removeStaleOpenFolderSettings(packCode){
     let newSettings = {}
     newSettings[packCode]=openFolders[packCode];
     await game.settings.set(mod,'open-temp-folders',newSettings);
+}
+function getTempEntityData(entityType,folder){
+    switch (entityType){
+        case 'Actor': return {name:TEMP_ENTITY_NAME,type:'npc',flags:{cf:folder}}
+
+        case 'Item': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
+ 
+        case 'JournalEntry': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
+
+        case 'RollTable':return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
+
+        case 'Scene':return {name:TEMP_ENTITY_NAME,flags:{cf:folder}} 
+        default:     
+            return null;      
+    }
+}
+async function removeTempEntities(entityType){
+    let collection = null
+    let cls = null
+    switch (entityType){
+        case 'Actor': collection = game.actors;
+            break;
+        case 'Item': collection = game.items;
+            break;
+        case 'JournalEntry': collection = game.journal;
+            break;
+        case 'RollTable':collection = game.tables;
+            break;
+        case 'Scene':collection = game.scenes;           
+    }
+    if (collection != null){
+        let tempEntities = collection.entries.filter(x => x.name === TEMP_ENTITY_NAME);
+        for (let tempEntity of tempEntities){
+            const entity = collection.apps[0].constructor.collection.get(tempEntity.id);
+            await entity.delete(entity)
+        } 
+    }
+    
 }
 function getFolderPath(folder){
     if (folder === null){
@@ -1564,16 +1603,12 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId,merge){
     await exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,merge)
 }
 async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,merge){
-    //Exporting issue with 2-deep folders
     let path = getFullPath(folderObj)
-    if (entities.length == 0){
-        return null;
+    let color = '#000000'
+    if (folderObj.data.color != null && folderObj.data.color.length>0){
+        color = folderObj.data.color;
     }
     for ( let e of entities ) {
-        let color = '#000000'
-        if (folderObj.data.color != null && folderObj.data.color.length>0){
-            color = folderObj.data.color;
-        }
         let data = await e.toCompendium();
         data.flags.cf={
             id:folderId,
@@ -1590,6 +1625,17 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         });
         console.log(`Exported ${e.name} to ${pack.collection}`);
     }
+    // Exporting temp entity to allow for empty folders being editable
+    let tempData = getTempEntityData(pack.entity);
+    tempData.flags.cf={
+        id:folderId,
+        path:path,
+        color:color,
+        name:folderObj.name
+    }
+    await pack.createEntity(tempData);
+    console.log(`Exported temp entity to ${pack.collection}`);
+    
     return folderObj
 }
 async function importFromCollectionWithMerge(clsColl,collection, entryId, folderPath, updateData={}, options={},merge=false) {
@@ -1667,6 +1713,7 @@ async function importFolderFromCompendium(event,folder){
 
             await recursivelyImportFolders(pack,coll,folder,merge);
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
+            removeTempEntities(pack.entity);
         }
     });
     
@@ -1744,8 +1791,9 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     }
     return folder;
 }
-function createFoldersWithinCompendium(allFolderData,packCode,openFolders){
+async function createFoldersWithinCompendium(allFolderData,packCode,openFolders,tempEntities){
     let createdFolders = {}
+    let foldersWithoutTempEntities = []
     for (let path of Object.keys(allFolderData).sort()){
         let segments = path.split('/');
         for (let seg of segments){
@@ -1760,13 +1808,16 @@ function createFoldersWithinCompendium(allFolderData,packCode,openFolders){
                 if (allFolderData[currentPath]==null){
                     //If folderData not provided, create blank folder
                     allFolderData[currentPath] = {
-                        id:currentId,
+                        id:generateRandomFolderName('temp_'),
                         color:'#000000',
-                        name:seg
+                        name:seg,
+                        path:currentPath
                     }
+                    
                 }else{
                     //Update folderData with temp ID and name
                     allFolderData[currentPath].name=seg;
+                    allFolderData[currentPath].path=currentPath;
                 }
                 let parent = null
                 if (index>0){
@@ -1798,11 +1849,10 @@ async function importFolderData(e){
             }
         }
         if (folderExists){
-            await e.update({folder : foundFolder.id})
+            await e.update({folder : foundFolder.id,flags:{cf:null}})
         }else{
             await createFolderPath(path,color,e.entity,e);
         }
-        e.data.flags.cf = null;
     }
 }
 async function createFolderPath(path,pColor,entityType,e){
@@ -1834,7 +1884,7 @@ async function createFolderPath(path,pColor,entityType,e){
             }
             let f = await Folder.create(data);
             if (index == segments.length-1){
-                await e.update({folder:f.id});
+                await e.update({folder:f.id,flags:{cf:null}});
             }
         }
         index++;
@@ -2003,16 +2053,19 @@ Hooks.once('setup',async function(){
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
             let contents = await e.getContent();
+            let tempEntities = contents.filter(x => x.name === TEMP_ENTITY_NAME)
+            
             let allFolderData={};
             //First parse folder data
             for (let entry of contents){
-                if (entry != null && entry.data.flags.cf != null){
+                if (entry != null && entry.data.flags.cf != null && entry.data.flags.cf.path != null){
                     let path = entry.data.flags.cf.path;
+                    let name = path.split('/')[path.split('/').length-1]
                     let color = entry.data.flags.cf.color;
                     let folderId = entry.data.flags.cf.id;
                     let entryId = entry._id
                     if (allFolderData[path] == null){
-                        allFolderData[path] = {id:folderId,color:color, children:[entryId]}
+                        allFolderData[path] = {id:folderId,color:color, children:[entryId],name:name}
                     }else{
                         allFolderData[path].children.push(entryId);
                     }
@@ -2021,9 +2074,9 @@ Hooks.once('setup',async function(){
             if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                 return;
             }
-            console.log(modName+' | Creating folder structure inside compendium.')
+            console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
-            createFoldersWithinCompendium(allFolderData,packCode,openFolders);
+            await createFoldersWithinCompendium(allFolderData,packCode,openFolders,tempEntities);
 
             if (game.user.isGM){
                 // Moving between folders
@@ -2034,6 +2087,10 @@ Hooks.once('setup',async function(){
                 window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
                 
                 for (let entity of window.querySelectorAll('.directory-item')){
+                    if (entity.querySelector('h4').innerText === TEMP_ENTITY_NAME){
+                        entity.style.display = 'none';
+                        entity.classList.add('hidden')
+                    }
                     entity.addEventListener('dragstart',async function(){
                         let currentId = this.getAttribute('data-entry-id');
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
