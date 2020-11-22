@@ -113,9 +113,9 @@ async function removeStaleOpenFolderSettings(packCode){
 }
 function getTempEntityData(entityType,folder){
     switch (entityType){
-        case 'Actor': return {name:TEMP_ENTITY_NAME,type:'npc',flags:{cf:folder}}
+        case 'Actor': return {name:TEMP_ENTITY_NAME,type:Object.keys(CONFIG.Actor.typeLabels)[0],flags:{cf:folder}}
 
-        case 'Item': return {name:TEMP_ENTITY_NAME,type:'weapon',flags:{cf:folder}}
+        case 'Item': return {name:TEMP_ENTITY_NAME,type:Object.keys(CONFIG.Item.typeLabels)[0],flags:{cf:folder}}
  
         case 'JournalEntry': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
 
