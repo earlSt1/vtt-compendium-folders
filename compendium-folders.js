@@ -2114,6 +2114,12 @@ export class Settings{
             type:Boolean,
             default:false
         })
+        game.settings.register(mod,'converted-packs',{
+            scope:'world',
+            config:false,
+            type:Object,
+            default:[]
+        })
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -2133,64 +2139,81 @@ export class Settings{
         return game.settings.get(mod,'cfolders');
     }
     static async doFolderConversions(){
-        console.log(modName + ' | Checking for old compendium folder formats...')
-        for (let packCode of game.packs.keys()){
-            if (game.user.isGM && !game.packs.get(packCode).locked){
-                let allFolderData = {}
-                let content = await game.packs.get(packCode).getContent()
-                let folderEntities = content.filter(x => x.data.flags != null && x.data.flags.cf != null);
-                if (folderEntities.length === 0){
+        if (game.user.isGM){
+            console.log(modName + ' | Checking for old compendium folder formats...')
+            let convertedPacks = game.settings.get(mod,'converted-packs')
+            for (let packCode of game.packs.keys()){
+                try{
+                    let pack = game.packs.get(packCode);
+                    
+                    if (convertedPacks.includes(packCode)){
+                        console.debug(modName + ' | Compendium '+packCode+' already converted, skipping')
+                        continue;
+                    }
+                    if (!pack.locked){
+                        convertedPacks.push(packCode);
+                        let allFolderData = {}
+                        let content = await pack.getContent()
+                        let folderEntities = content.filter(x => x.data.flags != null && x.data.flags.cf != null);
+                        if (folderEntities.length === 0){
+                            continue;
+                        }
+                        for (let entry of folderEntities){
+                            let path = entry.data.flags.cf.path;
+                            let name = path.split('/')[path.split('/').length-1]
+                            let color = entry.data.flags.cf.color;
+                            let folderId = entry.data.flags.cf.id;
+                            let entryId = entry._id
+                            if (allFolderData[path] == null){
+                                allFolderData[path] = {id:folderId,color:color, children:[entryId],name:name}
+                            }else{
+                                allFolderData[path].children.push(entryId);
+                            }
+                        }
+                        let finishedPaths = [];
+                        for (let path of Object.keys(allFolderData).sort()){
+                            let segments = path.split('/');
+                            for (let seg of segments){
+                                let index = segments.indexOf(seg)
+                                let currentPath = seg
+                                if (index>0){
+                                    currentPath = segments.slice(0,index).join('/')+'/'+seg;
+                                }
+                                let tempEntity = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath && x.name === TEMP_ENTITY_NAME)
+                                let entities = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath)
+                                if (tempEntity == null && !finishedPaths.includes(currentPath)){
+                                    
+                                    let tempData = getTempEntityData(pack.entity);
+                                    let folderId = generateRandomFolderName('temp_');
+                                    let folderColor = '#000000'
+                                    let folderName = seg;
+                                    if (entities != null && entities.data.flags.cf.id != null){
+                                        folderId = entities.data.flags.cf.id;
+                                        folderColor = entities.data.flags.cf.color;
+                                    }
+                                    tempData.flags.cf={
+                                        id:folderId,
+                                        path:currentPath,
+                                        color:folderColor,
+                                        name:folderName
+                                    }
+                                    await pack.createEntity(tempData);
+                                    console.log(`${modName} | Created temp entity for folder ${folderName} in ${pack.collection}`);
+                                    finishedPaths.push(currentPath);
+                                }
+                            }
+                        }
+                    } 
+                
+                }catch (e){
+                    console.debug(modName + ' | Could not convert pack '+packCode+', skipping')
                     continue;
                 }
-                for (let entry of folderEntities){
-                    let path = entry.data.flags.cf.path;
-                    let name = path.split('/')[path.split('/').length-1]
-                    let color = entry.data.flags.cf.color;
-                    let folderId = entry.data.flags.cf.id;
-                    let entryId = entry._id
-                    if (allFolderData[path] == null){
-                        allFolderData[path] = {id:folderId,color:color, children:[entryId],name:name}
-                    }else{
-                        allFolderData[path].children.push(entryId);
-                    }
-                }
-                let finishedPaths = [];
-                for (let path of Object.keys(allFolderData).sort()){
-                    let segments = path.split('/');
-                    for (let seg of segments){
-                        let index = segments.indexOf(seg)
-                        let currentPath = seg
-                        if (index>0){
-                            currentPath = segments.slice(0,index).join('/')+'/'+seg;
-                        }
-                        let tempEntity = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath && x.name === TEMP_ENTITY_NAME)
-                        let entities = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath)
-                        if (tempEntity == null && !finishedPaths.includes(currentPath)){
-                            let pack = game.packs.get(packCode);
-                            
-                            let tempData = getTempEntityData(pack.entity);
-                            let folderId = generateRandomFolderName('temp_');
-                            let folderColor = '#000000'
-                            let folderName = seg;
-                            if (entities != null && entities.data.flags.cf.id != null){
-                                folderId = entities.data.flags.cf.id;
-                                folderColor = entities.data.flags.cf.color;
-                            }
-                            tempData.flags.cf={
-                                id:folderId,
-                                path:currentPath,
-                                color:folderColor,
-                                name:folderName
-                            }
-                            await pack.createEntity(tempData);
-                            console.log(`${modName} | Created temp entity for folder ${folderName} in ${pack.collection}`);
-                            finishedPaths.push(currentPath);
-                        }
-                    }
-                }
-            } 
+            }
+            console.log(modName+' | Check complete!')
+            
+            await game.settings.set(mod,'converted-packs',convertedPacks);
         }
-        console.log(modName+' | Check complete!')
     }
 }
 // ==========================
