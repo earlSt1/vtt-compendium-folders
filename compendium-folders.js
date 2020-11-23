@@ -2026,16 +2026,19 @@ async function cleanupCompendium(pack){
     let index = await p.getIndex();
     let allData = await p.getContent();
     for (let entry of allData){
-
-        let matchingIndex = index.find(i => i._id === entry.id);
-        let data = await entry.toCompendium();
-        if (data.flags.cf != null){
-            data.flags['cf'] = null
+        if (entry.name.includes(TEMP_ENTITY_NAME)){
+            await p.deleteEntity(entry.id)
+        }else{
+            let matchingIndex = index.find(i => i._id === entry.id);
+            let data = await entry.toCompendium();
+            if (data.flags.cf != null){
+                data.flags['cf'] = null
+            }
+            if (matchingIndex){
+                data._id = matchingIndex._id;
+            }
+            await p.updateEntity(data)
         }
-        if (matchingIndex){
-            data._id = matchingIndex._id;
-        }
-        await p.updateEntity(data)
     }
     ui.notifications.notify(game.i18n.localize("CF.cleanupNotificationFinish"))
 }
