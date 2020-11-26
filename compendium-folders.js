@@ -6,6 +6,9 @@ const TEMP_ENTITY_NAME = '#[CF_tempEntity]'
 // ==========================
 // Utility functions
 // ==========================
+function arraysEqual(array1,array2){
+    return array1.length === array2.length && array1.every(function(value, index) { return value === array2[index]})
+}
 async function findEntryInFolder(packCode,folderId){
     let pack = game.packs.get(packCode)
     let contents = await pack.getContent();
@@ -1676,7 +1679,6 @@ async function createParentFoldersWithinCompendium(folder,pack){
     let currentFolder = folder;
     let content = await pack.getContent();
     let tempEntities = content.filter(e => e.name === TEMP_ENTITY_NAME);
-    let tempEntitiyIds = tempEntities.map(e => e.id);
 
     while (currentFolder.parent != null){
         parents.push(currentFolder.parent);
@@ -1684,14 +1686,15 @@ async function createParentFoldersWithinCompendium(folder,pack){
     }
     let previousParent = null;
     let previousPath = []
-    for (let i=parents.length-1 ;i>0;i--){
-        if (tempEntities.find(e => e.name === parents[i].name && e.folderPath === previousPath)){
+    for (let i=parents.length-1 ;i>=0;i--){
+        let tempEntity = tempEntities.find(e => e.data.flags.cf.name === parents[i].name && arraysEqual(e.data.flags.cf.folderPath,previousPath))
+        if (tempEntity != null){
             // if folder with parent name exists, and path matches, use that tempEntity id
-            previousParent = tempEntity.id;
+            previousParent = tempEntity.data.flags.cf.id;
             
         }else{
             // If folder does not exist, create tempEntity and use folderPath of previous parent value
-            let tempEntity = getTempEntityData(pack.entity);
+            tempEntity = getTempEntityData(pack.entity);
             previousParent = generateRandomFolderName('temp_')
             tempEntity.data = {flags : {
                     cf:{
@@ -1706,8 +1709,7 @@ async function createParentFoldersWithinCompendium(folder,pack){
             await pack.createEntity(tempEntity);
            
         }
-        if (i > 1)
-            previousPath.push(previousParent)
+        previousPath.push(previousParent)
     }
     return [...new Set(previousPath)];
 }
@@ -1720,11 +1722,14 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId,folderPath
         }
         return []
     }
+    let createdFolder = false;
     for (let child of folderObj.children){
+        
         let newPath = Array.from(folderPath);
         if (!newPath.includes(folderId))
             newPath.push(folderId)
-        await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'),newPath,merge)
+        await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'),newPath,merge,createdFolder)
+        createdFolder = true;
     }
     let entities = folderObj.content;
     
@@ -1748,8 +1753,8 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         let existing = merge ? index.find(i => i.name === data.name) : index.find(i => i._id === e.id);
         if ( existing ) data._id = existing._id;
         if ( data._id ){
-            result = await pack.updateEntity(data);
-            packEntities.push(result.id)
+            packEntities.push(existing._id)
+            await pack.updateEntity(data);            
         }
         else {
             result = await pack.createEntity(data)
