@@ -21,7 +21,8 @@ A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/
 - Folders in the compendium with no entities within them (e.g a folder with only folders in it), will always be open.
 - Supports all entity types (Actor,Item,JournalEntry,Scene,Rolltable)
 - Delete Folders inside the compendium (which move all entries up into the parent folder), or Delete All (which deletes the folder and all entries inside it)
-- Edit the name and colour of the folder, so long as it has entries inside it (see Limitations below).
+- Edit the name and colour of the folder.
+- Create new folders and drag/drop entries between them
 
 #### Instructions
 - To use the new functionality, each folder has a new button to the right of the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
