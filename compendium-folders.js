@@ -2522,11 +2522,13 @@ Hooks.once('setup',async function(){
                 await cacheFolderStructure(packCode,allFolderData);
             }
             if (updateData.length>0){
-                await e.close();
-                for (let d of updateData){
-                    await e.updateEntity(d);
-                }
-                await e.render(true);
+                e.close().then(async () => {
+                    for (let d of updateData){
+                        await e.updateEntity(d);
+                    }
+                    resetCache()
+                    e.render(true);
+                });
                 return;
             }
             let groupedFolders = {}
