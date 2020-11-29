@@ -2,6 +2,7 @@ export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
 const TEMP_ENTITY_NAME = '#[CF_tempEntity]'
+const FOLDER_SEPARATOR = '#/CF_SEP/'
 
 // ==========================
 // Utility functions
@@ -105,7 +106,7 @@ function getFullPath(folderObj){
     let currentFolder = folderObj;
     while (currentFolder.parent != null){
         currentFolder = currentFolder.parent;
-        path = currentFolder.name+'/'+path;
+        path = currentFolder.name+FOLDER_SEPARATOR+path;
     }
     return path;
 }
@@ -159,7 +160,7 @@ function getFolderPath(folder){
     let path = folder.data.name;
     let currentFolder = folder;
     while (currentFolder.parent != null){
-        path = currentFolder.parent.data.name+'/'+path;
+        path = currentFolder.parent.data.name+FOLDER_SEPARATOR+path;
         currentFolder = currentFolder.parent;
     }
     return path;
@@ -169,7 +170,7 @@ function getRenderedFolderPath(folder){
     let currentFolder = folder;
 
     while (currentFolder.parentElement.parentElement.parentElement.tagName === 'LI'){
-        path = currentFolder.parentElement.parentElement.parentElement.querySelector('h3').innerText + '/' + path;
+        path = currentFolder.parentElement.parentElement.parentElement.querySelector('h3').innerText + FOLDER_SEPARATOR + path;
         currentFolder = currentFolder.parentElement.parentElement.parentElement
     }
     return path;
@@ -2056,10 +2057,10 @@ async function importFolderData(e){
     }
 }
 async function createFolderPath(path,pColor,entityType,e){
-    let segments = path.split('/');
+    let segments = path.split(FOLDER_SEPARATOR);
     let index = 0;
     for (let seg of segments){
-        let folderPath = segments.slice(0,index).join('/')+'/'+seg
+        let folderPath = segments.slice(0,index).join(FOLDER_SEPARATOR)+FOLDER_SEPARATOR+seg
         if (index==0){
             folderPath = seg
         }
@@ -2069,7 +2070,7 @@ async function createFolderPath(path,pColor,entityType,e){
             let parentId = null
             let tContent = [];
             if (index>0){
-                parentId = game.folders.filter(f => f.type===entityType && f.name===segments[index-1] && getFolderPath(f)===segments.slice(0,index).join('/'))[0]
+                parentId = game.folders.filter(f => f.type===entityType && f.name===segments[index-1] && getFolderPath(f)===segments.slice(0,index).join(FOLDER_SEPARATOR))[0]
             }
             let data = {
                 name:seg,
