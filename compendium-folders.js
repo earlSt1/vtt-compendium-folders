@@ -20,6 +20,8 @@ function closeContextMenu(){
         contextMenu.parentNode.removeChild(contextMenu);
 }
 function createContextMenu(header,event){
+    console.log(event)
+    let clientY = event.clientY;
     let folder = header.parentElement
     let folderName = folder.querySelector('h3').innerText
     let folderId = folder.getAttribute('data-folder-id');
@@ -98,6 +100,7 @@ function createContextMenu(header,event){
 
     contextMenu.id='folder-context-menu';
     contextMenu.style.marginTop="30px"; 
+    contextMenu.style.top=(clientY - 100)+'px'
 
     header.insertAdjacentElement('afterbegin',contextMenu);
 }
