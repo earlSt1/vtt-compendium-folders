@@ -9,10 +9,10 @@ const TEMP_ENTITY_NAME = '#[CF_tempEntity]'
 function arraysEqual(array1,array2){
     return array1.length === array2.length && array1.every(function(value, index) { return value === array2[index]})
 }
-async function findEntryInFolder(packCode,folderId){
+async function getFolderColor(packCode,tempEntityId){
     let pack = game.packs.get(packCode)
-    let contents = await pack.getContent();
-    return contents.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.id != null && x.data.flags.cf.id === folderId)
+    let tempEntity = await pack.getEntity(tempEntityId);
+    return tempEntity.data.flags.cf.color
 }
 function closeContextMenu(){
     let contextMenu = document.querySelector('nav#folder-context-menu');
@@ -46,18 +46,16 @@ function createContextMenu(header,event){
             ev.stopPropagation();
             closeContextMenu();
             let path = getRenderedFolderPath(folder);
-            let entry = await findEntryInFolder(packCode,folderId)
-            if (entry != null){
-                let formObj = {
-                    id:folderId,
-                    name:folderName,
-                    color:entry.data.flags.cf.color,
-                    path:path,
-                    packCode:packCode,
-                    tempEntityId:tempEntityId
-                }
-                new FICFolderEditDialog(formObj).render(true);
+            let folderColor = await getFolderColor(packCode,tempEntityId);
+            let formObj = {
+                id:folderId,
+                name:folderName,
+                color:folderColor,
+                path:path,
+                packCode:packCode,
+                tempEntityId:tempEntityId
             }
+            new FICFolderEditDialog(formObj).render(true);
         })
         contextMenuList.appendChild(editOption);
     }
