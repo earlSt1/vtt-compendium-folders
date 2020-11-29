@@ -21,7 +21,6 @@ function closeContextMenu(){
 }
 function createContextMenu(header,event){
     console.log(event)
-    let clientY = event.clientY;
     let folder = header.parentElement
     let folderName = folder.querySelector('h3').innerText
     let folderId = folder.getAttribute('data-folder-id');
@@ -31,7 +30,7 @@ function createContextMenu(header,event){
         closeContextMenu()
     }
     let contextMenu = document.createElement('nav');
-    contextMenu.classList.add('expand-down');
+    //contextMenu.classList.add('expand-down');
 
     let contextMenuList = document.createElement('ol');
     contextMenuList.classList.add('context-items');
@@ -97,10 +96,9 @@ function createContextMenu(header,event){
     });
 
     contextMenu.id='folder-context-menu';
-    contextMenu.style.marginTop="30px"; 
-    contextMenu.style.top=(clientY - 100)+'px'
+    contextMenu.style.marginTop="32px"; 
 
-    header.insertAdjacentElement('afterbegin',contextMenu);
+    folder.insertAdjacentElement('beforebegin',contextMenu);
 }
 function getFullPath(folderObj){
     let path = folderObj.name;
@@ -1788,7 +1786,7 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
 
     // Prepare the source data from which to create the Entity
     const source = await pack.getEntity(entryId);
-    let createData = mergeObject(clsColl.fromCompendium(source.data), updateData);
+    let createData = mergeObject(clsColl.fromCompendium(source.data), {flags:{cf:{path:folderPath,import:true}}});
     delete createData._id;
 
     // Create the Entity
@@ -1821,9 +1819,10 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
 // ==========================
 async function recursivelyImportFolders(pack,coll,folder,merge){
     //First import immediate children
+    let folderPath = getRenderedFolderPath(folder)
     for (let entry of folder.querySelectorAll(':scope > .folder-contents > .entry-list > li.directory-item')){
         // Will invoke importFolderData()
-        await importFromCollectionWithMerge(coll,pack.collection,entry.getAttribute('data-entry-id'),getRenderedFolderPath(folder), {}, {renderSheet:false},merge)
+        await importFromCollectionWithMerge(coll,pack.collection,entry.getAttribute('data-entry-id'),folderPath, {}, {renderSheet:false},merge)
         // Wait a short amount of time for folder to fully create
         await new Promise(res => setTimeout(res,100));
     }
@@ -1839,7 +1838,7 @@ async function importAllParentFolders(pack,coll,folder,merge){
     if (!folder.parentElement.classList.contains('directory-list')){
         let parentList = []
         let parent = folder
-        while (!parent.parentElement.classList.contains('directory-list')){
+        while (!parent.parentElement.parentElement.classList.contains('directory-list')){
             parent = parent.parentElement.parentElement.parentElement
             parentList.push(parent);            
         }
@@ -1850,7 +1849,7 @@ async function importAllParentFolders(pack,coll,folder,merge){
                 pack.collection,
                 p.querySelector(':scope > .folder-contents > .entry-list > li.directory-item.hidden').getAttribute('data-entry-id'),
                 getRenderedFolderPath(p),
-                {},
+                {flags:{cf:{import:true}}},
                 {renderSheet:false},
                 merge);
 
@@ -1887,7 +1886,7 @@ async function importFolderFromCompendium(event,folder){
 // ==========================
 // Folder creation inside compendiums
 // ==========================
-function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
+function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     //Example of adding folders to compendium view
     let folder = document.createElement('li')
     folder.classList.add('compendium-folder');
@@ -1966,10 +1965,17 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
     }
 
     let directoryList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list');
-    if (parent != null){
-        directoryList.querySelector('.compendium-folder[data-folder-id=\''+parent.id+'\']').querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
+    let directoryFolderList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list > div.cfolders-container');
+    if (directoryFolderList == null){
+        directoryFolderList = document.createElement('div')
+        directoryFolderList.classList.add('cfolders-container');
+        directoryFolderList.style.position='relative'
+        directoryList.appendChild(directoryFolderList);
+    }
+    if (parentId != null){
+        directoryFolderList.querySelector('.compendium-folder[data-folder-id=\''+parentId+'\']').querySelector('ol.folder-list').insertAdjacentElement('beforeend',folder)
     }else{
-        directoryList.insertAdjacentElement('beforeend',folder);
+        directoryFolderList.insertAdjacentElement('beforeend',folder);
     }
 
     folder.addEventListener('click',function(event){ toggleFolderInsideCompendium(event,folder,packCode) },false)
@@ -1983,26 +1989,14 @@ function createFolderWithinCompendium(folderData,parent,packCode,openFolders){
             packList.appendChild(existingEntry);
         }
     }
-    // for (let existing of directoryList.querySelectorAll('li.directory-item')){
-    //     let existingId = existing.getAttribute('data-entry-id')
-    //     if (folderData.children != null && folderData.children.includes(existingId)){
-    //         packList.appendChild(existing);
-    //     }
-    // }
 }
-async function createFoldersWithinCompendium(allFolderData,groupedFolders,packCode,openFolders){
-    Object.keys(groupedFolders).sort(function(o1,o2){
-        if (parseInt(o1)<parseInt(o2)){
-            return -1;
-        }else if (parseInt(o1>parseInt(o2))){
-            return 1;
-        }return 0;
-    }).forEach(function(depth){
+async function createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders){
+    Object.keys(groupedFoldersSorted).forEach(function(depth){
         // Now loop through folder compendiums, get them from dict, add to local list, then pass to createFolder
-        for (let groupedFolder of alphaSortFolders(groupedFolders[depth],'name')){
-            if (allFolderData[groupedFolder.id].folderPath != null){
-                let parentFolderId = allFolderData[groupedFolder.id].folderPath.pop();
-                createFolderWithinCompendium(groupedFolder,allFolderData[parentFolderId],packCode,openFolders[packCode]);
+        for (let groupedFolder of alphaSortFolders(groupedFoldersSorted[depth],'name')){
+            if (groupedFolder.folderPath != null){
+                let parentFolderId = groupedFolder.folderPath[groupedFolder.folderPath.length-1];
+                createFolderWithinCompendium(groupedFolder,parentFolderId,packCode,openFolders[packCode]);
             }
         }
     });
@@ -2040,7 +2034,7 @@ function createNewFolderButtonWithinCompendium(window,packCode){
 // To keep folder parent and remove folderdata from name
 // ==========================
 async function importFolderData(e){
-    if (e.data.flags.cf != null){
+    if (e.data.flags.cf != null && e.data.flags.cf.import != null){
         let path = e.data.flags.cf.path;
         let color = e.data.flags.cf.color;
         //a.data.folder -> id;
@@ -2148,10 +2142,11 @@ class CleanupPackConfig extends FormApplication{
         }
     }
 }
-async function cacheFolderStructure(packCode,allFolderData){
+async function cacheFolderStructure(packCode,groupedFolders,groupedFolderMetadata){
     let cache = {
         pack:packCode,
-        folderData:allFolderData
+        groupedFolders:groupedFolders,
+        groupedFolderMetadata:groupedFolderMetadata
     }
     await game.settings.set(mod,'cached-folder',cache);
     console.log(modName+' | Cached folder structure');
@@ -2163,7 +2158,7 @@ async function loadCachedFolderStructure(packCode){
         return null;
     }
     if (cache.pack === packCode)
-        return cache.folderData;
+        return cache.groupedFolders;
     return null;
 }
 async function moveEntryInCache(packCode,entryId,folderId){
@@ -2172,20 +2167,26 @@ async function moveEntryInCache(packCode,entryId,folderId){
         // shouldnt be reachable....
         return;
     }
-    
-    for (let id of Object.keys(cache.folderData)){
-        if (folderId === id){
-            // Add entry to this folder
-            cache.folderData[id].children.push(entryId);
-            console.debug(modName+' | Adding '+entryId+' to folder ['+cache.folderData[id].name+']');
-        }
-        if (cache.folderData[id].children.includes(entryId) && folderId != id){
-            let index = cache.folderData[id].children.indexOf(entryId);
-            cache.folderData[id].children.splice(index,1);
-
-            console.debug(modName+' | Removing '+entryId+' from folder ['+cache.folderData[id].name+']');
-        }
+    let x = await game.packs.get(packCode).getEntity(entryId)
+    let fromFolderMetadata = null
+    if (x.data.flags.cf != null && x.data.flags.cf.id != null){
+        fromFolderMetadata = cache.groupedFolderMetadata[x.data.flags.cf.id]
     }
+    let toFolderMetadata = cache.groupedFolderMetadata[folderId]
+    
+    //if (folderId === id){
+        // Add entry to this folder
+        cache.groupedFolders[toFolderMetadata.depth][toFolderMetadata.index].children.push(entryId);
+        console.debug(modName+' | Adding '+entryId+' to folder ['+cache.groupedFolders[toFolderMetadata.depth][toFolderMetadata.index].name+']');
+    
+    if (fromFolderMetadata != null 
+        && cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].children.includes(entryId)){
+        let index = cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].children.indexOf(entryId);
+        cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].children.splice(index,1);
+
+        console.debug(modName+' | Removing '+entryId+' from folder ['+ cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].name+']');
+    }
+    
     await game.settings.set(mod,'cached-folder',cache);
     console.log(modName+' | Updated cached folder structure');
 }
@@ -2197,27 +2198,13 @@ async function updateFolderInCache(packCode,folderObj){
     if (Object.keys(cache).length === 0 || cache.pack != packCode){
         return;
     }
-    cache.folderData[folderObj.id].color = folderObj.newColor, 
-    cache.folderData[folderObj.id].name = folderObj.newName
-            
+    let folderMetadata = cache.groupedFolderMetadata[folderObj.id]
+    
+    cache.groupedFolders[folderMetadata.depth][folderMetadata.index].color = folderObj.newColor
+    cache.groupedFolders[folderMetadata.depth][folderMetadata.index].name = folderObj.newName
+    cache.groupedFolders[folderMetadata.depth] = alphaSortFolders(cache.groupedFolders[folderMetadata.depth],'name')
+    
     console.debug(modName+' | Updating folder in cache')
-   
-    await game.settings.set(mod,'cached-folder',cache);
-    console.log(modName+' | Updated cached folder structure');
-}
-async function createFolderInCache(packCode,folderObj){
-    let cache = game.settings.get(mod,'cached-folder');
-    if (Object.keys(cache).length === 0 || cache.pack != packCode){
-        return;
-    }
-    cache.folderData[folderObj.id] = {
-            id : folderObj.id,
-            color : folderObj.color, 
-            name : folderObj.name,
-            folderPath:folderObj.path,
-            children:[]
-    }
-    console.debug(modName+' | Creating folder in cache')
    
     await game.settings.set(mod,'cached-folder',cache);
     console.log(modName+' | Updated cached folder structure');
@@ -2476,12 +2463,14 @@ Hooks.once('setup',async function(){
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
-            let cachedFolderStructure = await loadCachedFolderStructure(packCode);
+            //let cachedFolderStructure = await loadCachedFolderStructure(packCode);
             let allFolderData={};
             let updateData = [];
-            if (cachedFolderStructure != null){
-               allFolderData = cachedFolderStructure;
-            }else{
+            let groupedFoldersSorted = {}
+            let groupedFolders = {}
+            //if (cachedFolderStructure != null){
+            //   groupedFoldersSorted = cachedFolderStructure;
+            //}else{
                 let folderChildren = {}
                 let contents = await e.getContent();
 
@@ -2496,6 +2485,9 @@ Hooks.once('setup',async function(){
                             && entry.name === TEMP_ENTITY_NAME){
                             
                             updateData.push(updateFolderPathForTempEntity(entry,e,contents));
+                        }
+                        if (entry.data.flags.cf.import != null){
+                            updateData.push({flags:{cf:{import:null}},_id:entryId})
                         }
                         if (entry.name === TEMP_ENTITY_NAME){
                             let name = entry.data.flags.cf.name
@@ -2520,46 +2512,50 @@ Hooks.once('setup',async function(){
                 for (let key of Object.keys(folderChildren)){
                     allFolderData[key].children = folderChildren[key].children
                 }
-                await cacheFolderStructure(packCode,allFolderData);
-            }
-            if (updateData.length>0){
-                e.close().then(async () => {
-                    for (let d of updateData){
-                        await e.updateEntity(d);
-                    }
-                    resetCache()
-                    e.render(true);
-                });
-                return;
-            }
-            let groupedFolders = {}
-            let parentFolders = [];
-            Object.keys(allFolderData).forEach(function(key) {
-                let depth = 0;
-                if (allFolderData[key].folderPath == null || allFolderData[key].folderPath.length===0){
-                    depth = 0;
-                }else{
-                    depth = allFolderData[key].folderPath.length
-                    // Add all parent folders to list
-                    // Need to make sure to render them
-                    for (let segment of allFolderData[key].folderPath){
-                        if (!parentFolders.includes(segment)){
-                            parentFolders.push(segment);
-                        }
-                    }
-                }
-                if (groupedFolders[depth] == null){
-                    groupedFolders[depth] = [allFolderData[key]];
-                }else{
-                    groupedFolders[depth].push(allFolderData[key]);
-                }
-                
-            });
+               
             
-            console.log(groupedFolders);
+                if (updateData.length>0){
+                    e.close().then(async () => {
+                        for (let d of updateData){
+                            await e.updateEntity(d);
+                        }
+                        resetCache()
+                        e.render(true);
+                    });
+                    return;
+                }
+                let groupedFolderMetadata = {}
+                Object.keys(allFolderData).forEach(function(key) {
+                    let depth = 0;
+                    if (allFolderData[key].folderPath == null || allFolderData[key].folderPath.length===0){
+                        depth = 0;
+                    }else{
+                        depth = allFolderData[key].folderPath.length
+                        
+                        // Add all parent folders to list
+                        // Need to make sure to render them
+                    }
+                    if (groupedFolders[depth] == null){
+                        groupedFolders[depth] = [allFolderData[key]];
+                    }else{
+                        groupedFolders[depth].push(allFolderData[key]);
+                    }
+                    groupedFolderMetadata[key] = {depth:depth, index:groupedFolders[depth].length-1}
+                });
+                Object.keys(groupedFolders).sort(function(o1,o2){
+                    if (parseInt(o1)<parseInt(o2)){
+                        return -1;
+                    }else if (parseInt(o1>parseInt(o2))){
+                        return 1;
+                    }return 0;
+                }).forEach((key) => {
+                    groupedFoldersSorted[key] = groupedFolders[key]
+                })
+                //await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
+           // }
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
-            await createFoldersWithinCompendium(allFolderData,groupedFolders,packCode,openFolders);
+            await createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
             createNewFolderButtonWithinCompendium(window,packCode);
             if (game.user.isGM){
                 // Moving between folders
@@ -2611,9 +2607,8 @@ Hooks.once('setup',async function(){
                                     }
                                 }
                             }
-                                                        
+                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
                             await p.updateEntity(data)
-                            moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
                         }
                     })
                 }
