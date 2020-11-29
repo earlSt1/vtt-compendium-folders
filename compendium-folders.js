@@ -2585,20 +2585,7 @@ Hooks.once('setup',async function(){
                             //let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
 
                             let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
-                            let p = game.packs.get(packCode);
-    
-                            // let folderData = null;
-                            // if (entryInFolderElement != null){
-                            //     let entryInFolder = await p.getEntry(entryInFolderElement.getAttribute('data-entry-id'));
-                            //     folderData = entryInFolder.flags.cf;
-                            // }else{
-                            //     //Create new folder
-                            //     folderData = {
-                            //         id:generateRandomFolderName('temp_'),
-                            //         path:getRenderedFolderPath(this),
-                            //         color:'#000000'
-                            //     }
-                            // }                             
+                            let p = game.packs.get(packCode);                          
 
                             let data = {
                                 _id:movingItemId,
@@ -2613,12 +2600,7 @@ Hooks.once('setup',async function(){
                         }
                     })
                 }
-            }
-            let newSearchBar = window.querySelector('input[name=\'search2\']')
-            if (newSearchBar != null && newSearchBar.value.length>0){
-                filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
-            }
-            
+            }          
         })
 
         Hooks.on('renderApplication',async function(a){
@@ -2638,6 +2620,9 @@ Hooks.once('setup',async function(){
                 newSearchBar.type='text';
                 newSearchBar.autocomplete='off';
                 newSearchBar.value = game.settings.get(mod,'last-search')
+                if (newSearchBar.value.length>0){
+                    filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
+                }
                 
                 newSearchBar.addEventListener('keyup',async function(event){
                     event.stopPropagation();
