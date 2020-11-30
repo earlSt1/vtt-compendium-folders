@@ -1665,6 +1665,7 @@ async function exportFolderStructureToCompendium(folderId){
             resetCache();
             let folderPath = await createParentFoldersWithinCompendium(folder,pack);
             await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'),folderPath,form.merge.checked)
+            resetCache()
             ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
             pack.render(true);
         },
@@ -1693,24 +1694,21 @@ async function createParentFoldersWithinCompendium(folder,pack){
             
         }else{
             // If folder does not exist, create tempEntity and use folderPath of previous parent value
-            tempEntity = getTempEntityData(pack.entity);
             previousParent = generateRandomFolderName('temp_')
-            tempEntity.data = {flags : {
-                    cf:{
-                        id:generateRandomFolderName('temp_'),
-                        name:parents[i].name,
-                        color:parents[i].color,
-                        folderPath:previousPath,
-                        children:[]
-                    }
-                }
-            }
+            tempEntity = getTempEntityData(pack.entity,{
+                id:previousParent,
+                name:parents[i].name,
+                color:parents[i].data.color,
+                folderPath:previousPath,
+                children:[]
+            });
+            
             await pack.createEntity(tempEntity);
            
         }
         previousPath.push(previousParent)
     }
-    return [...new Set(previousPath)];
+    return previousPath;
 }
 async function recursivelyExportFolders(index,pack,folderObj,folderId,folderPath,merge){
     if (folderObj.children.length==0){
