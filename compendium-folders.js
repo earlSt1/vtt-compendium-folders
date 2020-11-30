@@ -21,7 +21,6 @@ function closeContextMenu(){
         contextMenu.parentNode.removeChild(contextMenu);
 }
 function createContextMenu(header,event){
-    console.log(event)
     let folder = header.parentElement
     let folderName = folder.querySelector('h3').innerText
     let folderId = folder.getAttribute('data-folder-id');
@@ -2224,7 +2223,7 @@ function updateFolderPathForTempEntity(entity,pack,content){
         && e.data.flags.cf != null 
         && entity.data.flags.cf.path.startsWith(e.data.flags.cf.path,0) 
         && e.name === TEMP_ENTITY_NAME);
-    console.log(entity.data.flags.cf.path+" is entity");
+    console.debug(entity.data.flags.cf.path+" is entity");
     let updateData = {
         flags:{
             cf:{
@@ -2252,12 +2251,12 @@ function updateFolderPathForTempEntity(entity,pack,content){
     for (let parent of parents){
         
         if (entity.data.flags.cf.path != parent.data.flags.cf.path ){
-            console.log(parent.data.flags.cf.path);
+            console.debug(parent.data.flags.cf.path);
             updateData.flags.cf.folderPath.push(parent.data.flags.cf.id);
         }
     }
     updateData._id = entity.id
-    console.log(updateData);
+    console.debug(updateData);
     
     return updateData;
 }
@@ -2464,14 +2463,14 @@ Hooks.once('setup',async function(){
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
-            //let cachedFolderStructure = await loadCachedFolderStructure(packCode);
+            let cachedFolderStructure = await loadCachedFolderStructure(packCode);
             let allFolderData={};
             let updateData = [];
             let groupedFoldersSorted = {}
             let groupedFolders = {}
-            //if (cachedFolderStructure != null){
-            //   groupedFoldersSorted = cachedFolderStructure;
-            //}else{
+            if (cachedFolderStructure != null){
+               groupedFoldersSorted = cachedFolderStructure;
+            }else{
                 let folderChildren = {}
                 let contents = await e.getContent();
 
@@ -2552,12 +2551,18 @@ Hooks.once('setup',async function(){
                 }).forEach((key) => {
                     groupedFoldersSorted[key] = groupedFolders[key]
                 })
-                //await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
-           // }
+                await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
+            }
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
             createNewFolderButtonWithinCompendium(window,packCode);
+            for (let entity of window.querySelectorAll('.directory-item')){
+                if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
+                    entity.style.display = 'none';
+                    entity.classList.add('hidden')
+                }
+            }
             if (game.user.isGM){
                 // Moving between folders
                 let hiddenMoveField = document.createElement('input');
@@ -2567,10 +2572,6 @@ Hooks.once('setup',async function(){
                 window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
                 
                 for (let entity of window.querySelectorAll('.directory-item')){
-                    if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
-                        entity.style.display = 'none';
-                        entity.classList.add('hidden')
-                    }
                     entity.addEventListener('dragstart',async function(){
                         let currentId = this.getAttribute('data-entry-id');
                         this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
