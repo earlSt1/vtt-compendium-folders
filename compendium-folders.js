@@ -2214,7 +2214,22 @@ async function resetCache(){
 //==========================
 // Folder path conversions
 //==========================
-function updateFolderPathForTempEntity(entity,pack,content){
+function updateFolderChildrenForTempEntity(entity,content){
+    let children = content.filter(e => e.data.flags != null
+        && e.data.flags.cf != null
+        && e.data.flags.cf.path === entity.data.flags.cf.path);
+    let childrenIds = children.map(e => e.id)
+    let updateData = {
+        flags:{
+            cf:{
+                children:childrenIds
+            }
+        },
+        _id:entity.id
+    }
+    return updateData
+}
+function updateFolderPathForTempEntity(entity,content){
     // This constructs the folder path for temp entities
     // for each entity in contents with sub-path in entity path, add id
     let parents = content.filter(e => e.data.flags != null 
@@ -2481,8 +2496,11 @@ Hooks.once('setup',async function(){
                         let entryId = entry._id
                         if (entry.data.flags.cf.folderPath == null
                             && entry.name === TEMP_ENTITY_NAME){
-                            
-                            updateData.push(updateFolderPathForTempEntity(entry,e,contents));
+                            updateData.push(updateFolderPathForTempEntity(entry,contents));
+                        }
+                        if (entry.data.flags.cf.children == null
+                            && entry.name === TEMP_ENTITY_NAME){
+                            updateData.push(updateFolderChildrenForTempEntity(entry,contents));
                         }
                         if (entry.data.flags.cf.import != null){
                             updateData.push({flags:{cf:{import:null}},_id:entryId})
