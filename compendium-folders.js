@@ -2225,6 +2225,17 @@ async function resetCache(){
 //==========================
 // Folder path conversions
 //==========================
+function removeFolderIdForEntity(entity,content){
+    let updateData = {
+        flags:{
+            cf:{
+                id:null
+            }
+        },
+        _id:entity.id
+    }
+    return updateData
+}
 function updateFolderChildrenForTempEntity(entity,content){
     let children = content.filter(e => e.data.flags != null
         && e.data.flags.cf != null
@@ -2497,7 +2508,10 @@ Hooks.once('setup',async function(){
             }else{
                 let folderChildren = {}
                 let contents = await e.getContent();
-
+                let allFolderIds = contents.filter(e => e.data.flags != null 
+                    && e.data.flags.cf != null
+                    && e.data.flags.cf.id != null 
+                    && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
                 //First parse folder data
                 for (let entry of contents){
                     if (entry != null 
@@ -2505,6 +2519,11 @@ Hooks.once('setup',async function(){
                         //New
                         let folderId = entry.data.flags.cf.id;
                         let entryId = entry._id
+                        if (entry.data.flags.cf.id != null
+                            && entry.name != TEMP_ENTITY_NAME
+                            && !allFolderIds.includes(entry.data.flags.cf.id)){
+                            updateData.push(removeFolderIdForEntity(entry,contents));
+                        }
                         if (entry.data.flags.cf.folderPath == null
                             && entry.name === TEMP_ENTITY_NAME){
                             updateData.push(updateFolderPathForTempEntity(entry,contents));
@@ -2516,31 +2535,27 @@ Hooks.once('setup',async function(){
                         if (entry.data.flags.cf.import != null){
                             updateData.push({flags:{cf:{import:null}},_id:entryId})
                         }
-                        if (entry.name === TEMP_ENTITY_NAME){
-                            let name = entry.data.flags.cf.name
-                            let color = entry.data.flags.cf.color;
-                            let folderPath = entry.data.flags.cf.folderPath;
-                            let data = {
-                                id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId
+                        if (folderId != null){
+                            if (entry.name === TEMP_ENTITY_NAME){
+                                let name = entry.data.flags.cf.name
+                                let color = entry.data.flags.cf.color;
+                                let folderPath = entry.data.flags.cf.folderPath;
+                                let data = {
+                                    id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId
+                                }
+                                allFolderData[folderId]=data
                             }
-                            allFolderData[folderId]=data
+                            if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
+                                folderChildren[folderId].children.push(entryId);
+                            }else{
+                                folderChildren[folderId] = {children:[entryId]}
+                            }
                         }
-                        if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
-                            folderChildren[folderId].children.push(entryId);
-                        }else{
-                            folderChildren[folderId] = {children:[entryId]}
-                        }
-                        
                     }
                 }
                 if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                     return;
                 }
-                for (let key of Object.keys(folderChildren)){
-                    allFolderData[key].children = folderChildren[key].children
-                }
-               
-            
                 if (updateData.length>0){
                     e.close().then(async () => {
                         for (let d of updateData){
@@ -2551,6 +2566,12 @@ Hooks.once('setup',async function(){
                     });
                     return;
                 }
+                for (let key of Object.keys(folderChildren)){
+                    allFolderData[key].children = folderChildren[key].children
+                }
+               
+            
+                
                 let groupedFolderMetadata = {}
                 Object.keys(allFolderData).forEach(function(key) {
                     let depth = 0;
