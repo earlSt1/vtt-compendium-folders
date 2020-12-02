@@ -1981,10 +1981,21 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     for (let pack of directoryList.querySelectorAll('li.directory-item')){
         pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
     }
-    for (let child of folderData.children){
-        let existingEntry = directoryList.querySelector('li.directory-item[data-entry-id=\''+child+'\']')
-        if (existingEntry != null){
-            packList.appendChild(existingEntry);
+    let childElements = folderData.children.map(c => directoryList.querySelector('li.directory-item[data-entry-id=\''+c+'\']'))
+    if (childElements.length > 0){
+        let sortedChildElements = childElements.sort(function (a,b){
+            if (a.querySelector('h4').innerText < b.querySelector('h4').innerText){
+                return -1
+            }
+            if (a.querySelector('h4').innerText > b.querySelector('h4').innerText){
+                return 1;
+            }
+            return 0;
+        })
+        for (let child of sortedChildElements){
+            if (child != null){
+                packList.appendChild(child);
+            }
         }
     }
 }
