@@ -1983,8 +1983,6 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     }
     let childElements = folderData.children.map(c => directoryList.querySelector('li.directory-item[data-entry-id=\''+c+'\']'))
     if (childElements.length > 0){
-        console.log("Folder Children")
-        console.log(childElements)
         let sortedChildElements = childElements.filter(c => c != null).sort(function (a,b){
             if (a.querySelector('h4').innerText < b.querySelector('h4').innerText){
                 return -1
@@ -2560,11 +2558,15 @@ Hooks.once('setup',async function(){
                 }
                 if (updateData.length>0){
                     e.close().then(async () => {
-                        for (let d of updateData){
-                            await e.updateEntity(d);
+                        if (game.user.isGM){
+                            for (let d of updateData){
+                                await e.updateEntity(d);
+                            }
+                            resetCache()
+                            e.render(true);
+                        }else{
+                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
                         }
-                        resetCache()
-                        e.render(true);
                     });
                     return;
                 }
