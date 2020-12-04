@@ -1983,7 +1983,9 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     }
     let childElements = folderData.children.map(c => directoryList.querySelector('li.directory-item[data-entry-id=\''+c+'\']'))
     if (childElements.length > 0){
-        let sortedChildElements = childElements.sort(function (a,b){
+        console.log("Folder Children")
+        console.log(childElements)
+        let sortedChildElements = childElements.filter(c => c != null).sort(function (a,b){
             if (a.querySelector('h4').innerText < b.querySelector('h4').innerText){
                 return -1
             }
