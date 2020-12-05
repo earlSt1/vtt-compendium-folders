@@ -2240,9 +2240,16 @@ function consolidateTempEntities(entity,content){
         && e.data.flags.cf.path === entity.data.flags.cf.path 
         && e.data.flags.cf.id === excludeFolderId)
 
-    if (parentTempEntity != null && duplicateTempEntities.length > 1){
+    if (parentTempEntity != null && duplicateTempEntities.length > 0){
         console.debug('Found multiple temp entities at '+entity.data.flags.cf.path+', Deleting others')
         let toDelete = []
+        for (let tempEntity of duplicateTempEntities){
+            toDelete.push(tempEntity.id)
+        }
+        return toDelete
+    }else if (parentTempEntity === null && duplicateTempEntities.length > 1){
+        console.debug('Found multiple temp entities at '+entity.data.flags.cf.path+', Deleting others')
+        let newParentTempEntity = duplicateTempEntities.pop()
         for (let tempEntity of duplicateTempEntities){
             toDelete.push(tempEntity.id)
         }
@@ -2602,13 +2609,26 @@ Hooks.once('setup',async function(){
                 if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                     return;
                 }
-                if (deleteData.length>0 || updateData.length > 0){
+                if (deleteData.length>0){
                     ui.notifications.notify('Updating folder structure. Please wait...')
                     e.close().then(async () => {
                         if (game.user.isGM){
                             for (let d of deleteData){
                                 await e.deleteEntity(d)
                             }
+                            resetCache()
+                            ui.notifications.notify('Updating complete!')
+                            e.render(true);
+                        }else{
+                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                        }
+                    });
+                    return;
+                }  
+                if (updateData.length>0){
+                    ui.notifications.notify('Updating folder structure. Please wait...')
+                    e.close().then(async () => {
+                        if (game.user.isGM){
                             for (let d of updateData){
                                 await e.updateEntity(d);
                             }
@@ -2620,7 +2640,7 @@ Hooks.once('setup',async function(){
                         }
                     });
                     return;
-                }           
+                }          
                 for (let key of Object.keys(folderChildren)){
                     allFolderData[key].children = folderChildren[key].children
                 }
