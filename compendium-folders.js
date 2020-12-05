@@ -1302,7 +1302,8 @@ class FICFolderEditDialog extends FormApplication{
             tempEntityId:this.object.tempEntityId
         }
         await updateFolderInCache(folderObj.packCode,folderObj); 
-        await updateFolderWithinCompendium(folderObj);       
+        await updateFolderWithinCompendium(folderObj);      
+        //resetCache(); 
     }
 }
 class FICFolderCreateDialog extends FormApplication{
@@ -1953,7 +1954,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
         header.appendChild(importButton);
     }
 
-    //If no folder data, or folder is in open folders AND folder has an id, close folder by default
+    //If no folder data, or folder is not in open folders AND folder has an id, close folder by default
     if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
         contents.style.display = 'none';
         folder.setAttribute('collapsed','');
@@ -2212,7 +2213,7 @@ async function updateFolderInCache(packCode,folderObj){
     cache.groupedFolders[folderMetadata.depth][folderMetadata.index].color = folderObj.newColor
     cache.groupedFolders[folderMetadata.depth][folderMetadata.index].name = folderObj.newName
     cache.groupedFolders[folderMetadata.depth] = alphaSortFolders(cache.groupedFolders[folderMetadata.depth],'name')
-    
+    cache.groupedFolderMetadata[folderObj.id].index = cache.groupedFolders[folderMetadata.depth].findIndex(f => f.id === folderObj.id)
     console.debug(modName+' | Updating folder in cache')
    
     await game.settings.set(mod,'cached-folder',cache);
@@ -2225,11 +2226,41 @@ async function resetCache(){
 //==========================
 // Folder path conversions
 //==========================
-function removeFolderIdForEntity(entity,content){
+function consolidateTempEntities(entity,content){
+    let children = content.find(e => e.name != TEMP_ENTITY_NAME && e.data.flags.cf.path === entity.data.flags.cf.path)
+    let excludeFolderId = entity.data.flags.cf.id
+    if (children != null) { 
+        // Children are using a temp entity as parent. Exclude this folderId instead
+        excludeFolderId = children.data.flags.cf.id
+    }
+    let duplicateTempEntities = content.filter(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path === entity.data.flags.cf.path 
+        && e.data.flags.cf.id != excludeFolderId);
+    let parentTempEntity = content.find(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path === entity.data.flags.cf.path 
+        && e.data.flags.cf.id === excludeFolderId)
+
+    if (parentTempEntity != null && duplicateTempEntities.length > 1){
+        console.debug('Found multiple temp entities at '+entity.data.flags.cf.path+', Deleting others')
+        let toDelete = []
+        for (let tempEntity of duplicateTempEntities){
+            toDelete.push(tempEntity.id)
+        }
+        return toDelete
+    }
+    
+    return []
+}
+function removeOrUpdateFolderIdForEntity(entity,content){
+    let parent = content.find(e => e.name === TEMP_ENTITY_NAME && e.data.flags.cf.path === entity.data.flags.cf.path);
+    let folderId = null
+    if (parent != null){
+        folderId = parent.data.flags.cf.id
+    }
     let updateData = {
         flags:{
             cf:{
-                id:null
+                id:folderId
             }
         },
         _id:entity.id
@@ -2276,16 +2307,16 @@ function updateFolderPathForTempEntity(entity,content){
     // }
     //
     parents = parents.sort((a,b) => {
-        if (a.data.flags.path > b.data.flags.path){
+        if (a.data.flags.cf.path > b.data.flags.cf.path){
             return 1;
-        }else if (a.data.flags.path < b.data.flags.path){
+        }else if (a.data.flags.cf.path < b.data.flags.cf.path){
             return -1;
         }
         return 0;
     });
     for (let parent of parents){
         
-        if (entity.data.flags.cf.path != parent.data.flags.cf.path ){
+        if (entity.data.flags.cf.path != parent.data.flags.cf.path){
             console.debug(parent.data.flags.cf.path);
             updateData.flags.cf.folderPath.push(parent.data.flags.cf.id);
         }
@@ -2501,19 +2532,28 @@ Hooks.once('setup',async function(){
             let cachedFolderStructure = await loadCachedFolderStructure(packCode);
             let allFolderData={};
             let updateData = [];
+            let deleteData = []
             let groupedFoldersSorted = {}
             let groupedFolders = {}
             if (cachedFolderStructure != null){
                groupedFoldersSorted = cachedFolderStructure;
             }else{
                 let folderChildren = {}
+                let checkedPaths = []
                 let contents = await e.getContent();
                 let allFolderIds = contents.filter(e => e.data.flags != null 
                     && e.data.flags.cf != null
                     && e.data.flags.cf.id != null 
                     && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
                 //First parse folder data
-                for (let entry of contents){
+                for (let entry of contents.sort((a,b) => {
+                    if (a.data.flags.cf.path > b.data.flags.cf.path){
+                        return -1;
+                    }else if (a.data.flags.cf.path < b.data.flags.cf.path){
+                        return 1;
+                    }
+                    return 0;
+                })){
                     if (entry != null 
                         && entry.data.flags.cf != null){
                         //New
@@ -2522,11 +2562,12 @@ Hooks.once('setup',async function(){
                         if (entry.data.flags.cf.id != null
                             && entry.name != TEMP_ENTITY_NAME
                             && !allFolderIds.includes(entry.data.flags.cf.id)){
-                            updateData.push(removeFolderIdForEntity(entry,contents));
+                            updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
                         }
                         if (entry.data.flags.cf.folderPath == null
                             && entry.name === TEMP_ENTITY_NAME){
-                            updateData.push(updateFolderPathForTempEntity(entry,contents));
+                            let result = updateFolderPathForTempEntity(entry,contents);
+                            updateData.push(result);
                         }
                         if (entry.data.flags.cf.children == null
                             && entry.name === TEMP_ENTITY_NAME){
@@ -2534,6 +2575,11 @@ Hooks.once('setup',async function(){
                         }
                         if (entry.data.flags.cf.import != null){
                             updateData.push({flags:{cf:{import:null}},_id:entryId})
+                        }
+                        if (entry.data.flags.cf.path != null 
+                            && !checkedPaths.includes(entry.data.flags.cf.path)){                           
+                            deleteData.push.apply(deleteData,consolidateTempEntities(entry,contents));
+                            checkedPaths.push(entry.data.flags.cf.path);
                         }
                         if (folderId != null){
                             if (entry.name === TEMP_ENTITY_NAME){
@@ -2556,20 +2602,25 @@ Hooks.once('setup',async function(){
                 if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                     return;
                 }
-                if (updateData.length>0){
+                if (deleteData.length>0 || updateData.length > 0){
+                    ui.notifications.notify('Updating folder structure. Please wait...')
                     e.close().then(async () => {
                         if (game.user.isGM){
+                            for (let d of deleteData){
+                                await e.deleteEntity(d)
+                            }
                             for (let d of updateData){
                                 await e.updateEntity(d);
                             }
                             resetCache()
+                            ui.notifications.notify('Updating complete!')
                             e.render(true);
                         }else{
                             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
                         }
                     });
                     return;
-                }
+                }           
                 for (let key of Object.keys(folderChildren)){
                     allFolderData[key].children = folderChildren[key].children
                 }
