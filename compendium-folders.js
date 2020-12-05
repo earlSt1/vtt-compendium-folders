@@ -2565,14 +2565,7 @@ Hooks.once('setup',async function(){
                     && e.data.flags.cf.id != null 
                     && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
                 //First parse folder data
-                for (let entry of contents.sort((a,b) => {
-                    if (a.data.flags.cf.path > b.data.flags.cf.path){
-                        return -1;
-                    }else if (a.data.flags.cf.path < b.data.flags.cf.path){
-                        return 1;
-                    }
-                    return 0;
-                })){
+                for (let entry of contents){
                     if (entry != null 
                         && entry.data.flags.cf != null){
                         //New
