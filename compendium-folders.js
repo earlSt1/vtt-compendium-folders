@@ -2239,7 +2239,11 @@ async function resetCache(){
 // Folder path conversions
 //==========================
 function consolidateTempEntities(entity,content){
-    let children = content.find(e => e.name != TEMP_ENTITY_NAME && e.data.flags.cf.path != null && e.data.flags.cf.path === entity.data.flags.cf.path)
+    let children = content.find(e => e.name != TEMP_ENTITY_NAME 
+        && e.data.flags != null
+        && e.data.flags.cf != null 
+        && e.data.flags.cf.path != null 
+        && e.data.flags.cf.path === entity.data.flags.cf.path)
     let excludeFolderId = entity.data.flags.cf.id
     if (children != null) { 
         // Children are using a temp entity as parent. Exclude this folderId instead
@@ -2273,7 +2277,9 @@ function consolidateTempEntities(entity,content){
     return []
 }
 function removeOrUpdateFolderIdForEntity(entity,content){
-    let parent = content.find(e => e.name === TEMP_ENTITY_NAME && e.data.flags.cf.path === entity.data.flags.cf.path);
+    let parent = content.find(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path != null 
+        && e.data.flags.cf.path === entity.data.flags.cf.path);
     let folderId = null
     if (parent != null){
         folderId = parent.data.flags.cf.id
