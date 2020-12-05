@@ -2239,28 +2239,30 @@ async function resetCache(){
 // Folder path conversions
 //==========================
 function consolidateTempEntities(entity,content){
-    let children = content.find(e => e.name != TEMP_ENTITY_NAME && e.data.flags.cf.path === entity.data.flags.cf.path)
+    let children = content.find(e => e.name != TEMP_ENTITY_NAME && e.data.flags.cf.path != null && e.data.flags.cf.path === entity.data.flags.cf.path)
     let excludeFolderId = entity.data.flags.cf.id
     if (children != null) { 
         // Children are using a temp entity as parent. Exclude this folderId instead
         excludeFolderId = children.data.flags.cf.id
     }
     let duplicateTempEntities = content.filter(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path != null
         && e.data.flags.cf.path === entity.data.flags.cf.path 
         && e.data.flags.cf.id != excludeFolderId);
     let parentTempEntity = content.find(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path  != null
         && e.data.flags.cf.path === entity.data.flags.cf.path 
         && e.data.flags.cf.id === excludeFolderId)
 
     if (parentTempEntity != null && duplicateTempEntities.length > 0){
-        console.debug('Found multiple temp entities at '+entity.data.flags.cf.path+', Deleting others')
+        console.debug('Found multiple temp entities at '+entity.data.flags.cf.name+', Deleting others')
         let toDelete = []
         for (let tempEntity of duplicateTempEntities){
             toDelete.push(tempEntity.id)
         }
         return toDelete
     }else if (parentTempEntity === null && duplicateTempEntities.length > 1){
-        console.debug('Found multiple temp entities at '+entity.data.flags.cf.path+', Deleting others')
+        console.debug('Found multiple temp entities at '+entity.data.flags.cf.name+', Deleting others')
         let newParentTempEntity = duplicateTempEntities.pop()
         for (let tempEntity of duplicateTempEntities){
             toDelete.push(tempEntity.id)
