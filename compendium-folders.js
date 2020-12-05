@@ -1688,7 +1688,9 @@ async function createParentFoldersWithinCompendium(folder,pack){
     let previousParent = null;
     let previousPath = []
     for (let i=parents.length-1 ;i>=0;i--){
-        let tempEntity = tempEntities.find(e => e.data.flags.cf.name === parents[i].name && arraysEqual(e.data.flags.cf.folderPath,previousPath))
+        let tempEntity = tempEntities.find(e => e.data.flags.cf.name === parents[i].name 
+            && (e.data.flags.cf.path === getFolderPath(parents[i]) 
+                ||arraysEqual(e.data.flags.cf.folderPath,previousPath)))
         if (tempEntity != null){
             // if folder with parent name exists, and path matches, use that tempEntity id
             previousParent = tempEntity.data.flags.cf.id;
@@ -1735,6 +1737,14 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId,folderPath
 }
 async function exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge){
     let path = getFullPath(folderObj)
+    let content = await pack.getContent()
+    let existingFolder = content.find(e => e.name === TEMP_ENTITY_NAME 
+        && (arraysEqual(e.data.flags.cf.folderPath,folderPath) && e.data.flags.cf.name === folderObj.name))
+    if (existingFolder){
+        //create
+        folderId = existingFolder.data.flags.cf.id
+        path = existingFolder.data.flags.cf.path
+    }
     let color = '#000000'
     if (folderObj.data.color != null && folderObj.data.color.length>0){
         color = folderObj.data.color;
@@ -1763,17 +1773,19 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         }
         console.log(`Exported ${e.name} to ${pack.collection}`);
     }
-    // Exporting temp entity to allow for empty folders being editable
-    let tempData = getTempEntityData(pack.entity);
-    tempData.flags.cf={
-        id:folderId,
-        path:path,
-        color:color,
-        name:folderObj.name,
-        children:packEntities,
-        folderPath:folderPath
+    if (!existingFolder){
+        // Exporting temp entity to allow for empty folders being editable
+        let tempData = getTempEntityData(pack.entity);
+        tempData.flags.cf={
+            id:folderId,
+            path:path,
+            color:color,
+            name:folderObj.name,
+            children:packEntities,
+            folderPath:folderPath
+        }
+        await pack.createEntity(tempData);
     }
-    await pack.createEntity(tempData);
     console.log(`Exported temp entity to ${pack.collection}`);
     
     return folderObj
