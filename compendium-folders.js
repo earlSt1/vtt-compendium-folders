@@ -2259,14 +2259,14 @@ function consolidateTempEntities(entity,content){
         && e.data.flags.cf.id === excludeFolderId)
 
     if (parentTempEntity != null && duplicateTempEntities.length > 0){
-        console.debug('Found multiple temp entities at '+entity.data.flags.cf.name+', Deleting others')
+        console.debug(modName+' | Found multiple temp entities at '+entity.data.flags.cf.name+' with existing parent, Deleting others')
         let toDelete = []
         for (let tempEntity of duplicateTempEntities){
             toDelete.push(tempEntity.id)
         }
         return toDelete
     }else if (parentTempEntity === null && duplicateTempEntities.length > 1){
-        console.debug('Found multiple temp entities at '+entity.data.flags.cf.name+', Deleting others')
+        console.debug(modName+' | Found multiple temp entities at '+entity.data.flags.cf.name+' without existing parent, Using one duplicate and deleting others')
         let newParentTempEntity = duplicateTempEntities.pop()
         for (let tempEntity of duplicateTempEntities){
             toDelete.push(tempEntity.id)
