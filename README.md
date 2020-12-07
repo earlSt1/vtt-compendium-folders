@@ -75,6 +75,7 @@ Special thanks to the translators who contributed to this project:
 - lozalojo (Spanish)
 - CarnVanBeck (German)
 - rinnocent (Brazilian Portugese)
+- Himeroos#4803 (French)
 
 ## Contribution
 If you'd like to support my work, feel free to leave a tip through [my paypal](http://paypal.me/cre463)
