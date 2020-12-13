@@ -68,9 +68,10 @@ button.cfolder-submit{
 button.cfolder-submit#delete  {
   background-color:#c51c1c
 }
-.compendium-folder-header > .create-folder,.move-folder{
+.compendium-folder-header > .create-folder,.move-folder,.edit-folder{
   flex:none;
   padding-right:3px;
+  color: #CCC;
 }
 .compendium-folder-header > .create-folder {
   padding-right:0px !important;
@@ -80,7 +81,7 @@ button.cfolder-submit#delete  {
   padding:0px;
   position:relative !important;
 }
-.compendium-list{
+.compendium-list,.entry-list{
   margin-left:3px !important;
   position:relative !important;
 }
@@ -102,6 +103,7 @@ button.cfolder-submit#delete  {
   padding-right:5px !important ;
   margin:0px !important
 }
+
 #folder-create input[name='search-packs']{
   width: calc(100% - 25px);
 }
@@ -133,4 +135,50 @@ button.cfolder-submit#delete  {
 }
 button.create-compendium{
   font-size:12.5px;
+}
+/*Inside Compendiums*/
+.sidebar-tab.compendium li.compendium-folder >.folder-contents > .entry-list{
+  padding:0;
+  margin:0;
+}
+.folder-header a.export-folder,a.import-folder,a.create-fic{
+  flex: 0 0 20px;
+    text-align: center;
+    color: #CCC;
+    font-size: 14px;
+}
+/*Context menu*/
+.compendium-folder > #folder-context-menu{
+  margin-top:-7px
+}
+#folder-context-menu{
+  width: 32px;
+  height: max-content;
+  min-width: 150px;
+  max-width: 360px;
+  position: absolute;
+  background: #23221d;
+  border: 1px solid #000;
+  border-radius: 5px;
+  color: #EEE;
+  z-index:99999;
+}
+#folder-context-menu ol.context-items{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#folder-context-menu  li.context-item{
+  padding: 0 5px;
+  line-height: 32px;
+}
+#folder-context-menu li.context-item > i{
+  margin-right:5px;
+}
+#folder-context-menu li.context-item:hover{
+  color: #FFF;
+  text-shadow: 0 0 4px red;
+}
+button.dialog-button.deleteAll  {
+  background-color:#c51c1c
 }

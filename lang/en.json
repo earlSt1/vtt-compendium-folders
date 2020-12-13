@@ -32,5 +32,34 @@
     "CF.folderImportFailure":"Failed to import folder data",
     "CF.folderImportMaxDepth":"Imported string contains folders that exceed max folder limit",
     "CF.moveFolderNotification":"Moved folder {src} to {dest}",
-    "CF.searchCompendiums":"Search Compendiums"
+    "CF.searchCompendiums":"Search Compendiums",
+    "CF.configuration":"Configuration",
+
+    "CF.cleanup":"Cleanup",
+    "CF.cleanupHint":"Remove Folder Data from a Compendium",
+    "CF.cleanupTitle":"Cleanup Compendium",
+    "CF.cleanupL1":"This will remove all folder data from a compendium",
+    "CF.cleanupL2":"WARNING: This action is irreversible",
+    "CF.cleanupNotificationStart":"Removing folder data from {pack}",
+    "CF.cleanupNotificationFinish":"Cleanup complete!",
+
+    "CF.exportFolderHint":"Export Folder Structure",
+    "CF.exportFolderL1":"You may export contained entities from this folder into an unlocked Compendium pack of the appropriate type.",
+    "CF.exportFolderDestPack":"Destination Pack",
+    "CF.exportFolderSubmit":"Export Content",
+    "CF.exportFolderNotificationStart":"Exporting folder structure into {pack}...",
+    "CF.exportFolderNotificationFinish":"Exporting complete!",
+    
+    "CF.importFolderHint":"Import Folder Structure",
+    "CF.importFolderL1":"Are you sure you want to import the folder <strong>{folder}</strong> into your world",
+    "CF.importFolderL2":"Existing entities <strong>will not be overwritten</strong>, so will be duplicated",
+    "CF.importFolderL3":"Folders will be created as needed",
+    "CF.importFolderL4":"If a folder exists on the path it will be used",
+    "CF.importFolderNotificationStart":"Importing folder structure into world...",
+    "CF.importFolderNotificationFinish":"Importing complete!",
+    "CF.deleteFolderNotificationStart":"Deleting folder ...",
+    "CF.deleteFolderNotificationFinish":"Deleting complete!",
+    "CF.updateFolderNotificationStart":"Updating folder ...",
+    "CF.updateFolderNotificationFinish":"Updating complete!",
+    "CF.createFolderWithinCompendiumL1":"Folder name must be unique, else it will update existing folders on the same path"
 }
