@@ -1881,6 +1881,7 @@ async function importFolderFromCompendium(event,folder){
             <ul><li>${l3}</li><li>${l4}</li></ul>
             <div class='form-group'><label for='merge'>Merge by name</label><input type='checkbox' name='merge' checked/></div></form>`,
         yes: async (h) => {
+            await game.settings.set(mod,'importing',true);
             let merge = h[0].querySelector('input[name=\'merge\']').checked
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"))
             let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
@@ -1889,7 +1890,8 @@ async function importFolderFromCompendium(event,folder){
             await importAllParentFolders(pack,coll,folder,merge);
             await recursivelyImportFolders(pack,coll,folder,merge);
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
-            removeTempEntities(pack.entity);
+            await removeTempEntities(pack.entity);
+            await game.settings.set(mod,'importing',false);
         }
     });
     
@@ -2408,6 +2410,12 @@ export class Settings{
             type:Object,
             default:{}
         });
+        game.settings.register(mod,'importing',{
+            scope:'client',
+            config:false,
+            type:Boolean,
+            default:false
+        });
     }
     static updateFolder(folderData){
         let existingFolders = game.settings.get(mod,'cfolders');
@@ -2815,6 +2823,10 @@ Hooks.once('setup',async function(){
                     addExportButton(folder);
                 }
             }
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.actors.entities.some(a => a.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('Actor')
+            }
         })
         Hooks.on('renderJournalDirectory',async function(){
             for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
@@ -2823,6 +2835,10 @@ Hooks.once('setup',async function(){
                     && game.user.isGM){
                     addExportButton(folder);
                 }
+            }
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('JournalEntry')
             }
         })
         Hooks.on('renderSceneDirectory',async function(){
@@ -2833,14 +2849,22 @@ Hooks.once('setup',async function(){
                     addExportButton(folder);
                 } 
             }
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('Scene')
+            }
         })
-        Hooks.on('renderItemDirectory',async function(){
+        Hooks.on('renderItemDirectory',async function(e){
             for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null//
                     && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
                     && game.user.isGM){
                     addExportButton(folder);
                 } 
+            }
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('Item')
             }
         })
         Hooks.on('renderRollTableDirectory',async function(){
@@ -2850,6 +2874,10 @@ Hooks.once('setup',async function(){
                     && game.user.isGM){
                     addExportButton(folder);
                 }  
+            }
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('RollTable')
             }
         })
     }
