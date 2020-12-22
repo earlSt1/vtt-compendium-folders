@@ -123,6 +123,8 @@ function getTempEntityData(entityType,folder){
  
         case 'JournalEntry': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
 
+        case 'Macro':return {name:TEMP_ENTITY_NAME,type:'chat',command:'',flags:{cf:folder}} 
+
         case 'RollTable':return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
 
         case 'Scene':return {name:TEMP_ENTITY_NAME,flags:{cf:folder}} 
@@ -139,6 +141,8 @@ async function removeTempEntities(entityType){
             break;
         case 'JournalEntry': collection = game.journal;
             break;
+        case 'Macro': collection = game.macros;
+            break;
         case 'RollTable':collection = game.tables;
             break;
         case 'Scene':collection = game.scenes;           
@@ -146,7 +150,12 @@ async function removeTempEntities(entityType){
     if (collection != null){
         let tempEntities = collection.entries.filter(x => x.name.includes(TEMP_ENTITY_NAME));
         for (let tempEntity of tempEntities){
-            const entity = collection.apps[0].constructor.collection.get(tempEntity.id);
+            let entity = null;
+            if (entityType==='Macro'){
+                entity = collection.apps[1].constructor.collection.get(tempEntity.id);
+            }else{
+                entity = collection.apps[0].constructor.collection.get(tempEntity.id);
+            }
             await entity.delete(entity)
         } 
     }
@@ -174,6 +183,19 @@ function getRenderedFolderPath(folder){
     }
     return path;
 }
+function getMacroFolderPath(macroId){
+    let allFolders = game.settings.get('macro-folders','mfolders')
+    let folder = Object.values(allFolders).find(f => f.macroList != null && f.macroList.includes(macroId))
+    if (folder != null){
+        let folderPath = folder.titleText;
+        if (folder.pathToFolder != null){
+            folderPath = folder.pathToFolder.map(p => allFolders[p].titleText).join(FOLDER_SEPARATOR)+FOLDER_SEPARATOR+folderPath
+        }
+        return folderPath
+    }
+    return null;
+}
+
 function generateRandomFolderName(prefix){
     return Math.random().toString(36).replace('0.',prefix || '');
 }
@@ -248,6 +270,70 @@ function checkForDeletedCompendiums(){
         game.settings.set(mod,'cfolders',allFolders).then(() => {return allFolders});
     }
     return allFolders;
+}
+// Recursively construct folder data from macro folders settings
+async function constructFolderDataFromMacroFolder(mFolderId,macroFolders){
+    let folderObj = {data:{_id:mFolderId}};
+    let currentFolder = macroFolders[mFolderId];
+    folderObj.content = currentFolder.macroList.map(m => game.macros.get(m));
+    folderObj.data.color = currentFolder.colorText;
+    folderObj.data.name = currentFolder.titleText;
+    folderObj.name = currentFolder.titleText;
+    folderObj.data.type = 'Macro'
+    let currentFolderChildren = Object.values(macroFolders).filter(m => m.pathToFolder != null && m.pathToFolder[m.pathToFolder.length-1] === mFolderId)
+    folderObj.children = []
+    for (let child of currentFolderChildren){
+        folderObj.children.push(await recursivelyFetchChildren(child._id,macroFolders,currentFolder));
+    }
+
+    if (currentFolder.pathToFolder.length === 0){
+        return folderObj
+    }
+    let parentFolderId = currentFolder.pathToFolder.pop();
+    let parentFolder = await recursivelyFetchParents(parentFolderId,macroFolders);
+    folderObj.parent = parentFolder;
+    folderObj.data.parent = parentFolder;
+    return folderObj;
+
+}
+async function recursivelyFetchChildren(mFolderId,macroFolders,parent){
+    let folderObj = {data:{_id:mFolderId}};
+    let currentFolder = macroFolders[mFolderId];
+    folderObj.content = currentFolder.macroList.map(m => game.macros.get(m));
+    folderObj.data.color = currentFolder.colorText;
+    folderObj.data.name = currentFolder.titleText;
+    folderObj.name = currentFolder.titleText;
+    folderObj.data.type = 'Macro'
+    folderObj.data.parent = parent;
+    folderObj.parent = parent;
+    let currentFolderChildren = Object.values(macroFolders).filter(m => m.pathToFolder != null && m.pathToFolder[m.pathToFolder.length-1] === mFolderId)
+    folderObj.children = []
+    if (currentFolderChildren.length===0){
+        return folderObj;
+    }
+    for (let child of currentFolderChildren){
+        folderObj.children.push(await recursivelyFetchChildren(child._id,macroFolders,currentFolder));
+    }
+    return folderObj
+}
+async function recursivelyFetchParents(mFolderId,macroFolders){
+    let folderObj = {data:{_id:mFolderId}};
+    let currentFolder = macroFolders[mFolderId];
+    folderObj.content = currentFolder.macroList.map(m => game.macros.get(m));
+    folderObj.data.color = currentFolder.colorText;
+    folderObj.data.name = currentFolder.titleText;
+    folderObj.name = currentFolder.titleText;
+    folderObj.data.type = 'Macro'
+    folderObj.children = []
+    if (currentFolder.pathToFolder.length === 0){
+        return folderObj
+    }
+    let parentFolderId = currentFolder.pathToFolder.pop();
+    let parentFolder = await recursivelyFetchParents(parentFolderId,macroFolders);
+    folderObj.parent = parentFolder;
+    folderObj.data.parent = parentFolder;
+    return folderObj;
+
 }
 // ==========================
 // Folder object structure
@@ -1616,25 +1702,36 @@ function setupDragEventListeners(){
 // ==========================
 // Exporting Folders to compendiums
 // ==========================
-function addExportButton(folder){
+function addExportButton(folder,isMacroFolder){
     let newButton = document.createElement('i');
     newButton.classList.add('fas','fa-upload');
     let link = document.createElement('a');
     link.setAttribute('title',"Export Folder Structure")
-    link.setAttribute('data-folder',folder.parentElement.getAttribute('data-folder-id'));
+    if (isMacroFolder){
+        link.setAttribute('data-folder',folder.parentElement.getAttribute('data-mfolder-id'));
+    }else{
+        link.setAttribute('data-folder',folder.parentElement.getAttribute('data-folder-id'));
+    }
     link.classList.add('export-folder');
     link.appendChild(newButton);
-    link.addEventListener('click',async function(event){
-        event.stopPropagation();
-        
-        await exportFolderStructureToCompendium(this.getAttribute('data-folder'));
-    });
+    if (isMacroFolder){
+        link.style.flex='0';
+        link.addEventListener('click',async function(event){
+            event.stopPropagation();
+            let folder = await constructFolderDataFromMacroFolder(this.getAttribute('data-folder'),game.settings.get('macro-folders','mfolders'))
+            await exportFolderStructureToCompendium(folder);
+        });
+    }else{
+        link.addEventListener('click',async function(event){
+            event.stopPropagation();
+            let folder = game.folders.get(this.getAttribute('data-folder'));
+            await exportFolderStructureToCompendium(folder);
+        });
+    }
     folder.insertAdjacentElement('beforeend',link);
 }
 // Mostly taken from foundry.js 
-async function exportFolderStructureToCompendium(folderId){
-    
-    let folder = game.folders.get(folderId);
+async function exportFolderStructureToCompendium(folder){
     
     // Get eligible pack destinations
     const packs = game.packs.filter(p => (p.entity === folder.data.type) && !p.locked);
@@ -1811,6 +1908,8 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
                         break;
             case 'JournalEntry':search = game.journal.entities.filter(j => j.name === source.name && getFolderPath(j.folder)===folderPath)
                         break;
+            case 'Macro':search = game.macros.entities.filter(m => m.name === source.name && getMacroFolderPath(m.id)===folderPath)
+                        break;
             case 'Scene':search = game.scenes.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
                         break;
             case 'RollTable':search = game.tables.entities.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
@@ -1887,11 +1986,21 @@ async function importFolderFromCompendium(event,folder){
             let packCode = folder.closest('.sidebar-tab.compendium').getAttribute('data-pack');
             let pack = await game.packs.get(packCode);
             let coll = pack.cls.collection;
+            if (pack.entity === 'Macro'){
+                if (document.querySelector('#macros-popout') != null){
+                    document.querySelector('#macros-popout').querySelector('a.header-button.close').click()
+                }
+            }
             await importAllParentFolders(pack,coll,folder,merge);
             await recursivelyImportFolders(pack,coll,folder,merge);
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
             await removeTempEntities(pack.entity);
             await game.settings.set(mod,'importing',false);
+            if (pack.entity === 'Macro'){
+                if (document.querySelector('#macros-popout') != null){
+                    document.querySelector('#macros-popout').querySelector('a.header-button.close').click()
+                }
+            }
         }
     });
     
@@ -2058,24 +2167,54 @@ function createNewFolderButtonWithinCompendium(window,packCode){
 // To keep folder parent and remove folderdata from name
 // ==========================
 async function importFolderData(e){
+    let isMacro = e.entity === 'Macro'
     if (e.data.flags.cf != null && e.data.flags.cf.import != null){
         let path = e.data.flags.cf.path;
         let color = e.data.flags.cf.color;
         //a.data.folder -> id;
         let foundFolder = null;
         let folderExists=false;
-        for (let folder of game.folders.values()){
-            if (folder.data.type==e.entity){
-                if (getFolderPath(folder) === path){
-                    folderExists=true;
-                    foundFolder=folder;
+        if (isMacro){
+            let allMacroFolders = game.settings.get('macro-folders','mfolders')
+            for (let folder of Object.entries(allMacroFolders)){
+                if (folder.pathToFolder != null){
+                    let folderPath = folder.pathToFolder.map(m => allMacroFolders[m].titleText).join(FOLDER_SEPARATOR)
+                    if (!folderPath.contains(FOLDER_SEPARATOR)){
+                        folderPath = folder.titleText;
+                    }
+                    if (folderPath === path){
+                        folderExists=true;
+                        foundFolder=folder
+                    }
+                }
+            }
+        }else{
+            for (let folder of game.folders.values()){
+                if (folder.data.type==e.entity){
+                    if (getFolderPath(folder) === path){
+                        folderExists=true;
+                        foundFolder=folder;
+                    }
                 }
             }
         }
         if (folderExists){
-            await e.update({folder : foundFolder.id,flags:{cf:null}})
+            if (isMacro){
+                let allMacroFolders = game.settings.get('macro-folders','mfolders')   
+                for (let mfId of Object.keys(allMacroFolders)){
+                    allMacroFolders[mfId].macroList.filter(m => m != e._id)
+                }
+                allMacroFolders[folder._id].macroList.push(e._id);
+                await game.settings.set('macro-folders','mfolders',allMacroFolders);
+            }else{
+                await e.update({folder : foundFolder.id,flags:{cf:null}})
+            }
         }else{
-            await createFolderPath(path,color,e.entity,e);
+            if (isMacro){
+                await createMacroFolderPath(path,color,e);
+            }else{
+                await createFolderPath(path,color,e.entity,e);
+            }
         }
     }
 }
@@ -2113,6 +2252,53 @@ async function createFolderPath(path,pColor,entityType,e){
         }
         index++;
     }
+}
+async function createMacroFolderPath(path,pColor,e){
+    let allMacroFolders = game.settings.get('macro-folders','mfolders')  
+    let lastId = null;
+    let segments = path.split(FOLDER_SEPARATOR);
+    let index = 0;
+    for (let seg of segments){
+        let folderPath = segments.slice(0,index).join(FOLDER_SEPARATOR)+FOLDER_SEPARATOR+seg
+        if (index==0){
+            folderPath = seg
+        }
+        let results = Object.values(allMacroFolders).filter(f => f.pathToFolder != null 
+            && f.pathToFolder.map(m => allMacroFolders[m].titleText).join(FOLDER_SEPARATOR)+(index>0?FOLDER_SEPARATOR:"")+f.titleText === folderPath)
+        console.log(results);
+        if (results.length==0 ){
+            //create folder
+            let newFolder = {
+                _id:generateRandomFolderName('mfolder'),
+                titleText:seg,
+                macroList:[],
+                pathToFolder:[]
+            }
+            if (index == segments.length-1){
+                newFolder.colorText = pColor;
+                newFolder.macroList.push(e._id)
+            }
+            if (lastId != null){
+                newFolder.pathToFolder = Array.from(allMacroFolders[lastId].pathToFolder)
+                newFolder.pathToFolder.push(lastId);
+            }
+            allMacroFolders[newFolder._id]=newFolder
+            lastId = newFolder._id;
+        }else{
+            //Folder exists, add entity to thing
+            lastId = results[0]._id
+            if (index == segments.length-1){
+                allMacroFolders[lastId].macroList.push(e._id)
+            }
+        }
+        index++;
+    }
+    for (let key of Object.keys(allMacroFolders)){
+        if (key != lastId){
+            allMacroFolders[key].macroList.filter(m => m != e._id)
+        }
+    }
+    await game.settings.set('macro-folders','mfolders',allMacroFolders)
 }
 // ==========================
 // For cleaning folder data from a compendium pack
@@ -2784,43 +2970,50 @@ Hooks.once('setup',async function(){
         Hooks.on('createActor',async function(a){
             await importFolderData(a);
         })
+        Hooks.on('createItem',async function(i){
+            await importFolderData(i);
+        })
         Hooks.on('createJournalEntry',async function(j){
             await importFolderData(j);
         })
-        Hooks.on('createScene',async function(s){
-            await importFolderData(s);
-        })
-        Hooks.on('createItem',async function(i){
-            await importFolderData(i);
+        Hooks.on('createMacro',async function(m){
+            await importFolderData(m);
         })
         Hooks.on('createRollTable',async function(r){
             await importFolderData(r);
         })
+        Hooks.on('createScene',async function(s){
+            await importFolderData(s);
+        })
         
+
         Hooks.on('updateActor',async function(a){
             await importFolderData(a);
-        })
-        Hooks.on('updateJournalEntry',async function(j){
-            await importFolderData(j);
-        })
-        Hooks.on('updateScene',async function(s){
-            await importFolderData(s);
         })
         Hooks.on('updateItem',async function(i){
             await importFolderData(i);
         })
+        Hooks.on('updateJournalEntry',async function(j){
+            await importFolderData(j);
+        })
+        Hooks.on('updateMacro',async function(m){
+            await importFolderData(m);
+        })
         Hooks.on('updateRollTable',async function(r){
             await importFolderData(r);
+        })
+        Hooks.on('updateScene',async function(s){
+            await importFolderData(s);
         })
 
         // Adding the export button to all folders
         // ONLY if it contains an entity (either direct child or in child folder)
-        Hooks.on('renderActorDirectory',async function(){
-            for (let folder of document.querySelectorAll('.directory-item > .folder-header')){
+        Hooks.on('renderActorDirectory',async function(a){
+            for (let folder of a._element[0].querySelectorAll('.directory-item > .folder-header')){
                 if (folder.querySelector('a.export-folder')==null //
                     && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
                     && game.user.isGM){
-                    addExportButton(folder);
+                    addExportButton(folder,false);
                 }
             }
             let importing = game.settings.get(mod,'importing');
@@ -2833,7 +3026,7 @@ Hooks.once('setup',async function(){
                 if (folder.querySelector('a.export-folder')==null//
                     && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
                     && game.user.isGM){
-                    addExportButton(folder);
+                    addExportButton(folder,false);
                 }
             }
             let importing = game.settings.get(mod,'importing');
@@ -2846,7 +3039,7 @@ Hooks.once('setup',async function(){
                 if (folder.querySelector('a.export-folder')==null//
                     && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
                     && game.user.isGM){
-                    addExportButton(folder);
+                    addExportButton(folder,false);
                 } 
             }
             let importing = game.settings.get(mod,'importing');
@@ -2859,7 +3052,7 @@ Hooks.once('setup',async function(){
                 if (folder.querySelector('a.export-folder')==null//
                     && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
                     && game.user.isGM){
-                    addExportButton(folder);
+                    addExportButton(folder,false);
                 } 
             }
             let importing = game.settings.get(mod,'importing');
@@ -2872,12 +3065,28 @@ Hooks.once('setup',async function(){
                 if (folder.querySelector('a.export-folder')==null//
                     && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
                     && game.user.isGM){
-                    addExportButton(folder);
+                    addExportButton(folder,false);
                 }  
             }
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('RollTable')
+            }
+        })
+        Hooks.on('addExportButtonsForCF',async function(window){
+            for (let folderHeader of window.querySelectorAll('.macro-folder > .macro-folder-header')){
+                if (folderHeader.querySelector('a.export-folder')==null//
+                    && folderHeader.parentElement.querySelector(':scope > .folder-contents').querySelector('.directory-item.entity') != null
+                    && folderHeader.parentElement.getAttribute('data-mfolder-id') != 'default'
+                    && game.user.isGM){
+                    addExportButton(folderHeader,true);
+                }  
+            }
+        })
+        Hooks.on('renderMacroDirectory',async function(){
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.macros.entities.some(m => m.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('Macro')
             }
         })
     }
