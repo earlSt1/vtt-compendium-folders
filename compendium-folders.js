@@ -2265,7 +2265,6 @@ async function createMacroFolderPath(path,pColor,e){
         }
         let results = Object.values(allMacroFolders).filter(f => f.pathToFolder != null 
             && f.pathToFolder.map(m => allMacroFolders[m].titleText).join(FOLDER_SEPARATOR)+(index>0?FOLDER_SEPARATOR:"")+f.titleText === folderPath)
-        console.log(results);
         if (results.length==0 ){
             //create folder
             let newFolder = {
