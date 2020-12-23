@@ -1026,7 +1026,8 @@ async function updateFolderWithinCompendium(folderObj){
             flags:{
                 cf:{
                     name:newFolderName,
-                    color:newColor
+                    color:newColor,
+                    icon:folderObj.icon
                 }
             }
         }
@@ -1055,7 +1056,8 @@ async function createNewFolderWithinCompendium(folderObj){
         folderPath:newPath,
         color:folderObj.color,
         name:folderObj.name,
-        children:[]
+        children:[],
+        icon:folderObj.icon
     }
     let e = await pack.createEntity(tempData);
     console.log(`Created temp entity for folder in ${pack.collection}`);
@@ -1374,7 +1376,8 @@ class FICFolderEditDialog extends FormApplication{
         return {
             name:this.object.name,
             color:this.object.color,
-            id:this.object.id
+            id:this.object.id,
+            icon:this.object.icon
         };
     }
     async _updateObject(options,formData){
@@ -1385,7 +1388,8 @@ class FICFolderEditDialog extends FormApplication{
             newColor:formData.color,
             path:this.object.path,
             packCode:this.object.packCode,
-            tempEntityId:this.object.tempEntityId
+            tempEntityId:this.object.tempEntityId,
+            icon:formData.icon
         }
         await updateFolderInCache(folderObj.packCode,folderObj); 
         await updateFolderWithinCompendium(folderObj);      
@@ -1418,7 +1422,8 @@ class FICFolderCreateDialog extends FormApplication{
             color:formData.color,
             packCode:this.object.packCode,
             parentId:this.object.parentId,
-            tempEntityId:this.object.tempEntityId
+            tempEntityId:this.object.tempEntityId,
+            icon:formData.icon
         }
         let newPath = await createNewFolderWithinCompendium(folderObj); 
         //folderObj.path = newPath
@@ -2078,12 +2083,22 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     }
 
     //If no folder data, or folder is not in open folders AND folder has an id, close folder by default
-    if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
-        contents.style.display = 'none';
-        folder.setAttribute('collapsed','');
-        headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder\"></i>"+folderData.name;
+    if (folderData.icon == null){
+        if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
+            contents.style.display = 'none';
+            folder.setAttribute('collapsed','');
+            headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder\"></i>"+folderData.name;
+        }else{
+            headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder-open\"></i>"+folderData.name;
+        }
     }else{
-        headerTitle.innerHTML = "<i class=\"fas fa-fw fa-folder-open\"></i>"+folderData.name;
+        if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
+            contents.style.display = 'none';
+            folder.setAttribute('collapsed','');
+        }
+        let folderCustomIcon = document.createElement('img');
+        folderCustomIcon.src = folderData.icon;
+        headerTitle.innerHTML = folderCustomIcon.outerHTML+folderData.name;
     }
 
     let directoryList = document.querySelector('.sidebar-tab.compendium[data-pack=\''+packCode+'\'] ol.directory-list');
@@ -2408,9 +2423,10 @@ async function updateFolderInCache(packCode,folderObj){
         return;
     }
     let folderMetadata = cache.groupedFolderMetadata[folderObj.id]
-    
-    cache.groupedFolders[folderMetadata.depth][folderMetadata.index].color = folderObj.newColor
-    cache.groupedFolders[folderMetadata.depth][folderMetadata.index].name = folderObj.newName
+    let index = cache.groupedFolders[folderMetadata.depth].findIndex(x => x.id === folderObj.id)
+    cache.groupedFolders[folderMetadata.depth][index].color = folderObj.newColor
+    cache.groupedFolders[folderMetadata.depth][index].name = folderObj.newName
+    cache.groupedFolders[folderMetadata.depth][index].icon = folderObj.icon
     cache.groupedFolders[folderMetadata.depth] = alphaSortFolders(cache.groupedFolders[folderMetadata.depth],'name')
     cache.groupedFolderMetadata[folderObj.id].index = cache.groupedFolders[folderMetadata.depth].findIndex(f => f.id === folderObj.id)
     console.debug(modName+' | Updating folder in cache')
@@ -2799,8 +2815,9 @@ Hooks.once('setup',async function(){
                                 let name = entry.data.flags.cf.name
                                 let color = entry.data.flags.cf.color;
                                 let folderPath = entry.data.flags.cf.folderPath;
+                                let folderIcon = entry.data.flags.cf.icon
                                 let data = {
-                                    id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId
+                                    id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
                                 }
                                 allFolderData[folderId]=data
                             }
