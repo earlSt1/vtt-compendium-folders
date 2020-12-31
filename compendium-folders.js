@@ -2101,7 +2101,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     }
 
     //If no folder data, or folder is not in open folders AND folder has an id, close folder by default
-    if (folderData.icon == null){
+    if (folderData.icon == null || folderData.icon === ""){
         if ((openFolders == null || !openFolders.includes(folderData.id)) && folderData.id != "noid"){
             contents.style.display = 'none';
             folder.setAttribute('collapsed','');
