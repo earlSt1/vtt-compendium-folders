@@ -283,9 +283,10 @@ async function constructFolderDataFromMacroFolder(mFolderId,macroFolders){
     let currentFolderChildren = Object.values(macroFolders).filter(m => m.pathToFolder != null && m.pathToFolder[m.pathToFolder.length-1] === mFolderId)
     folderObj.children = []
     for (let child of currentFolderChildren){
-        folderObj.children.push(await recursivelyFetchChildren(child._id,macroFolders,currentFolder));
+        folderObj.children.push(await recursivelyFetchChildren(child._id,macroFolders,folderObj));
     }
 
+    // Is root folder
     if (currentFolder.pathToFolder.length === 0){
         return folderObj
     }
@@ -308,11 +309,12 @@ async function recursivelyFetchChildren(mFolderId,macroFolders,parent){
     folderObj.parent = parent;
     let currentFolderChildren = Object.values(macroFolders).filter(m => m.pathToFolder != null && m.pathToFolder[m.pathToFolder.length-1] === mFolderId)
     folderObj.children = []
+    // Folder has no macros in it
     if (currentFolderChildren.length===0){
         return folderObj;
     }
     for (let child of currentFolderChildren){
-        folderObj.children.push(await recursivelyFetchChildren(child._id,macroFolders,currentFolder));
+        folderObj.children.push(await recursivelyFetchChildren(child._id,macroFolders,folderObj));
     }
     return folderObj
 }
@@ -1767,7 +1769,13 @@ async function exportFolderStructureToCompendium(folder){
             await pack.close();
             resetCache();
             let folderPath = await createParentFoldersWithinCompendium(folder,pack);
-            await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'),folderPath,form.merge.checked)
+            // First check if there is an existing folder for current folder
+            let existingFolderId = await getExistingFolderId(folder,pack)
+            if (existingFolderId != null){
+                await recursivelyExportFolders(index,pack,folder,existingFolderId,folderPath,form.merge.checked)
+            }else{
+                await recursivelyExportFolders(index,pack,folder,generateRandomFolderName('temp_'),folderPath,form.merge.checked)
+            }
             resetCache()
             ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
             pack.render(true);
@@ -1776,6 +1784,16 @@ async function exportFolderStructureToCompendium(folder){
     });
 
     
+}
+async function getExistingFolderId(folder,pack){
+    let folderPath = getFolderPath(folder);
+    let content = await pack.getContent()
+    let existingFolder = content.find(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path === folderPath && e.data.flags.cf.name === folder.name)
+    if (existingFolder){
+        return existingFolder.data.flags.cf.id;
+    }
+    return null;
 }
 async function createParentFoldersWithinCompendium(folder,pack){
     let parents = []
