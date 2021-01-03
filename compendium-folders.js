@@ -1787,9 +1787,13 @@ async function exportFolderStructureToCompendium(folder){
 }
 async function getExistingFolderId(folder,pack){
     let folderPath = getFolderPath(folder);
+    //Also check for old folder paths (not using separator)
+    let folderPathOld = folderPath.replace(FOLDER_SEPARATOR,'/')
     let content = await pack.getContent()
     let existingFolder = content.find(e => e.name === TEMP_ENTITY_NAME 
-        && e.data.flags.cf.path === folderPath && e.data.flags.cf.name === folder.name)
+        && (e.data.flags.cf.path === folderPath 
+            || e.data.flags.cf.path === folderPathOld) 
+        && e.data.flags.cf.name === folder.name)
     if (existingFolder){
         return existingFolder.data.flags.cf.id;
     }
@@ -1842,14 +1846,15 @@ async function recursivelyExportFolders(index,pack,folderObj,folderId,folderPath
         }
         return []
     }
-    let createdFolder = false;
     for (let child of folderObj.children){
-        
         let newPath = Array.from(folderPath);
         if (!newPath.includes(folderId))
             newPath.push(folderId)
-        await recursivelyExportFolders(index,pack,child,generateRandomFolderName('temp_'),newPath,merge,createdFolder)
-        createdFolder = true;
+
+        let existingFolderId = await getExistingFolderId(child,pack)
+        if (existingFolderId === null)
+            existingFolderId = generateRandomFolderName('temp_')
+        await recursivelyExportFolders(index,pack,child,existingFolderId,newPath,merge)
     }
     let entities = folderObj.content;
     
@@ -1859,9 +1864,9 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     let path = getFullPath(folderObj)
     let content = await pack.getContent()
     let existingFolder = content.find(e => e.name === TEMP_ENTITY_NAME 
-        && (arraysEqual(e.data.flags.cf.folderPath,folderPath) && e.data.flags.cf.name === folderObj.name))
-    if (existingFolder){
-        //create
+        && e.data?.flags?.cf?.id === folderId)
+    if (existingFolder != null){
+        // Use existing
         folderId = existingFolder.data.flags.cf.id
         path = existingFolder.data.flags.cf.path
     }
@@ -1893,8 +1898,8 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         }
         console.log(`Exported ${e.name} to ${pack.collection}`);
     }
-    if (!existingFolder){
-        // Exporting temp entity to allow for empty folders being editable
+    if (existingFolder === null){
+        // Create new folder (exporting temp entity to allow for empty folders being editable)
         let tempData = getTempEntityData(pack.entity);
         tempData.flags.cf={
             id:folderId,
