@@ -1865,7 +1865,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     let content = await pack.getContent()
     let existingFolder = content.find(e => e.name === TEMP_ENTITY_NAME 
         && e.data?.flags?.cf?.id === folderId)
-    if (existingFolder != null){
+    if (existingFolder){
         // Use existing
         folderId = existingFolder.data.flags.cf.id
         path = existingFolder.data.flags.cf.path
@@ -1898,7 +1898,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         }
         console.log(`Exported ${e.name} to ${pack.collection}`);
     }
-    if (existingFolder === null){
+    if (!existingFolder){
         // Create new folder (exporting temp entity to allow for empty folders being editable)
         let tempData = getTempEntityData(pack.entity);
         tempData.flags.cf={
