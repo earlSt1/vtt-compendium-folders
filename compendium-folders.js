@@ -2735,6 +2735,9 @@ export class Settings{
             await game.settings.set(mod,'converted-packs',convertedPacks);
         }
     }
+    static async clearSearchTerms(){
+        game.settings.set(mod,'last-search-packs',{})
+    }
 }
 // ==========================
 // Main hook setup
@@ -2781,6 +2784,7 @@ Hooks.once('setup',async function(){
         });
     }
     if (post073 && hasFICChanges){
+        Settings.clearSearchTerms()
         Hooks.on('ready',async function(){
             await Settings.doFolderConversions();
         })
