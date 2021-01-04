@@ -2616,11 +2616,11 @@ export class Settings{
             type:Object,
             default:{}
         });
-        game.settings.register(mod,'last-search',{
+        game.settings.register(mod,'last-search-packs',{
             scope:'client',
             config:false,
-            type:String,
-            default:""
+            type:Object,
+            default:{}
         });
         game.settings.register(mod,'converted-packs',{
             scope:'world',
@@ -2989,14 +2989,22 @@ Hooks.once('setup',async function(){
                 newSearchBar.placeholder='Search';
                 newSearchBar.type='text';
                 newSearchBar.autocomplete='off';
-                newSearchBar.value = game.settings.get(mod,'last-search')
+                newSearchBar.setAttribute('data-pack',a.collection)
+                let existingSearchTerms = game.settings.get(mod,'last-search-packs')
+                if (!Object.keys(existingSearchTerms).includes(a.collection)){
+                    existingSearchTerms[a.collection] = ""
+                    await game.settings.set(mod,'last-search-packs',existingSearchTerms)
+                }
+                newSearchBar.value = existingSearchTerms[a.collection]
                 if (newSearchBar.value.length>0){
                     filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
                 }
                 
                 newSearchBar.addEventListener('keyup',async function(event){
                     event.stopPropagation();
-                    game.settings.set(mod,'last-search',event.currentTarget.value);
+                    let existingSearchTerms = game.settings.get(mod,'last-search-packs')
+                    existingSearchTerms[event.currentTarget.getAttribute('data-pack')] = event.currentTarget.value
+                    game.settings.set(mod,'last-search-packs',existingSearchTerms);
                     filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
                 })
                 let header = searchBar.parentElement;
