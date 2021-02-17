@@ -425,12 +425,13 @@ export class CompendiumFolder extends Folder{
             parent:null,
             pathToFolder:[],
             compendiumList:[],
+            compendiums:[],
             folderIcon:null,
             expanded:false
         },data));
     }
     _getSaveData(){
-        let data = this.data;
+        let data = duplicate(this.data);
         delete data.compendiums;
         delete data.content;
         delete data.children;
@@ -438,7 +439,7 @@ export class CompendiumFolder extends Folder{
     }
     /** @override */
     static create(data={}){
-        let newFolder = new CompendiumFolder(data);
+         let newFolder = new CompendiumFolder(data);
         if (!game.customFolders){
             game.customFolders = new Map();
         }
@@ -458,6 +459,8 @@ export class CompendiumFolder extends Folder{
         }
         if (compendiums){
             data.compendiums = compendiums;
+        }else{
+            data.compendiums = []
         }
         // Set open state
         data.expanded = game.settings.get(mod,'open-folders').includes(data._id)
@@ -476,16 +479,18 @@ export class CompendiumFolder extends Folder{
         if (!this.collection.get(this.id)){
             this.collection.insert(this);
         }
-        let allFolders = game.settings.get(mod,'cfolders')
-        let currentFolder = allFolders[this.id];
-        if (!currentFolder){
-            // create folder
-            allFolders[this.id] = this._getSaveData();
-            
-        }else{
-            allFolders[this.id] = mergeObject(currentFolder,this._getSaveData());
+        if (game.user.isGM){
+            let allFolders = game.settings.get(mod,'cfolders')
+            let currentFolder = allFolders[this.id];
+            if (!currentFolder){
+                // create folder
+                allFolders[this.id] = this._getSaveData();
+                
+            }else{
+                allFolders[this.id] = mergeObject(currentFolder,this._getSaveData());
+            }
+            await game.settings.set(mod,'cfolders',allFolders)
         }
-        await game.settings.set(mod,'cfolders',allFolders)
         game.customFolders.compendium.folders.get(this._id).data = duplicate(this.data);
         if (refresh)
             ui.compendium.render(true,'update')
@@ -515,8 +520,10 @@ export class CompendiumFolder extends Folder{
             //Move from old entry to new entry
             let oldParent = entry.parent;
             this._addPack(entry);
-            oldParent._removePack(entry)
-            await oldParent.save(false);
+            if (oldParent){
+                oldParent._removePack(entry)
+                await oldParent.save(false);
+            }
             game.customFolders.compendium.entries.set(packCode,entry)
         }else{
             //Create entry and assign to this obj
@@ -661,9 +668,13 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     /** @override */
     initialize(){
         //filter out gone compendiums
-        
-        this.folders = [...this.constructor.folders];
-        this.entities = [...this.constructor.collection];
+        if (game.user.isGM){
+            this.folders = [...this.constructor.folders];
+            this.entities = [...this.constructor.collection];
+        }else{
+            this.folders = [...this.constructor.folders].filter(x => x.content.find(y => !y.pack.private));
+            this.entities = [...this.constructor.collection].filter(z => !z.pack.private);
+        }
         let tree = this.constructor.setupFolders(this.folders, this.entities);
         
         this.tree = this._sortTreeAlphabetically(tree)
@@ -769,6 +780,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
 
     /** @override */
     _getEntryContextOptions(){
+        if (!game.user.isGM)
+            return;
         let x = CompendiumDirectory.prototype._getEntryContextOptions()
         x.find(c => c.name === 'COMPENDIUM.Duplicate').callback = li => {
             let pack = game.packs.get(li.data("pack"));
@@ -3589,13 +3602,20 @@ export class Settings{
 var eventsSetup = []
 async function initFolders(){
     let allFolders = game.settings.get(mod,'cfolders');
-    let init = false;
+    let refresh = false;
     let assigned = []
     let toRemove = [];
+    if (allFolders.hidden && !allFolders.hidden._id){
+        allFolders.hidden._id = 'hidden'
+    }
+    if (allFolders.default && !allFolders.default._id){
+        allFolders.default._id = 'default';
+    }
     if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
-        init = true;
-        let entityId = {}
         // initialize settings
+        refresh = true;
+        let entityId = {}
+        
         
         allFolders = {
             hidden:{
@@ -3627,7 +3647,7 @@ async function initFolders(){
     }
     for (let folder of Object.values(allFolders)){
         let compendiums = []
-       
+        folder.compendiums = []
         for (let pack of folder.compendiumList){
             let existingPack = game.customFolders?.compendium?.entries?.get(pack)
             if (game.packs.has(pack)){
@@ -3642,29 +3662,47 @@ async function initFolders(){
                 assigned.push(pack);
         }
         let f = CompendiumFolder.import(folder,compendiums)
-        if (init)
-            await f.save(false);
-        
-        
+        // refresh flag works like "init" in this case
+        if (refresh)
+            await f.save(false); 
+
+    }
+    if (refresh){
+        ui.compendium.render(true,'update');
+    }
+    // Set default folder content
+    let unassigned = game.packs.entries.filter(x => !assigned.includes(x.collection))
+    for (let pack of unassigned.map(y => y.collection)){
+        if (game.customFolders.compendium.entries.has(pack)){
+            // Pack has an entry (assigned to default folder)
+            game.customFolders.compendium.entries.get(pack).folder = 'default';
+        }else{
+            // Pack does not have an entry (because it is new)
+            new CompendiumEntry(pack,'default');
+        }
+    }
+    game.customFolders.compendium.folders.default.compendiumList = unassigned.map(y => y.collection);
+    game.customFolders.compendium.folders.default.content = unassigned;
+    
+    // Check for removed compendiums
+    let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
+    for (let c of goneCompendiums){
+        c.parent.removeCompendium(c.code,true,false);
+        refresh = true;
+    }
+    if (refresh){
+        ui.compendium.render(true,'update');
     }
     
-    // Set default folder content
-    let unassigned = game.packs.entries.filter(x => !assigned.includes(x.collection)).map(y => y.collection)
-    for (let pack of unassigned){
-        game.customFolders.compendium.folders.default.addCompendium(pack,false)
-    }
     // Set child folders
     let allEntries = [...CompendiumFolder.collection.values()]
     for (let cf of allEntries){
         let directChildren = allEntries.filter(f => f.data?.pathToFolder?.length > 0 && f.data.pathToFolder[f.data.pathToFolder.length-1] === cf._id)
         cf.children = directChildren;
     }
-    // Check for removed compendiums
-    let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
-    for (let c of goneCompendiums){
-        await c.parent.removeCompendium(c.code,true,false);
-    }
-    //await game.settings.set(mod,'cfolders',allFolders);
+    
+    if (game.user.isGM)
+        game.settings.set(mod,'cfolders',allFolders);
 }
 
 Hooks.once('setup',async function(){
@@ -3677,11 +3715,8 @@ Hooks.once('setup',async function(){
         ui.compendium = new CompendiumFolderDirectory();
     })
     //for (let hook of hooks){
-        Hooks.on('renderCompendiumFolderDirectory', async function() {
-            
-            //ui.compendium.folders = [...game.customFolders.compendium.folders]
-            //ui.compendium.entries = [...game.customFolders.compendium.entries]
-            //ui.compendium.render(false,'update');
+        Hooks.on('renderCompendiumFolderDirectory', () => {
+            initFolders();
             return;
             let isPopout = document.querySelector('#compendium-popout') != null;
             let prefix = '#sidebar '
