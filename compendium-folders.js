@@ -536,7 +536,7 @@ export class CompendiumFolder extends Folder{
         await this.save(refresh);
     }
     async removeCompendium(packCode,del=false,refresh=true){
-        this._removePack(packCode);
+        this._removePack(packCode,del);
         if (del){
             game.customFolders.compendium.entries.remove(packCode);
         }else{
@@ -558,10 +558,11 @@ export class CompendiumFolder extends Folder{
         this.data.compendiumList = this.data.compendiumList.concat(pack.packCode);
         pack.folder = this._id;
     }
-    _removePack(pack){
-        this.content = this.content.filter(x => x.packCode != pack);
+    _removePack(pack,del=false){
+        this.content = this.content.filter(x => x.packCode != pack.packCode);
         this.data.compendiumList = this.content.map(p => p.packCode);
-
+        if (del)
+            pack.folder = null
     }
     _removeFolder(child){
         this.children = this.children.filter(c => c.id != child.id);
@@ -903,7 +904,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                     const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
                     let allConfig = game.settings.get('core','compendiumConfiguration');
                     for (let p of folder.content){
-                        let pack = game.packs.get(p.packCode);
+                        let pack = game.packs.get(p.code);
                         if (pack.private){
                             if (allConfig[p.packCode]){
                                 allConfig[p.packCode].private = false;
@@ -2160,15 +2161,15 @@ class CompendiumFolderEditConfig extends FormApplication {
             }
         }
         for (let packKey of packsToAdd){
-            this.object.addCompendium(packKey,false);
+            await this.object.addCompendium(packKey,false);
         }
         for (let packKey of packsToRemove){
-            this.object.removeCompendium(packKey,false,false);
+            await this.object.removeCompendium(packKey,false,false);
         }
         if (this.object.data.parent){
-            this.object.moveFolder(this.object.data.parent._id);
+            await this.object.moveFolder(this.object.data.parent._id);
         }
-        this.object.save();
+        await this.object.save();
 
         return
 
