@@ -1,4 +1,4 @@
-{{#*inline "folderPartial"}}{{#if (or folder.content.length (not folder.isDefault))}}
+{{#*inline "folderPartial"}}
 <li class="directory-item compendium-folder folder flexcol {{#unless folder.expanded}}collapsed{{/unless}}"
     data-folder-id="{{folder._id}}" data-folder-depth="{{folder.depth}}">
   <header class="folder-header compendium-folder-header flexrow" style="background-color: {{folder.color}}">
@@ -19,7 +19,6 @@
     {{/each}}
   </ol>
 </li>
-{{/if}}
 {{/inline}}
 
 {{#*inline "entityPartial"}}
@@ -56,7 +55,14 @@
     <!-- Directories List -->
 	<ol class="directory-list">
 	    {{~#each tree.children as |f fi|}}
-        {{> folderPartial folder=f user=../user}}
+            {{#if f.content.length }}
+                {{> folderPartial folder=f user=../user}}
+            {{else}}
+                {{#unless f.isDefault }}
+                    {{> folderPartial folder=f user=../user}}
+                {{/unless}}
+            {{/if}}
+
 	    {{/each}}
 	    {{#each tree.content}}
         {{> entityPartial}}
