@@ -3601,9 +3601,9 @@ export class Settings{
 // Main hook setup
 // ==========================
 var eventsSetup = []
-async function initFolders(){
+async function initFolders(refresh=false){
     let allFolders = game.settings.get(mod,'cfolders');
-    let refresh = false;
+    // let refresh = false;
     let assigned = []
     let toRemove = [];
     if (allFolders.hidden && !allFolders.hidden._id){
@@ -3612,9 +3612,10 @@ async function initFolders(){
     if (allFolders.default && !allFolders.default._id){
         allFolders.default._id = 'default';
     }
+    let init1 = false;
     if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
         // initialize settings
-        refresh = true;
+        init1 = true;
         let entityId = {}
         
         
@@ -3664,12 +3665,9 @@ async function initFolders(){
         }
         let f = CompendiumFolder.import(folder,compendiums)
         // refresh flag works like "init" in this case
-        if (refresh)
+        if (init1)
             await f.save(false); 
 
-    }
-    if (refresh){
-        ui.compendium.render(true,'update');
     }
     // Set default folder content
     let unassigned = game.packs.entries.filter(x => !assigned.includes(x.collection))
@@ -3686,13 +3684,15 @@ async function initFolders(){
     game.customFolders.compendium.folders.default.content = unassigned;
     
     // Check for removed compendiums
+    let missingCompendiums = false
     let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
     for (let c of goneCompendiums){
         c.parent.removeCompendium(c.code,true,false);
-        refresh = true;
+        missingCompendiums = true;
     }
-    if (refresh){
+    if (missingCompendiums){
         ui.compendium.render(true,'update');
+        return;
     }
     
     // Set child folders
@@ -3704,6 +3704,9 @@ async function initFolders(){
     
     if (game.user.isGM)
         game.settings.set(mod,'cfolders',allFolders);
+    if (refresh){
+        ui.compendium.render(true,'update');
+    }
 }
 
 Hooks.once('setup',async function(){
@@ -3712,7 +3715,7 @@ Hooks.once('setup',async function(){
     let hasFICChanges = game.modules.get(mod).data.version >= '2.0.0';
     Settings.registerSettings()
     Hooks.once('ready',async function(){
-        await initFolders()
+        await initFolders(true)
         ui.compendium = new CompendiumFolderDirectory();
     })
     //for (let hook of hooks){
