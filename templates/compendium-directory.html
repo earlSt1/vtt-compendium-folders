@@ -4,11 +4,11 @@
   <header class="folder-header compendium-folder-header flexrow" style="background-color: {{folder.color}}">
     <h3 style="color:{{folder.fontColor}}"><i class="fas fa-folder-open fa-fw"></i>{{folder.name}}</h3>
     {{#if user.isGM}}
-      {{#if (not folder.isDefault)}}
+      {{#unless folder.isDefault}}
       <a class="create-folder" style="flex:0 0 20px" data-parent-folder="{{folder._id}}"><i class="fas fa-folder-plus fa-fw"></i></a>
       <a class="create-entity" style="flex:0 0 20px" data-folder="{{folder._id}}"><i class="fas fa-atlas"></i></a>
-      {{/if}}
-	  {{/if}}
+      {{/unless}}
+	{{/if}}
   </header>
   <ol class="subdirectory">
 	{{~#each folder.children as |child i|}}
