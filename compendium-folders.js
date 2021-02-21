@@ -1908,7 +1908,7 @@ class ImportExportConfig extends FormApplication {
                 if (success){
                     game.settings.set(mod,'cfolders',importJson).then(async function(){
                         game.customFolders = null;
-                        await initFolders()
+                        await initializeFFC()
                         ui.compendium.refresh();
                         ui.notifications.info(game.i18n.localize('CF.folderImportSuccess'));
                     });
@@ -3612,7 +3612,7 @@ export class Settings{
 // Main hook setup
 // ==========================
 var eventsSetup = []
-async function initFolders(refresh=false){
+async function initializeFFC(refresh=false){
     let allFolders = game.settings.get(mod,'cfolders');
     // let refresh = false;
     let assigned = []
@@ -3719,7 +3719,48 @@ async function initFolders(refresh=false){
         ui.compendium.render(true,'update');
     }
 }
+class EntryInCompendium {
 
+}
+class EntryInCompendiumCollection extends EntityCollection{
+
+}
+class FolderInCompendium extends Folder{
+    constructor(data={}){
+        super(mergeObject({
+            titleText:'New Folder',
+            colorText:'#000000',
+            fontColorText:'#FFFFFF',
+            type:"CompendiumEntry",
+            _id:'temp_'+randomID(10),
+            entity:"CompendiumFolder",
+            sorting:'a',
+            parent:null,
+            pathToFolder:[],
+            compendiumList:[],
+            compendiums:[],
+            folderIcon:null,
+            expanded:false
+        },data));
+    }
+}
+class FolderInCompendiumCollection extends EntityCollection{
+
+}
+
+class FICCompendium extends Compendium{
+    constructor(...args){
+        super(args);
+        this.entities = null;
+
+        this.folders = null;
+    }
+    async initialize(){
+        let content = await this.getContent();
+    }
+
+
+}
 Hooks.once('setup',async function(){
     // let hooks = ['renderCompendiumFolderDirectory','renderCompendiumDirectoryPF'];
     let post073 = game.data.version >= '0.7.3';
@@ -3727,53 +3768,25 @@ Hooks.once('setup',async function(){
     Settings.registerSettings()
     Hooks.once('ready',async function(){
         ui.compendium = new CompendiumFolderDirectory();
-        initFolders(true);
+        initializeFFC(true);
     })
-    //for (let hook of hooks){
-        Hooks.on('renderCompendiumFolderDirectory', () => {
-            initFolders();
-            return;
-            let isPopout = document.querySelector('#compendium-popout') != null;
-            let prefix = '#sidebar '
-            if (isPopout){
-                prefix = '#compendium-popout '
-            }
-            let allFolders = game.settings.get(mod,'cfolders')
-            let toReturn = allFolders['hidden']==null || allFolders['default']==null;
-            if (allFolders['hidden']==null){
-                allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums','_id':'hidden'};
-            }
-            if (allFolders['default']==null){
-                allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
-            }
-            if (toReturn){
-                game.settings.set(mod,'cfolders',allFolders).then(function(){
-                    if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
-                        convertExistingSubmenusToFolder(prefix);
-                    }else{
-                        //setupFolders(prefix)
-                    }
-                    //addEventListeners(prefix)
-                });
-            }else{
-                if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
-                    convertExistingSubmenusToFolder(prefix);
-                }else{
-                    //setupFolders(prefix)
-                }
-                //addEventListeners(prefix)
-            }   
-        });
-    //}
+    Hooks.on('renderCompendiumFolderDirectory', () => {
+        initializeFFC();
+        return;
+    });
+ 
     if (post073){
         Settings.clearSearchTerms()
         // Hooks.on('ready',async function(){
         //     await Settings.doFolderConversions();
         // })
         Hooks.on('renderCompendium',async function(e){
-            if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
+            if (!e.locked)
+                createNewFolderButtonWithinCompendium(window,packCode); 
+            if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
+            
             removeStaleOpenFolderSettings(packCode);
             let cachedFolderStructure = await loadCachedFolderStructure(packCode);
             let allFolderData={};
@@ -3781,9 +3794,9 @@ Hooks.once('setup',async function(){
             let deleteData = []
             let groupedFoldersSorted = {}
             let groupedFolders = {}
-            if (cachedFolderStructure != null){
-               groupedFoldersSorted = cachedFolderStructure;
-            }else{
+            //if (cachedFolderStructure != null){
+            //   groupedFoldersSorted = cachedFolderStructure;
+            //}else{
                 let folderChildren = {}
                 let checkedPaths = []
                 let allFolderIds = e.index.filter(x => x.name === TEMP_ENTITY_NAME).map(e => e._id)
@@ -3914,12 +3927,12 @@ Hooks.once('setup',async function(){
                 }).forEach((key) => {
                     groupedFoldersSorted[key] = groupedFolders[key]
                 })
-                await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
-            }
+                //await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
+            //}
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
-            createNewFolderButtonWithinCompendium(window,packCode);
+            
             for (let entity of window.querySelectorAll('.directory-item')){
                 if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
                     entity.style.display = 'none';
@@ -3951,6 +3964,31 @@ Hooks.once('setup',async function(){
                             let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
                             let p = game.packs.get(packCode);                          
 
+                            let toUpdate = [];
+                            let entry = await p.getEntry(movingItemId)
+                            if (entry.flags?.cf?.id){
+                                let oldParentId = window.querySelector('li.compendium-folder[data-folder-id="'+entry.flags.cf.id+'"]').getAttribute('data-temp-entity-id')
+                                let oldParent = await p.getEntry(oldParentId);
+                                let oldParentData = {
+                                    _id : entry.flags.cf.id,
+                                    flags:{
+                                        cf:{
+                                            children:(oldParent.flags.cf.children ? oldParent.flags.cf.children.filter(x => x != movingItemId) : [])
+                                        }
+                                    }
+                                }
+                                toUpdate.push(oldParentData)
+                            }
+                            let newParent = await p.getEntry(folder.getAttribute('data-temp-entity-id'));
+                            let newParentData = {
+                                _id : folder.getAttribute('data-temp-entity-id'),
+                                flags:{
+                                    cf:{
+                                        children:(newParent.flags.cf.children ? newParent.flags.cf.children.concat(movingItemId) : [])
+                                    }
+                                }
+                            }
+                            toUpdate.push(newParentData);
                             let data = {
                                 _id:movingItemId,
                                 flags:{
@@ -3959,12 +3997,16 @@ Hooks.once('setup',async function(){
                                     }
                                 }
                             }
-                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
-                            await p.updateEntity(data)
+                            toUpdate.push(data);
+
+                            //await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
+                            for (let d of toUpdate)
+                                await p.updateEntity(d)
                         }
                     })
                 }
-            }          
+            }    
+                
         })
 
         Hooks.on('renderApplication',async function(a){
