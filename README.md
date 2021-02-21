@@ -4,6 +4,8 @@
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used to organize compendiums in the directory, in addition to organize entries *inside* compendiums.
 
+The module functionality is split into 2 parts. **Folders In Compendiums** (or **FIC**), and **Folders For Compendiums** (or **FFC**)
+
 ## Folders In Compendiums
 
 _This feature only works for FVTT 0.7.3+_
@@ -36,6 +38,7 @@ A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/
 - ~~Fix path separator so folders containing slashes `/` can be used~~ Fixed in 2.1.4!
 - ~~Create folder in compendium?~~ Now in 2.0.8!
 - Drag+drop folders into eachother
+- Auto-create folders based on attributes of entries in compendium
 
 ## Folders for Compendiums
 
