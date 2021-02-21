@@ -2843,13 +2843,15 @@ async function importAllParentFolders(pack,coll,folder,merge){
         parentList.push(parent);
 
         for (let p of parentList.reverse()){
-            await importFromCollectionWithMerge(coll,
-                pack.collection,
-                p.querySelector(':scope > .folder-contents > .entry-list > li.directory-item.hidden').getAttribute('data-entry-id'),
-                getRenderedFolderPath(p),
-                {flags:{cf:{import:true}}},
-                {renderSheet:false},
-                merge);
+            if (p.querySelector(':scope > .folder-contents > .entry-list > li.directory-item.hidden')){
+                await importFromCollectionWithMerge(coll,
+                    pack.collection,
+                    p.querySelector(':scope > .folder-contents > .entry-list > li.directory-item.hidden').getAttribute('data-entry-id'),
+                    getRenderedFolderPath(p),
+                    {flags:{cf:{import:true}}},
+                    {renderSheet:false},
+                    merge);
+            }
 
             await new Promise(res => setTimeout(res,100));
         }
