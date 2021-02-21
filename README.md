@@ -36,6 +36,7 @@ A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/
 - ~~Fix path separator so folders containing slashes `/` can be used~~ Fixed in 2.1.4!
 - ~~Create folder in compendium?~~ Now in 2.0.8!
 - Drag+drop folders into eachother
+- Auto-create folders based on attributes of entries in compendium
 
 ## Folders for Compendiums
 
