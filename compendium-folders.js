@@ -3525,83 +3525,83 @@ export class Settings{
     static getFolders(){
         return game.settings.get(mod,'cfolders');
     }
-    static async doFolderConversions(){
-        if (game.user.isGM){
-            console.log(modName + ' | Checking for old compendium folder formats...')
-            let convertedPacks = game.settings.get(mod,'converted-packs')
-            for (let packCode of game.packs.keys()){
-                try{
-                    let pack = game.packs.get(packCode);
+    // static async doFolderConversions(){
+    //     if (game.user.isGM){
+    //         console.log(modName + ' | Checking for old compendium folder formats...')
+    //         let convertedPacks = game.settings.get(mod,'converted-packs')
+    //         for (let packCode of game.packs.keys()){
+    //             try{
+    //                 let pack = game.packs.get(packCode);
                     
-                    if (convertedPacks.includes(packCode)){
-                        console.debug(modName + ' | Compendium '+packCode+' already converted, skipping')
-                        continue;
-                    }
-                    if (!pack.locked){
-                        convertedPacks.push(packCode);
-                        let allFolderData = {}
-                        let content = await pack.getContent()
-                        let folderEntities = content.filter(x => x.data.flags != null && x.data.flags.cf != null);
-                        if (folderEntities.length === 0){
-                            continue;
-                        }
-                        for (let entry of folderEntities){
-                            let path = entry.data.flags.cf.path;
-                            let name = path.split('/')[path.split('/').length-1]
-                            let color = entry.data.flags.cf.color;
-                            let folderId = entry.data.flags.cf.id;
-                            let entryId = entry._id
-                            if (allFolderData[path] == null){
-                                allFolderData[path] = {id:folderId,color:color, children:[entryId],name:name}
-                            }else{
-                                allFolderData[path].children.push(entryId);
-                            }
-                        }
-                        let finishedPaths = [];
-                        for (let path of Object.keys(allFolderData).sort()){
-                            let segments = path.split('/');
-                            for (let seg of segments){
-                                let index = segments.indexOf(seg)
-                                let currentPath = seg
-                                if (index>0){
-                                    currentPath = segments.slice(0,index).join('/')+'/'+seg;
-                                }
-                                let tempEntity = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath && x.name === TEMP_ENTITY_NAME)
-                                let entities = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath)
-                                if (tempEntity == null && !finishedPaths.includes(currentPath)){
+    //                 if (convertedPacks.includes(packCode)){
+    //                     console.debug(modName + ' | Compendium '+packCode+' already converted, skipping')
+    //                     continue;
+    //                 }
+    //                 if (!pack.locked){
+    //                     convertedPacks.push(packCode);
+    //                     let allFolderData = {}
+    //                     let content = await pack.getContent()
+    //                     let folderEntities = content.filter(x => x.data.flags != null && x.data.flags.cf != null);
+    //                     if (folderEntities.length === 0){
+    //                         continue;
+    //                     }
+    //                     for (let entry of folderEntities){
+    //                         let path = entry.data.flags.cf.path;
+    //                         let name = path.split('/')[path.split('/').length-1]
+    //                         let color = entry.data.flags.cf.color;
+    //                         let folderId = entry.data.flags.cf.id;
+    //                         let entryId = entry._id
+    //                         if (allFolderData[path] == null){
+    //                             allFolderData[path] = {id:folderId,color:color, children:[entryId],name:name}
+    //                         }else{
+    //                             allFolderData[path].children.push(entryId);
+    //                         }
+    //                     }
+    //                     let finishedPaths = [];
+    //                     for (let path of Object.keys(allFolderData).sort()){
+    //                         let segments = path.split('/');
+    //                         for (let seg of segments){
+    //                             let index = segments.indexOf(seg)
+    //                             let currentPath = seg
+    //                             if (index>0){
+    //                                 currentPath = segments.slice(0,index).join('/')+'/'+seg;
+    //                             }
+    //                             let tempEntity = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath && x.name === TEMP_ENTITY_NAME)
+    //                             let entities = content.find(x => x.data.flags != null && x.data.flags.cf != null && x.data.flags.cf.path === currentPath)
+    //                             if (tempEntity == null && !finishedPaths.includes(currentPath)){
                                     
-                                    let tempData = getTempEntityData(pack.entity);
-                                    let folderId = generateRandomFolderName('temp_');
-                                    let folderColor = '#000000'
-                                    let folderName = seg;
-                                    if (entities != null && entities.data.flags.cf.id != null){
-                                        folderId = entities.data.flags.cf.id;
-                                        folderColor = entities.data.flags.cf.color;
-                                    }
-                                    tempData.flags.cf={
-                                        id:folderId,
-                                        path:currentPath,
-                                        color:folderColor,
-                                        name:folderName
-                                    }
-                                    await pack.createEntity(tempData);
-                                    console.log(`${modName} | Created temp entity for folder ${folderName} in ${pack.collection}`);
-                                    finishedPaths.push(currentPath);
-                                }
-                            }
-                        }
-                    } 
+    //                                 let tempData = getTempEntityData(pack.entity);
+    //                                 let folderId = generateRandomFolderName('temp_');
+    //                                 let folderColor = '#000000'
+    //                                 let folderName = seg;
+    //                                 if (entities != null && entities.data.flags.cf.id != null){
+    //                                     folderId = entities.data.flags.cf.id;
+    //                                     folderColor = entities.data.flags.cf.color;
+    //                                 }
+    //                                 tempData.flags.cf={
+    //                                     id:folderId,
+    //                                     path:currentPath,
+    //                                     color:folderColor,
+    //                                     name:folderName
+    //                                 }
+    //                                 await pack.createEntity(tempData);
+    //                                 console.log(`${modName} | Created temp entity for folder ${folderName} in ${pack.collection}`);
+    //                                 finishedPaths.push(currentPath);
+    //                             }
+    //                         }
+    //                     }
+    //                 } 
                 
-                }catch (e){
-                    console.debug(modName + ' | Could not convert pack '+packCode+', skipping')
-                    continue;
-                }
-            }
-            console.log(modName+' | Check complete!')
+    //             }catch (e){
+    //                 console.debug(modName + ' | Could not convert pack '+packCode+', skipping')
+    //                 continue;
+    //             }
+    //         }
+    //         console.log(modName+' | Check complete!')
             
-            await game.settings.set(mod,'converted-packs',convertedPacks);
-        }
-    }
+    //         await game.settings.set(mod,'converted-packs',convertedPacks);
+    //     }
+    // }
     static async clearSearchTerms(){
         game.settings.set(mod,'last-search-packs',{})
     }
@@ -3721,7 +3721,7 @@ async function initFolders(refresh=false){
 Hooks.once('setup',async function(){
     // let hooks = ['renderCompendiumFolderDirectory','renderCompendiumDirectoryPF'];
     let post073 = game.data.version >= '0.7.3';
-    let hasFICChanges = game.modules.get(mod).data.version >= '2.0.0';
+    
     Settings.registerSettings()
     Hooks.once('ready',async function(){
         ui.compendium = new CompendiumFolderDirectory();
@@ -3763,11 +3763,11 @@ Hooks.once('setup',async function(){
             }   
         });
     //}
-    if (post073 && hasFICChanges){
+    if (post073){
         Settings.clearSearchTerms()
-        Hooks.on('ready',async function(){
-            await Settings.doFolderConversions();
-        })
+        // Hooks.on('ready',async function(){
+        //     await Settings.doFolderConversions();
+        // })
         Hooks.on('renderCompendium',async function(e){
             if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
             let packCode = e.metadata.package+'.'+e.metadata.name;
@@ -3962,10 +3962,7 @@ Hooks.once('setup',async function(){
             //When compendium window renders, recreate the search bar and register custom listener
             if (a.template != null && a.template === 'templates/apps/compendium.html'){
                 let pack = game.packs.get(a.collection);
-                let contents = await pack.getContent()
-                if (!contents.some(e => e.name === TEMP_ENTITY_NAME)){
-                    return;
-                }
+                if (!pack.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
                 
                 let window = a._element[0]
                 let searchBar = window.querySelector('input[name=\'search\']')
