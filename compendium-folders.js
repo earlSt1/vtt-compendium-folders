@@ -3786,16 +3786,16 @@ Hooks.once('setup',async function(){
             }else{
                 let folderChildren = {}
                 let checkedPaths = []
-                let allFolderIds = e.index.filter(x => x.name === TEMP_ENTITY_NAME).map(e => e._id)
-                //let contents = await e.getContent();
-                let contents = [];
+                //let allFolderIds = e.index.filter(x => x.name === TEMP_ENTITY_NAME).map(e => e._id)
+                let contents = await e.getContent();
+                //let contents = [];
                 for (let fId of allFolderIds){
                     contents.push(await e.getEntity(fId))
                 }
-                // let allFolderIds = contents.filter(e => e.data.flags != null 
-                //     && e.data.flags.cf != null
-                //     && e.data.flags.cf.id != null 
-                //     && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
+                let allFolderIds = contents.filter(e => e.data.flags != null 
+                    && e.data.flags.cf != null
+                    && e.data.flags.cf.id != null 
+                    && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
                 //First parse folder data
                 for (let entry of contents){
                     if (entry != null 
@@ -3803,45 +3803,45 @@ Hooks.once('setup',async function(){
                         //New
                         let folderId = entry.data.flags.cf.id;
                         let entryId = entry._id
-                        // if (entry.data.flags.cf.id != null
-                        //     && entry.name != TEMP_ENTITY_NAME
-                        //     && !allFolderIds.includes(entry.data.flags.cf.id)){
-                        //     updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
-                        // }
-                        // if (entry.data.flags.cf.folderPath == null
-                        //     && entry.name === TEMP_ENTITY_NAME){
-                        //     let result = updateFolderPathForTempEntity(entry,contents);
-                        //     updateData.push(result);
-                        // }
-                        // if (entry.data.flags.cf.children == null
-                        //     && entry.name === TEMP_ENTITY_NAME){
-                        //     updateData.push(updateFolderChildrenForTempEntity(entry,contents));
-                        // }
-                        // if (entry.data.flags.cf.import != null){
-                        //     updateData.push({flags:{cf:{import:null}},_id:entryId})
-                        // }
-                        // if (entry.data.flags.cf.path != null 
-                        //     && !checkedPaths.includes(entry.data.flags.cf.path)){                           
-                        //     deleteData.push.apply(deleteData,consolidateTempEntities(entry,contents));
-                        //     checkedPaths.push(entry.data.flags.cf.path);
-                        // }
+                        if (entry.data.flags.cf.id != null
+                            && entry.name != TEMP_ENTITY_NAME
+                            && !allFolderIds.includes(entry.data.flags.cf.id)){
+                            updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
+                        }
+                        if (entry.data.flags.cf.folderPath == null
+                            && entry.name === TEMP_ENTITY_NAME){
+                            let result = updateFolderPathForTempEntity(entry,contents);
+                            updateData.push(result);
+                        }
+                        if (entry.data.flags.cf.children == null
+                            && entry.name === TEMP_ENTITY_NAME){
+                            updateData.push(updateFolderChildrenForTempEntity(entry,contents));
+                        }
+                        if (entry.data.flags.cf.import != null){
+                            updateData.push({flags:{cf:{import:null}},_id:entryId})
+                        }
+                        if (entry.data.flags.cf.path != null 
+                            && !checkedPaths.includes(entry.data.flags.cf.path)){                           
+                            deleteData.push.apply(deleteData,consolidateTempEntities(entry,contents));
+                            checkedPaths.push(entry.data.flags.cf.path);
+                        }
                         if (folderId != null){
-                            //if (entry.name === TEMP_ENTITY_NAME){
-                            let name = entry.data.flags.cf.name
-                            let color = entry.data.flags.cf.color;
-                            let folderPath = entry.data.flags.cf.folderPath;
-                            let folderIcon = entry.data.flags.cf.icon
-                            let children = entry.data.flags.cf.children
-                            let data = {
-                                id:folderId,color:color, children:children,name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
+                            if (entry.name === TEMP_ENTITY_NAME){
+                                let name = entry.data.flags.cf.name
+                                let color = entry.data.flags.cf.color;
+                                let folderPath = entry.data.flags.cf.folderPath;
+                                let folderIcon = entry.data.flags.cf.icon
+                                let children = entry.data.flags.cf.children
+                                let data = {
+                                    id:folderId,color:color, children:children,name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
+                                }
+                                allFolderData[folderId]=data
                             }
-                            allFolderData[folderId]=data
-                            //}
-                            // if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
-                            //     folderChildren[folderId].children.push(entryId);
-                            // }else{
-                            //     folderChildren[folderId] = {children:[entryId]}
-                            // }
+                            if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
+                                folderChildren[folderId].children.push(entryId);
+                            }else{
+                                folderChildren[folderId] = {children:[entryId]}
+                            }
                             folderChildren[folderId] = children
                         }
                     }
@@ -3849,41 +3849,41 @@ Hooks.once('setup',async function(){
                 if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                     return;
                 }
-                // if (deleteData.length>0){
-                //     ui.notifications.notify('Updating folder structure. Please wait...')
-                //     e.close().then(async () => {
-                //         if (game.user.isGM){
-                //             for (let d of deleteData){
-                //                 await e.deleteEntity(d)
-                //             }
-                //             resetCache()
-                //             ui.notifications.notify('Updating complete!')
-                //             e.render(true);
-                //         }else{
-                //             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
-                //         }
-                //     });
-                //     return;
-                // }  
-                // if (updateData.length>0){
-                //     ui.notifications.notify('Updating folder structure. Please wait...')
-                //     e.close().then(async () => {
-                //         if (game.user.isGM){
-                //             for (let d of updateData){
-                //                 await e.updateEntity(d);
-                //             }
-                //             resetCache()
-                //             ui.notifications.notify('Updating complete!')
-                //             e.render(true);
-                //         }else{
-                //             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
-                //         }
-                //     });
-                //     return;
-                // }          
-                // for (let key of Object.keys(folderChildren)){
-                //     allFolderData[key].children = folderChildren[key].children
-                // }
+                if (deleteData.length>0){
+                    ui.notifications.notify('Updating folder structure. Please wait...')
+                    e.close().then(async () => {
+                        if (game.user.isGM){
+                            for (let d of deleteData){
+                                await e.deleteEntity(d)
+                            }
+                            resetCache()
+                            ui.notifications.notify('Updating complete!')
+                            e.render(true);
+                        }else{
+                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                        }
+                    });
+                    return;
+                }  
+                if (updateData.length>0){
+                    ui.notifications.notify('Updating folder structure. Please wait...')
+                    e.close().then(async () => {
+                        if (game.user.isGM){
+                            for (let d of updateData){
+                                await e.updateEntity(d);
+                            }
+                            resetCache()
+                            ui.notifications.notify('Updating complete!')
+                            e.render(true);
+                        }else{
+                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                        }
+                    });
+                    return;
+                }          
+                for (let key of Object.keys(folderChildren)){
+                    allFolderData[key].children = folderChildren[key].children
+                }
                
             
                 
