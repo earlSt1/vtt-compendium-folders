@@ -904,7 +904,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                     const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
                     let allConfig = game.settings.get('core','compendiumConfiguration');
                     for (let p of folder.content){
-                        let pack = game.packs.get(p.code);
+                        let pack = game.packs.get(p.packCode);
                         if (pack.private){
                             if (allConfig[p.packCode]){
                                 allConfig[p.packCode].private = false;
@@ -3715,7 +3715,7 @@ Hooks.once('setup',async function(){
     let hasFICChanges = game.modules.get(mod).data.version >= '2.0.0';
     Settings.registerSettings()
     Hooks.once('ready',async function(){
-        await initFolders(true)
+        initFolders();
         ui.compendium = new CompendiumFolderDirectory();
     })
     //for (let hook of hooks){
