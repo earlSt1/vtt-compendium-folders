@@ -669,7 +669,11 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     /** @override */
     initialize(){
         //filter out gone compendiums
-        if (game.user.isGM){
+        if (!this.constructor.folders && !this.constructor.collection){
+            this.folders = [];
+            this.entities = [];
+        }
+        else if (game.user.isGM){
             this.folders = [...this.constructor.folders];
             this.entities = [...this.constructor.collection];
         }else{
@@ -712,12 +716,12 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     }
     /** @override */
     static get folders(){
-        return game.customFolders.compendium.folders;
+        return game.customFolders?.compendium?.folders;
     }
 
     /** @override */
     static get collection() {
-        return game.customFolders.compendium.entries;
+        return game.customFolders?.compendium?.entries;
     }
 
     /** @override */
@@ -3496,7 +3500,12 @@ export class Settings{
             type:Boolean,
             default:false
         });
-        
+        game.customFolders = {
+            compendium:{
+                folders:new CompendiumFolderCollection([]),
+                entries:new CompendiumEntryCollection([])
+            }
+        }
         
     }
     static updateFolder(folderData){
@@ -3715,8 +3724,8 @@ Hooks.once('setup',async function(){
     let hasFICChanges = game.modules.get(mod).data.version >= '2.0.0';
     Settings.registerSettings()
     Hooks.once('ready',async function(){
-        initFolders();
         ui.compendium = new CompendiumFolderDirectory();
+        initFolders(true);
     })
     //for (let hook of hooks){
         Hooks.on('renderCompendiumFolderDirectory', () => {
@@ -3760,6 +3769,7 @@ Hooks.once('setup',async function(){
             await Settings.doFolderConversions();
         })
         Hooks.on('renderCompendium',async function(e){
+            if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
             removeStaleOpenFolderSettings(packCode);
