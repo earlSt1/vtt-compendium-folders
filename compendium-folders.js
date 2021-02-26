@@ -493,7 +493,7 @@ export class CompendiumFolder extends Folder{
         }
         game.customFolders.compendium.folders.get(this._id).data = duplicate(this.data);
         if (refresh)
-            ui.compendium.render(true,'update')
+            ui.compendium.render(true);
     }
     async delete(refresh=true){
         let nextFolder = (this.parent) ? this.parent : this.collection.default;
@@ -511,7 +511,7 @@ export class CompendiumFolder extends Folder{
         
         await game.settings.set(mod,'cfolders',allFolders)
         if (refresh)
-            ui.compendium.render(true,'update')
+            ui.compendium.render(true);
         
     }
     async addCompendium(packCode,refresh=true){
@@ -677,8 +677,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             this.folders = [...this.constructor.folders];
             this.entities = [...this.constructor.collection];
         }else{
-            this.folders = [...this.constructor.folders].filter(x => x.content.find(y => !y.pack.private));
-            this.entities = [...this.constructor.collection].filter(z => !z.pack.private);
+            this.folders = [...this.constructor.folders].filter(x => x?.content?.find(y => !y?.pack?.private));
+            this.entities = [...this.constructor.collection].filter(z => !z?.pack?.private);
         }
         let tree = this.constructor.setupFolders(this.folders, this.entities);
         
@@ -745,7 +745,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         const options = {top: button.offsetTop, left: window.innerWidth - 310 - FolderConfig.defaultOptions.width};
         new CompendiumFolderEditConfig(data, options).showDialog(false);
     }
-    // /** @override */
+    /** @override */
     activateListeners(html){
         super.activateListeners(html);
 
@@ -762,7 +762,13 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             pack.render(true);
         }
         });
-
+        // Refresh button
+        html.find('.refresh-directory').click(() => {
+            game.customFolders = null;
+            initFolders();
+            //ui.compendium = new CompendiumFolderDirectory();
+            ui.compendium.render(true);
+        })
         // Options below are GM only
         if ( !game.user.isGM ) return;
 
@@ -781,6 +787,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                 oldTag.parentNode.replaceChild(folderCustomIcon,oldTag);
             }
         });
+        
     }
 
     /** @override */
@@ -831,8 +838,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                     // Remove the pack from the game World
                     game.data.packs.findSplice(p => (p.package === "world") && (p.name === pack.metadata.name) );
                     await game.customFolders.compendium.folders.find(x => x.compendiumList.includes(pack.collection)).removeCompendium(pack.collection,true,true);
-                    await game.initializePacks();
-                    ui.compendium.render();
+                    game.initializePacks().then(() => ui.compendium.render());
                 },
                 defaultYes: false
               })
@@ -921,7 +927,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                         }
                     }
                     await game.settings.set('core','compendiumConfiguration',allConfig);
-                    ui.compendium.render(true,'update');
                 }
             },{
                 name: "Hide All From Players",
@@ -947,7 +952,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                         }
                     }
                     await game.settings.set('core','compendiumConfiguration',allConfig);
-                    ui.compendium.render(true,'update');
                 }
             },{
                 name: "Lock All Contents",
@@ -973,7 +977,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                         }
                     }
                     await game.settings.set('core','compendiumConfiguration',allConfig);
-                    ui.compendium.render(true,'update');
                 }
             },{
                 name: "Unlock All Contents",
@@ -999,7 +1002,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                         }
                     }
                     await game.settings.set('core','compendiumConfiguration',allConfig);
-                    ui.compendium.render(true,'update');
                 }
             }
         ]
@@ -3457,6 +3459,7 @@ export class Settings{
             scope: 'world',
             config: false,
             type: Object,
+
             default:{}
         });
         game.settings.register(mod,'open-folders',{
@@ -3614,6 +3617,7 @@ export class Settings{
 var eventsSetup = []
 async function initFolders(refresh=false){
     let allFolders = game.settings.get(mod,'cfolders');
+    game.customFolders = null;
     // let refresh = false;
     let assigned = []
     let toRemove = [];
@@ -3702,7 +3706,7 @@ async function initFolders(refresh=false){
         missingCompendiums = true;
     }
     if (missingCompendiums){
-        ui.compendium.render(true,'update');
+        ui.compendium.render(true);
         return;
     }
     
@@ -3716,7 +3720,7 @@ async function initFolders(refresh=false){
     if (game.user.isGM)
         game.settings.set(mod,'cfolders',allFolders);
     if (refresh){
-        ui.compendium.render(true,'update');
+        await ui.compendium.render(true);
     }
 }
 
@@ -3726,45 +3730,15 @@ Hooks.once('setup',async function(){
     
     Settings.registerSettings()
     Hooks.once('ready',async function(){
+        while (!ui.compendium.rendered){
+            // wait for old compendium directory to render
+            // else we get a race condition
+            await new Promise(res => setTimeout(res,500));
+        }
         ui.compendium = new CompendiumFolderDirectory();
-        initFolders(true);
+        await initFolders(true);
     })
-    //for (let hook of hooks){
-        Hooks.on('renderCompendiumFolderDirectory', () => {
-            initFolders();
-            return;
-            let isPopout = document.querySelector('#compendium-popout') != null;
-            let prefix = '#sidebar '
-            if (isPopout){
-                prefix = '#compendium-popout '
-            }
-            let allFolders = game.settings.get(mod,'cfolders')
-            let toReturn = allFolders['hidden']==null || allFolders['default']==null;
-            if (allFolders['hidden']==null){
-                allFolders['hidden']={'compendiumList':[],'titleText':'hidden-compendiums','_id':'hidden'};
-            }
-            if (allFolders['default']==null){
-                allFolders['default']={'compendiumList':[],'titleText':'Default','_id':'default','colorText':'#000000'};
-            }
-            if (toReturn){
-                game.settings.set(mod,'cfolders',allFolders).then(function(){
-                    if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
-                        convertExistingSubmenusToFolder(prefix);
-                    }else{
-                        //setupFolders(prefix)
-                    }
-                    //addEventListeners(prefix)
-                });
-            }else{
-                if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object){
-                    convertExistingSubmenusToFolder(prefix);
-                }else{
-                    //setupFolders(prefix)
-                }
-                //addEventListeners(prefix)
-            }   
-        });
-    //}
+    
     if (post073){
         Settings.clearSearchTerms()
         // Hooks.on('ready',async function(){
