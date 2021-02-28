@@ -121,15 +121,10 @@ function getTempEntityData(entityType,folder){
 
         case 'Item': return {name:TEMP_ENTITY_NAME,type:Object.keys(CONFIG.Item.typeLabels)[0],flags:{cf:folder}}
  
-        case 'JournalEntry': return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
-
         case 'Macro':return {name:TEMP_ENTITY_NAME,type:'chat',command:'',flags:{cf:folder}} 
 
-        case 'RollTable':return {name:TEMP_ENTITY_NAME,flags:{cf:folder}}
-
-        case 'Scene':return {name:TEMP_ENTITY_NAME,flags:{cf:folder}} 
         default:     
-            return null;      
+            return {name:TEMP_ENTITY_NAME,flags:{cf:folder}};      
     }
 }
 async function removeTempEntities(entityType){
@@ -142,6 +137,8 @@ async function removeTempEntities(entityType){
         case 'JournalEntry': collection = game.journal;
             break;
         case 'Macro': collection = game.macros;
+            break;
+        case 'Macro': collection = game.playlists;
             break;
         case 'RollTable':collection = game.tables;
             break;
@@ -775,7 +772,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         // Create Compendium
         html.find('.create-compendium').click(this._onCreateEntity.bind(this));
 
-        // html.find('.create-entity').click(this._onCreateEntityInFolder.bind(this));
         //Manually set icons in here for now
         $('#compendium .directory-item.folder').each((i,el) => {
             let li = $(el);
@@ -795,6 +791,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         if (!game.user.isGM)
             return;
         let x = CompendiumDirectory.prototype._getEntryContextOptions()
+        // Modify the Duplicate callback to place duplicated compendium in folder of parent.
         x.find(c => c.name === 'COMPENDIUM.Duplicate').callback = li => {
             let pack = game.packs.get(li.data("pack"));
             let folder = game.customFolders.compendium.entries.get(li.data("pack")).parent;
@@ -843,6 +840,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                 defaultYes: false
               })
         }
+        // New context menu button - Adds compendium to hidden folder
         return x.concat([
             {
                 name: "Hide for GM",
@@ -1056,7 +1054,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     }
     async _onCreateEntity(event) {
         let parentId = 'default' 
-        console.log("TEST");
         if (!event.currentTarget.classList.contains('create-compendium')){
             // is a button on folder
             parentId = event.currentTarget.closest('li')?.dataset?.folderId;
@@ -1747,7 +1744,7 @@ async function deleteAllChildFolders(folder){
     
 }
 async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
-    ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))
+    //ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))
     
     let pack = game.packs.get(packCode);
     await pack.close();
@@ -1826,7 +1823,7 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     pack.render(true);
 }
 async function updateFolderWithinCompendium(folderObj){
-    ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationStart'))
+    //ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationStart'))
     let packCode = folderObj.packCode;
     let pack = game.packs.get(packCode);
     let newFolderName = folderObj.newName;
@@ -1873,7 +1870,7 @@ async function createNewFolderWithinCompendium(folderObj){
         icon:folderObj.icon
     }
     let e = await pack.createEntity(tempData);
-    console.log(`Created temp entity for folder in ${pack.collection}`);
+    console.log(`${modName} | Created temp entity for folder in ${pack.collection}`);
     return newPath
 }
 // Edit functions
@@ -2758,7 +2755,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
                 folderObj.contents.splice(folderObj.contents.findIndex((x => x.id==e.id)),1,result.id);
             }
         }
-        console.log(`Exported ${e.name} to ${pack.collection}`);
+        console.log(`${modName} | Exported ${e.name} to ${pack.collection}`);
     }
     if (!existingFolder){
         // Create new folder (exporting temp entity to allow for empty folders being editable)
@@ -2783,7 +2780,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         }
         await pack.updateEntity(folderData);
     }
-    console.log(`Exported temp entity to ${pack.collection}`);
+    console.log(`${modName} | Exported temp entity to ${pack.collection}`);
     
     return folderObj
 }
@@ -2810,9 +2807,12 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
                         break;
             case 'Macro':search = game.macros.entities.filter(m => m.name === source.name && getMacroFolderPath(m.id)===folderPath)
                         break;
-            case 'Scene':search = game.scenes.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
+            case 'Playlist':search = game.playlists.entities.filter(p => p.name === source.name)
                         break;
             case 'RollTable':search = game.tables.entities.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
+                        break;
+            case 'Scene':search = game.scenes.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
+            
         }
     }
     if (search === null || search.length === 0){
@@ -3642,8 +3642,7 @@ async function initFolders(refresh=false){
         // initialize settings
         init1 = true;
         let entityId = {}
-        
-        
+  
         allFolders = {
             hidden:{
                 compendiumList:[],
@@ -3735,7 +3734,6 @@ async function initFolders(refresh=false){
 }
 
 Hooks.once('setup',async function(){
-    // let hooks = ['renderCompendiumFolderDirectory','renderCompendiumDirectoryPF'];
     let post073 = game.data.version >= '0.7.3';
     
     Settings.registerSettings()
@@ -3775,41 +3773,33 @@ Hooks.once('setup',async function(){
     oldFn = SceneDirectory.prototype._getFolderContextOptions
     SceneDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
 
-    //})
     Hooks.on('renderCompendiumFolderDirectory',()=>{
         // Call old hook to keep compatibility with modules like compendium browser
         Hooks.call('renderCompendiumDirectory');
     })
+    // Folders In Compendium changes
     if (post073){
         Settings.clearSearchTerms()
-        // Hooks.on('ready',async function(){
-        //     await Settings.doFolderConversions();
-        // })
         Hooks.on('renderCompendium',async function(e){
-            if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0]
+            if (!e.locked && game.user.isGM)
+                createNewFolderButtonWithinCompendium(window,packCode);
+            if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
+            
             removeStaleOpenFolderSettings(packCode);
             let cachedFolderStructure = await loadCachedFolderStructure(packCode);
             let allFolderData={};
-            let updateData = [];
-            let deleteData = []
             let groupedFoldersSorted = {}
             let groupedFolders = {}
             if (cachedFolderStructure != null){
                groupedFoldersSorted = cachedFolderStructure;
             }else{
-                let checkedPaths = []
                 let allFolderIds = e.index.filter(x => x.name === TEMP_ENTITY_NAME).map(e => e._id)
-                //let contents = await e.getContent();
                 let contents = [];
                 for (let fId of allFolderIds){
                     contents.push(await e.getEntity(fId))
                 }
-                // let allFolderIds = contents.filter(e => e.data.flags != null 
-                //     && e.data.flags.cf != null
-                //     && e.data.flags.cf.id != null 
-                //     && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
                 //First parse folder data
                 for (let entry of contents){
                     if (entry != null 
@@ -3817,28 +3807,7 @@ Hooks.once('setup',async function(){
                         //New
                         let folderId = entry.data.flags.cf.id;
                         let entryId = entry._id
-                        // if (entry.data.flags.cf.id != null
-                        //     && entry.name != TEMP_ENTITY_NAME
-                        //     && !allFolderIds.includes(entry.data.flags.cf.id)){
-                        //     updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
-                        // }
-                        // if (entry.data.flags.cf.folderPath == null
-                        //     && entry.name === TEMP_ENTITY_NAME){
-                        //     let result = updateFolderPathForTempEntity(entry,contents);
-                        //     updateData.push(result);
-                        // }
-                        // if (entry.data.flags.cf.children == null
-                        //     && entry.name === TEMP_ENTITY_NAME){
-                        //     updateData.push(updateFolderChildrenForTempEntity(entry,contents));
-                        // }
-                        // if (entry.data.flags.cf.import != null){
-                        //     updateData.push({flags:{cf:{import:null}},_id:entryId})
-                        // }
-                        // if (entry.data.flags.cf.path != null 
-                        //     && !checkedPaths.includes(entry.data.flags.cf.path)){                           
-                        //     deleteData.push.apply(deleteData,consolidateTempEntities(entry,contents));
-                        //     checkedPaths.push(entry.data.flags.cf.path);
-                        // }
+
                         if (folderId != null){
                             if (entry.name === TEMP_ENTITY_NAME){
                                 let name = entry.data.flags.cf.name
@@ -3850,13 +3819,8 @@ Hooks.once('setup',async function(){
                                     id:folderId,color:color, children:children,name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
                                 }
                                 allFolderData[folderId]=data
-                                //folderChildren[folderId] = children
                             }
-                            // if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
-                            //     folderChildren[folderId].children.push(entryId);
-                            // }else{
-                            //     folderChildren[folderId] = {children:[entryId]}
-                            // }
+
                             
                         }
                     }
@@ -3864,44 +3828,8 @@ Hooks.once('setup',async function(){
                 if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                     return;
                 }
-                // if (deleteData.length>0){
-                //     ui.notifications.notify('Updating folder structure. Please wait...')
-                //     e.close().then(async () => {
-                //         if (game.user.isGM){
-                //             for (let d of deleteData){
-                //                 await e.deleteEntity(d)
-                //             }
-                //             resetCache()
-                //             ui.notifications.notify('Updating complete!')
-                //             e.render(true);
-                //         }else{
-                //             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
-                //         }
-                //     });
-                //     return;
-                // }  
-                // if (updateData.length>0){
-                //     ui.notifications.notify('Updating folder structure. Please wait...')
-                //     e.close().then(async () => {
-                //         if (game.user.isGM){
-                //             for (let d of updateData){
-                //                 await e.updateEntity(d);
-                //             }
-                //             resetCache()
-                //             ui.notifications.notify('Updating complete!')
-                //             e.render(true);
-                //         }else{
-                //             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
-                //         }
-                //     });
-                //     return;
-                // }          
-                // for (let key of Object.keys(folderChildren)){
-                //     allFolderData[key].children = folderChildren[key].children
-                // }
-               
-            
                 
+                //Group folders in terms of depth
                 let groupedFolderMetadata = {}
                 Object.keys(allFolderData).forEach(function(key) {
                     let depth = 0;
@@ -3909,7 +3837,6 @@ Hooks.once('setup',async function(){
                         depth = 0;
                     }else{
                         depth = allFolderData[key].folderPath.length
-                        
                         // Add all parent folders to list
                         // Need to make sure to render them
                     }
@@ -3934,7 +3861,7 @@ Hooks.once('setup',async function(){
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
-            createNewFolderButtonWithinCompendium(window,packCode);
+            //createNewFolderButtonWithinCompendium(window,packCode);
             for (let entity of window.querySelectorAll('.directory-item')){
                 if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
                     entity.style.display = 'none';
@@ -4032,6 +3959,9 @@ Hooks.once('setup',async function(){
         Hooks.on('createMacro',async function(m){
             await importFolderData(m);
         })
+        Hooks.on('createPlaylist',async function(p){
+            await importFolderData(p);
+        })
         Hooks.on('createRollTable',async function(r){
             await importFolderData(r);
         })
@@ -4052,6 +3982,9 @@ Hooks.once('setup',async function(){
         Hooks.on('updateMacro',async function(m){
             await importFolderData(m);
         })
+        Hooks.on('updatePlaylist',async function(p){
+            await importFolderData(p);
+        })
         Hooks.on('updateRollTable',async function(r){
             await importFolderData(r);
         })
@@ -4068,28 +4001,34 @@ Hooks.once('setup',async function(){
                 removeTempEntities('Actor')
             }
         })
-        Hooks.on('renderJournalDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('JournalEntry')
-            }
-        })
-        Hooks.on('renderSceneDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('Scene')
-            }
-        })
         Hooks.on('renderItemDirectory',async function(e){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('Item')
             }
         })
+        Hooks.on('renderJournalDirectory',async function(){
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('JournalEntry')
+            }
+        })
+        Hooks.on('renderPlaylistDirectory',async function(){
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.playlists.entities.some(p => p.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('Playlist')
+            }
+        })
         Hooks.on('renderRollTableDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('RollTable')
+            }
+        })
+        Hooks.on('renderSceneDirectory',async function(){
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
+                removeTempEntities('Scene')
             }
         })
         // Integration with Macro Folders
