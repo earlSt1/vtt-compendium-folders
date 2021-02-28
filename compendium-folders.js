@@ -1819,9 +1819,8 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
         for (let data of Object.values(allData)){
             await pack.updateEntity(data)
         }
-        await pack.deleteEntity(tempEntity.id);
     }
-    await pack.deleteEntity({id:tempEntity.id})
+    await pack.deleteEntity(tempEntity.id)
     ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationFinish'));
     document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
     pack.render(true);
@@ -2738,6 +2737,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     }
     let packEntities = []
     let result = null;
+    let folderChildren = []
     for ( let e of entities ) {
         let data = await e.toCompendium();
         data.flags.cf={
@@ -2772,6 +2772,16 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
             folderPath:folderPath
         }
         await pack.createEntity(tempData);
+    }else{
+        let folderData = {
+            _id:existingFolder.id,
+            flags:{
+                cf:{
+                    children:packEntities
+                }
+            }
+        }
+        await pack.updateEntity(folderData);
     }
     console.log(`Exported temp entity to ${pack.collection}`);
     
@@ -3738,7 +3748,38 @@ Hooks.once('setup',async function(){
         ui.compendium = new CompendiumFolderDirectory();
         await initFolders(true);
     })
-    
+    // Adding export buttons to context menus for folders
+    let newContextOption = {
+        name: "Export Folder Structure",
+        icon: '<i class="fas fa-upload"></i>',
+        condition: header => {
+            return game.user?.isGM && header.parent().find('.entity').length > 0
+        },
+        callback: header => {
+            const li = header.parent()[0];
+            exportFolderStructureToCompendium(game.folders.get(li.dataset.folderId))
+        }  
+    }
+    let oldFn = ActorDirectory.prototype._getFolderContextOptions
+    ActorDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+
+    oldFn = ItemDirectory.prototype._getFolderContextOptions
+    ItemDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+
+    oldFn = JournalDirectory.prototype._getFolderContextOptions
+    JournalDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+
+    oldFn = RollTableDirectory.prototype._getFolderContextOptions
+    RollTableDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+
+    oldFn = SceneDirectory.prototype._getFolderContextOptions
+    SceneDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+
+    //})
+    Hooks.on('renderCompendiumFolderDirectory',()=>{
+        // Call old hook to keep compatibility with modules like compendium browser
+        Hooks.call('renderCompendiumDirectory');
+    })
     if (post073){
         Settings.clearSearchTerms()
         // Hooks.on('ready',async function(){
@@ -3758,18 +3799,17 @@ Hooks.once('setup',async function(){
             if (cachedFolderStructure != null){
                groupedFoldersSorted = cachedFolderStructure;
             }else{
-                let folderChildren = {}
                 let checkedPaths = []
-                //let allFolderIds = e.index.filter(x => x.name === TEMP_ENTITY_NAME).map(e => e._id)
-                let contents = await e.getContent();
-                //let contents = [];
+                let allFolderIds = e.index.filter(x => x.name === TEMP_ENTITY_NAME).map(e => e._id)
+                //let contents = await e.getContent();
+                let contents = [];
                 for (let fId of allFolderIds){
                     contents.push(await e.getEntity(fId))
                 }
-                let allFolderIds = contents.filter(e => e.data.flags != null 
-                    && e.data.flags.cf != null
-                    && e.data.flags.cf.id != null 
-                    && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
+                // let allFolderIds = contents.filter(e => e.data.flags != null 
+                //     && e.data.flags.cf != null
+                //     && e.data.flags.cf.id != null 
+                //     && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
                 //First parse folder data
                 for (let entry of contents){
                     if (entry != null 
@@ -3777,28 +3817,28 @@ Hooks.once('setup',async function(){
                         //New
                         let folderId = entry.data.flags.cf.id;
                         let entryId = entry._id
-                        if (entry.data.flags.cf.id != null
-                            && entry.name != TEMP_ENTITY_NAME
-                            && !allFolderIds.includes(entry.data.flags.cf.id)){
-                            updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
-                        }
-                        if (entry.data.flags.cf.folderPath == null
-                            && entry.name === TEMP_ENTITY_NAME){
-                            let result = updateFolderPathForTempEntity(entry,contents);
-                            updateData.push(result);
-                        }
-                        if (entry.data.flags.cf.children == null
-                            && entry.name === TEMP_ENTITY_NAME){
-                            updateData.push(updateFolderChildrenForTempEntity(entry,contents));
-                        }
-                        if (entry.data.flags.cf.import != null){
-                            updateData.push({flags:{cf:{import:null}},_id:entryId})
-                        }
-                        if (entry.data.flags.cf.path != null 
-                            && !checkedPaths.includes(entry.data.flags.cf.path)){                           
-                            deleteData.push.apply(deleteData,consolidateTempEntities(entry,contents));
-                            checkedPaths.push(entry.data.flags.cf.path);
-                        }
+                        // if (entry.data.flags.cf.id != null
+                        //     && entry.name != TEMP_ENTITY_NAME
+                        //     && !allFolderIds.includes(entry.data.flags.cf.id)){
+                        //     updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
+                        // }
+                        // if (entry.data.flags.cf.folderPath == null
+                        //     && entry.name === TEMP_ENTITY_NAME){
+                        //     let result = updateFolderPathForTempEntity(entry,contents);
+                        //     updateData.push(result);
+                        // }
+                        // if (entry.data.flags.cf.children == null
+                        //     && entry.name === TEMP_ENTITY_NAME){
+                        //     updateData.push(updateFolderChildrenForTempEntity(entry,contents));
+                        // }
+                        // if (entry.data.flags.cf.import != null){
+                        //     updateData.push({flags:{cf:{import:null}},_id:entryId})
+                        // }
+                        // if (entry.data.flags.cf.path != null 
+                        //     && !checkedPaths.includes(entry.data.flags.cf.path)){                           
+                        //     deleteData.push.apply(deleteData,consolidateTempEntities(entry,contents));
+                        //     checkedPaths.push(entry.data.flags.cf.path);
+                        // }
                         if (folderId != null){
                             if (entry.name === TEMP_ENTITY_NAME){
                                 let name = entry.data.flags.cf.name
@@ -3810,54 +3850,55 @@ Hooks.once('setup',async function(){
                                     id:folderId,color:color, children:children,name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
                                 }
                                 allFolderData[folderId]=data
+                                //folderChildren[folderId] = children
                             }
-                            if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
-                                folderChildren[folderId].children.push(entryId);
-                            }else{
-                                folderChildren[folderId] = {children:[entryId]}
-                            }
-                            folderChildren[folderId] = children
+                            // if (folderChildren[folderId] != null && folderChildren[folderId].children != null){
+                            //     folderChildren[folderId].children.push(entryId);
+                            // }else{
+                            //     folderChildren[folderId] = {children:[entryId]}
+                            // }
+                            
                         }
                     }
                 }
                 if (Object.keys(allFolderData).length === 0 && allFolderData.constructor === Object){
                     return;
                 }
-                if (deleteData.length>0){
-                    ui.notifications.notify('Updating folder structure. Please wait...')
-                    e.close().then(async () => {
-                        if (game.user.isGM){
-                            for (let d of deleteData){
-                                await e.deleteEntity(d)
-                            }
-                            resetCache()
-                            ui.notifications.notify('Updating complete!')
-                            e.render(true);
-                        }else{
-                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
-                        }
-                    });
-                    return;
-                }  
-                if (updateData.length>0){
-                    ui.notifications.notify('Updating folder structure. Please wait...')
-                    e.close().then(async () => {
-                        if (game.user.isGM){
-                            for (let d of updateData){
-                                await e.updateEntity(d);
-                            }
-                            resetCache()
-                            ui.notifications.notify('Updating complete!')
-                            e.render(true);
-                        }else{
-                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
-                        }
-                    });
-                    return;
-                }          
-                for (let key of Object.keys(folderChildren)){
-                    allFolderData[key].children = folderChildren[key].children
-                }
+                // if (deleteData.length>0){
+                //     ui.notifications.notify('Updating folder structure. Please wait...')
+                //     e.close().then(async () => {
+                //         if (game.user.isGM){
+                //             for (let d of deleteData){
+                //                 await e.deleteEntity(d)
+                //             }
+                //             resetCache()
+                //             ui.notifications.notify('Updating complete!')
+                //             e.render(true);
+                //         }else{
+                //             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                //         }
+                //     });
+                //     return;
+                // }  
+                // if (updateData.length>0){
+                //     ui.notifications.notify('Updating folder structure. Please wait...')
+                //     e.close().then(async () => {
+                //         if (game.user.isGM){
+                //             for (let d of updateData){
+                //                 await e.updateEntity(d);
+                //             }
+                //             resetCache()
+                //             ui.notifications.notify('Updating complete!')
+                //             e.render(true);
+                //         }else{
+                //             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                //         }
+                //     });
+                //     return;
+                // }          
+                // for (let key of Object.keys(folderChildren)){
+                //     allFolderData[key].children = folderChildren[key].children
+                // }
                
             
                 
@@ -4020,71 +4061,38 @@ Hooks.once('setup',async function(){
 
         // Adding the export button to all folders
         // ONLY if it contains an entity (either direct child or in child folder)
+        
         Hooks.on('renderActorDirectory',async function(a){
-            for (let folder of a._element[0].querySelectorAll('.directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null //
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
-                    && game.user.isGM){
-                    addExportButton(folder,false);
-                }
-            }
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.actors.entities.some(a => a.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('Actor')
             }
         })
         Hooks.on('renderJournalDirectory',async function(){
-            for (let folder of document.querySelectorAll('#journal .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
-                    && game.user.isGM){
-                    addExportButton(folder,false);
-                }
-            }
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('JournalEntry')
             }
         })
         Hooks.on('renderSceneDirectory',async function(){
-            for (let folder of document.querySelectorAll('#scenes .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
-                    && game.user.isGM){
-                    addExportButton(folder,false);
-                } 
-            }
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('Scene')
             }
         })
         Hooks.on('renderItemDirectory',async function(e){
-            for (let folder of document.querySelectorAll('#items .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
-                    && game.user.isGM){
-                    addExportButton(folder,false);
-                } 
-            }
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('Item')
             }
         })
         Hooks.on('renderRollTableDirectory',async function(){
-            for (let folder of document.querySelectorAll('#tables .directory-item > .folder-header')){
-                if (folder.querySelector('a.export-folder')==null//
-                    && folder.parentElement.querySelector(':scope > ol.subdirectory').querySelector('.directory-item.entity') != null
-                    && game.user.isGM){
-                    addExportButton(folder,false);
-                }  
-            }
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
                 removeTempEntities('RollTable')
             }
         })
+        // Integration with Macro Folders
         Hooks.on('addExportButtonsForCF',async function(window){
             for (let folderHeader of window.querySelectorAll('.macro-folder > .macro-folder-header')){
                 if (folderHeader.querySelector('a.export-folder')==null//
