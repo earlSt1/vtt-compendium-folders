@@ -558,7 +558,7 @@ export class CompendiumFolder extends Folder{
     _removePack(pack,del=false){
         this.content = this.content.filter(x => x.packCode != pack.packCode);
         this.data.compendiumList = this.content.map(p => p.packCode);
-        if (del)
+        if (del && pack.folder)
             pack.folder = null
     }
     _removeFolder(child){
@@ -2734,7 +2734,6 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     }
     let packEntities = []
     let result = null;
-    let folderChildren = []
     for ( let e of entities ) {
         let data = await e.toCompendium();
         data.flags.cf={
@@ -2745,7 +2744,24 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         let existing = merge ? index.find(i => i.name === data.name) : index.find(i => i._id === e.id);
         if ( existing ) data._id = existing._id;
         if ( data._id ){
+            // Remove child from old parent
+            let oldParent = content.find(n => n.name === TEMP_ENTITY_NAME && n.data?.flags?.cf?.children?.includes(data._id) && n.data.flags.cf.id != folderId)
+            if (oldParent){
+                let nData = {
+                    _id: oldParent._id,
+                    flags:{
+                        cf:{
+                            children:oldParent.data.flags.cf.children.filter(m => m != data._id)
+                        }
+                    }
+                }
+                await pack.updateEntity(nData)
+                 //Update saved content for future reference
+                oldParent.data.flags.cf.children = oldParent.data.flags.cf.children.filter(m => m != data._id);
+            }
+           
             packEntities.push(existing._id)
+            
             await pack.updateEntity(data);            
         }
         else {
@@ -2774,7 +2790,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
             _id:existingFolder.id,
             flags:{
                 cf:{
-                    children:packEntities
+                    children:[...new Set(existingFolder.data.flags.cf.children.concat(packEntities))]
                 }
             }
         }
@@ -2945,7 +2961,7 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     contents.appendChild(packList);
 
     if (game.user.isGM){
-        if (game.user.isGM && !game.packs.get(packCode).locked){
+        if (!game.packs.get(packCode).locked){
             let newFolderLabel = document.createElement('label');
             let newFolderIcon = document.createElement('i');
             let newFolderLink = document.createElement('a');
@@ -2970,13 +2986,15 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
                 }).render(true)
             });
         }
-        let importButton = document.createElement('a');
-        importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
-        importButton.classList.add('import-folder');
-        importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
-        importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
+        if (game.packs.get(packCode).entity != 'Playlist'){
+            let importButton = document.createElement('a');
+            importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
+            importButton.classList.add('import-folder');
+            importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
+            importButton.addEventListener('click',event => importFolderFromCompendium(event,folder));
 
-        header.appendChild(importButton);
+            header.appendChild(importButton);
+        }
     }
 
     //If no folder data, or folder is not in open folders AND folder has an id, close folder by default
@@ -3282,7 +3300,7 @@ async function loadCachedFolderStructure(packCode){
         return cache.groupedFolders;
     return null;
 }
-async function moveEntryInCache(packCode,entryId,folderId){
+async function moveEntryInCache(packCode,entryId,toFolderId,fromFolderId){
     let cache = game.settings.get(mod,'cached-folder');
     if (Object.keys(cache).length === 0 || cache.pack != packCode){
         // shouldnt be reachable....
@@ -3290,10 +3308,10 @@ async function moveEntryInCache(packCode,entryId,folderId){
     }
     let x = await game.packs.get(packCode).getEntity(entryId)
     let fromFolderMetadata = null
-    if (x.data.flags.cf != null && x.data.flags.cf.id != null){
-        fromFolderMetadata = cache.groupedFolderMetadata[x.data.flags.cf.id]
-    }
-    let toFolderMetadata = cache.groupedFolderMetadata[folderId]
+    //if (x.data.flags.cf != null && x.data.flags.cf.id != null && x.data.flags.cf.id != toFolderId){
+        fromFolderMetadata = cache.groupedFolderMetadata[fromFolderId]
+    //}
+    let toFolderMetadata = cache.groupedFolderMetadata[toFolderId]
     
     //if (folderId === id){
         // Add entry to this folder
@@ -3868,7 +3886,7 @@ Hooks.once('setup',async function(){
                     entity.classList.add('hidden')
                 }
             }
-            if (game.user.isGM){
+            if (game.user.isGM && !e.locked){
                 // Moving between folders
                 let hiddenMoveField = document.createElement('input');
                 hiddenMoveField.type='hidden'
@@ -3892,21 +3910,57 @@ Hooks.once('setup',async function(){
 
                             let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
                             let p = game.packs.get(packCode);                          
-
-                            let data = {
-                                _id:movingItemId,
+                            
+                            let toFolder = await p.getEntity(folder.getAttribute('data-temp-entity-id'));
+                            let data = null;
+                            if (!toFolder?.data?.flags?.cf?.children?.includes(movingItemId)){
+                                //if (toFolder?.data?.flags?.cf?.children != null){    
+                                    data = {
+                                        _id:toFolder._id,
+                                        flags:{
+                                            cf:{
+                                                children: toFolder.data.flags.cf.children.concat(movingItemId) 
+                                            }
+                                        }
+                                    }
+                                //}
+                            }
+                            let entity =  await p.getEntity(movingItemId)
+                            let fromFolderId = entity.data?.flags?.cf?.id;
+                            
+                            if (fromFolderId){             
+                                for (let tempEntityId of p.index.filter(e => e.name === TEMP_ENTITY_NAME).map(f => f._id)){
+                                    let tempEntity = await p.getEntity(tempEntityId);
+                                    if (tempEntity?.data?.flags?.cf?.children?.includes(movingItemId)){
+                                        let nData = {
+                                            _id: tempEntity._id,
+                                            flags:{
+                                                cf:{
+                                                    children:tempEntity.data.flags.cf.children.filter(e => e != movingItemId)
+                                                }
+                                            }
+                                        }
+                                        await p.updateEntity(nData)
+                                        break;
+                                    }
+                                }                             
+                            }
+                            let eData = {
+                                _id: entity._id,
                                 flags:{
                                     cf:{
-                                        id:folder.getAttribute('data-folder-id')   
+                                        id:folder.getAttribute('data-folder-id')
                                     }
                                 }
                             }
-                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
-                            await p.updateEntity(data)
+                            await p.updateEntity(eData)
+                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'),fromFolderId)
+                            if (data) await p.updateEntity(data)
                         }
                     })
                 }
-            }          
+            }         
+            
         })
 
         Hooks.on('renderApplication',async function(a){
