@@ -2646,7 +2646,7 @@ async function exportFolderStructureToCompendium(folder){
             return obj;
         }, {}),
         pack: null,
-        merge: true
+        merge: game.settings.get(mod,'default-mbn')
     });
 
     // Display it as a dialog prompt
@@ -2934,7 +2934,7 @@ async function importFolderFromCompendium(event,folder){
         title:'Import Folder: '+folderName,
         content: `<form id='importFolder'><p>${l1}</p>
             <ul><li>${l3}</li><li>${l4}</li></ul>
-            <div class='form-group'><label for='merge'>Merge by name</label><input type='checkbox' name='merge' checked/></div></form>`,
+            <div class='form-group'><label for='merge'>Merge by name</label><input type='checkbox' name='merge' ${game.settings.get(mod,'default-mbn')?'checked':''}/></div></form>`,
         yes: async (h) => {
             await game.settings.set(mod,'importing',true);
             let merge = h[0].querySelector('input[name=\'merge\']').checked
@@ -3568,6 +3568,14 @@ export class Settings{
         game.settings.register(mod,'importing',{
             scope:'client',
             config:false,
+            type:Boolean,
+            default:false
+        });
+        game.settings.register(mod,'default-mbn',{
+            name:'Default Merge by name',
+            hint:'If enabled, the Merge by name option will be enabled by default when importing compendiums',
+            scope:'world',
+            config:true,
             type:Boolean,
             default:false
         });
