@@ -130,30 +130,29 @@ function getTempEntityData(entityType,folder){
 async function removeTempEntities(entityType){
     let collection = null
     switch (entityType){
-        case 'Actor': collection = game.actors;
+        case 'Actor': collection = ui.actors.constructor.collection;
             break;
-        case 'Item': collection = game.items;
+        case 'Item': collection = ui.items.constructor.collection;
             break;
-        case 'JournalEntry': collection = game.journal;
+        case 'JournalEntry': collection = ui.journal.constructor.collection;
             break;
-        case 'Macro': collection = game.macros;
+        case 'Macro': collection = ui.macros.constructor.collection;
             break;
-        case 'Macro': collection = game.playlists;
+        case 'Macro': collection = ui.playlists.constructor.collection;
             break;
-        case 'RollTable':collection = game.tables;
+        case 'RollTable':collection = ui.tables.constructor.collection;
             break;
-        case 'Scene':collection = game.scenes;           
+        case 'Scene':collection = ui.scenes.constructor.collection;           
     }
     if (collection != null){
-        let tempEntities = collection.entries.filter(x => x.name.includes(TEMP_ENTITY_NAME));
+        let tempEntities = duplicate(collection.entries.filter(x => x.name.includes(TEMP_ENTITY_NAME)).map(y => y.id));
         for (let tempEntity of tempEntities){
-            let entity = null;
-            if (entityType==='Macro'){
-                entity = collection.apps[1].constructor.collection.get(tempEntity.id);
-            }else{
-                entity = collection.apps[0].constructor.collection.get(tempEntity.id);
+            let entity = collection.get(tempEntity);
+            try{
+                await entity.delete(entity)
+            }catch (e){
+                console.debug(modName + '| Entity no longer exists in collection');
             }
-            await entity.delete(entity)
         } 
     }
     
@@ -845,6 +844,15 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                 },
                 defaultYes: false
               })
+        }
+        i = x.findIndex(c => c.name === 'COMPENDIUM.ImportAll')
+        let oldCallback = x[i].callback;
+        x[i].callback = async (li) => {
+            await game.settings.set(mod,'importing',true);
+            await oldCallback.bind(this)(li);
+            await game.settings.set(mod,'importing',false);
+            let pack = game.packs.get(li.data('pack'));
+            removeTempEntities(pack.entity);
         }
         // New context menu button - Adds compendium to hidden folder
         return x.concat([
@@ -2643,7 +2651,7 @@ async function exportFolderStructureToCompendium(folder){
 
     // Display it as a dialog prompt
     return Dialog.prompt({
-        title: game.i18n.localize("FOLDER.ExportTitle") + `: ${folder.data.name}`,
+        title: game.i18n.localize("FOLDER.ExportTitle") + `: ${folder.macroList ? folder.name : folder.data.name}`,
         content: html,
         label: game.i18n.localize("FOLDER.ExportTitle"),
         callback: async function(html) {
@@ -2710,7 +2718,7 @@ async function createParentFoldersWithinCompendium(folder,pack){
             tempEntity = getTempEntityData(pack.entity,{
                 id:previousParent,
                 name:parents[i].name,
-                color:parents[i].data.color,
+                color:parents[i].macroList ? parents[i].color : parents[i].data.color,
                 folderPath:previousPath,
                 children:[]
             });
@@ -4090,37 +4098,37 @@ Hooks.once('setup',async function(){
         Hooks.on('renderActorDirectory',async function(a){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.actors.entities.some(a => a.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('Actor')
+                await removeTempEntities('Actor')
             }
         })
         Hooks.on('renderItemDirectory',async function(e){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('Item')
+                await removeTempEntities('Item')
             }
         })
         Hooks.on('renderJournalDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('JournalEntry')
+                await removeTempEntities('JournalEntry')
             }
         })
         Hooks.on('renderPlaylistDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.playlists.entities.some(p => p.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('Playlist')
+                await removeTempEntities('Playlist')
             }
         })
         Hooks.on('renderRollTableDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('RollTable')
+                await removeTempEntities('RollTable')
             }
         })
         Hooks.on('renderSceneDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('Scene')
+                await removeTempEntities('Scene')
             }
         })
         // Integration with Macro Folders
@@ -4130,7 +4138,7 @@ Hooks.once('setup',async function(){
         Hooks.on('renderMacroDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.macros.entities.some(m => m.name === TEMP_ENTITY_NAME)){
-                removeTempEntities('Macro')
+                await removeTempEntities('Macro')
             }
         })
     }
