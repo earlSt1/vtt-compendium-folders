@@ -35,7 +35,7 @@ function createContextMenu(header,event){
     let contextMenuList = document.createElement('ol');
     contextMenuList.classList.add('context-items');
 
-    if (header.parentElement.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item') != null){
+    //if (header.parentElement.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item') != null){
         let editOption = document.createElement('li');
         editOption.classList.add('context-item')
         let editIcon = document.createElement('i');
@@ -57,7 +57,7 @@ function createContextMenu(header,event){
             new FICFolderEditDialog(formObj).render(true);
         })
         contextMenuList.appendChild(editOption);
-    }
+    //}
     let deleteOption = document.createElement('li');
     deleteOption.classList.add('context-item')
     let deleteIcon = document.createElement('i');
@@ -163,9 +163,15 @@ function getFolderPath(folder){
         return '';
     }
     let path = folder.data.name;
+    if (folder.macroList)
+        path = folder.name;
     let currentFolder = folder;
     while (currentFolder.parent != null){
-        path = currentFolder.parent.data.name+FOLDER_SEPARATOR+path;
+        if (folder.macroList)
+            path = currentFolder.parent.name+FOLDER_SEPARATOR+path;
+        else
+            path = currentFolder.parent.data.name+FOLDER_SEPARATOR+path;
+        
         currentFolder = currentFolder.parent;
     }
     return path;
@@ -272,7 +278,7 @@ function checkForDeletedCompendiums(){
 async function constructFolderDataFromMacroFolder(mFolderId,macroFolders){
     let folderObj = {data:{_id:mFolderId}};
     let currentFolder = macroFolders[mFolderId];
-    folderObj.content = currentFolder.macroList.map(m => game.macros.get(m));
+    folderObj.content = currentFolder.macroList.map(m => game.macros.get(m)).filter(n => n != null);
     folderObj.data.color = currentFolder.colorText;
     folderObj.data.name = currentFolder.titleText;
     folderObj.name = currentFolder.titleText;
@@ -761,7 +767,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         });
         // Refresh button
         html.find('.refresh-directory').click(() => {
-            game.customFolders = null;
+            game.customFolders.compendium = null;
             initFolders();
             //ui.compendium = new CompendiumFolderDirectory();
             ui.compendium.render(true);
@@ -892,8 +898,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             },{
                 name: "CF.moveFolder",
                 icon: '<i class="fas fa-sitemap"></i>',
-                condition: header => { 
-                    return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
+                condition: () => { 
+                    return game.user.isGM
                 },
                 callback: header => {
                     const li = header.parent();
@@ -1766,6 +1772,9 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
         for (let entity of folderElement.querySelectorAll('.directory-item')){
             toDelete.push(entity.getAttribute('data-entry-id'));
         }
+        for (let folder of folderElement.querySelectorAll('.compendium-folder')){
+            toDelete.push(folder.getAttribute('data-temp-entity-id'));
+        }
     }else{
         for (let entity of contents){
             if (entity.data.flags != null && entity.data.flags.cf != null){
@@ -1905,7 +1914,7 @@ class ImportExportConfig extends FormApplication {
                 });
                 if (success){
                     game.settings.set(mod,'cfolders',importJson).then(async function(){
-                        game.customFolders = null;
+                        game.customFolders.compendium = null;
                         await initFolders()
                         ui.compendium.refresh();
                         ui.notifications.info(game.i18n.localize('CF.folderImportSuccess'));
@@ -2567,7 +2576,25 @@ function setupDragEventListeners(){
 // ==========================
 // Exporting Folders to compendiums
 // ==========================
-function addExportButton(folder,isMacroFolder){
+
+function addMacroFoldersExportButton(){
+    let newContextOption = {
+        name: "Export Folder Structure",
+        icon: '<i class="fas fa-upload"></i>',
+        condition: header => {
+            return game.user?.isGM && header.parent().find('.entity').length > 0
+        },
+        callback: async (header) => {
+            const li = header.parent()[0];
+            let folder = game.customFolders.macro.folders.get(li.getAttribute('data-folder-id'));
+            await exportFolderStructureToCompendium(folder);
+        }  
+    }
+    let old = ui.macros.constructor.prototype._getFolderContextOptions();
+    ui.macros.constructor.prototype._getFolderContextOptions = function(){
+        return old.concat(newContextOption)
+    }
+    return;
     let newButton = document.createElement('i');
     newButton.classList.add('fas','fa-upload');
     let link = document.createElement('a');
@@ -2731,6 +2758,9 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     let color = '#000000'
     if (folderObj.data.color != null && folderObj.data.color.length>0){
         color = folderObj.data.color;
+    }
+    else if (folderObj.color != null && folderObj.color.length>0){
+        color = folderObj.color;
     }
     let packEntities = []
     let result = null;
@@ -3533,10 +3563,18 @@ export class Settings{
             type:Boolean,
             default:false
         });
-        game.customFolders = {
-            compendium:{
+        if (game.customFolders){
+            game.customFolders.compendium = {
                 folders:new CompendiumFolderCollection([]),
                 entries:new CompendiumEntryCollection([])
+                
+            }
+        } else {
+            game.customFolders = {
+                compendium:{
+                    folders:new CompendiumFolderCollection([]),
+                    entries:new CompendiumEntryCollection([])
+                }
             }
         }
         
@@ -3645,7 +3683,7 @@ export class Settings{
 var eventsSetup = []
 async function initFolders(refresh=false){
     let allFolders = game.settings.get(mod,'cfolders');
-    game.customFolders = null;
+    game.customFolders.compendium = null;
     // let refresh = false;
     let assigned = []
     let toRemove = [];
@@ -4086,15 +4124,8 @@ Hooks.once('setup',async function(){
             }
         })
         // Integration with Macro Folders
-        Hooks.on('addExportButtonsForCF',async function(window){
-            for (let folderHeader of window.querySelectorAll('.macro-folder > .macro-folder-header')){
-                if (folderHeader.querySelector('a.export-folder')==null//
-                    && folderHeader.parentElement.querySelector(':scope > .folder-contents').querySelector('.directory-item.entity') != null
-                    && folderHeader.parentElement.getAttribute('data-mfolder-id') != 'default'
-                    && game.user.isGM){
-                    addExportButton(folderHeader,true);
-                }  
-            }
+        Hooks.on('addExportButtonsForCF',async function(){
+            addMacroFoldersExportButton();
         })
         Hooks.on('renderMacroDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
