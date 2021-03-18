@@ -433,17 +433,20 @@ export class CompendiumFolder extends Folder{
         //update(entry.data);
         await this.save(refresh);
     }
-    async removeCompendium(packCode,del=false,refresh=true){
-        this._removePack(packCode,del);
+    async removeCompendium(pack,del=false,refresh=true){
+        this._removePack(pack,del);
         if (del){
-            game.customFolders.compendium.entries.remove(packCode);
+            game.customFolders.compendium.entries.remove(pack.packCode);
         }else{
-            let entry = game.customFolders.compendium.entries.get(packCode);
+            let entry = game.customFolders.compendium.entries.get(pack.packCode);
             let hiddenFolder = this.collection.hidden;
             hiddenFolder._addPack(entry);
             await hiddenFolder.save(false);
         }
         await this.save(refresh);
+    }
+    async removeCompendiumByCode(packCode,del=false,refresh=true){
+        await this.removeCompendium(game.customFolders.compendium.entries.get(packCode),del,refresh);
     }
     async moveFolder(destId){
         let destFolder = this.collection.get(destId);
@@ -452,13 +455,15 @@ export class CompendiumFolder extends Folder{
         
     }
     _addPack(pack){
-        this.content = this.content.concat(pack);
-        this.data.compendiumList = this.data.compendiumList.concat(pack.packCode);
+        if (!this.data.compendiumList.includes(pack.packCode)){
+            this.content = this.content.concat(pack);
+            this.data.compendiumList = this.data.compendiumList.concat(pack.packCode);
+        }
         pack.folder = this._id;
     }
     _removePack(pack,del=false){
+        this.data.compendiumList = this.data.compendiumList.filter(x => x != pack.packCode);
         this.content = this.content.filter(x => x.packCode != pack.packCode);
-        this.data.compendiumList = this.content.map(p => p.packCode);
         if (del && pack.folder)
             pack.folder = null
     }
@@ -561,7 +566,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     async checkDeleted(){
         let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
         for (let c of goneCompendiums){
-            await c.parent.removeCompendium(c.code,true,false);
+            await c.parent.removeCompendium(c,true,false);
         }
     }
     /** @override */
@@ -735,7 +740,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
 
                     // Remove the pack from the game World
                     game.data.packs.findSplice(p => (p.package === "world") && (p.name === pack.metadata.name) );
-                    await game.customFolders.compendium.folders.find(x => x.compendiumList.includes(pack.collection)).removeCompendium(pack.collection,true,true);
+                    await game.customFolders.compendium.folders.find(x => x.compendiumList.includes(pack.collection)).removeCompendiumByCode(pack.collection,true,true);
                     game.initializePacks().then(() => ui.compendium.render());
                 },
                 defaultYes: false
@@ -930,7 +935,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         event.dataTransfer.setData("text/plain", JSON.stringify(dragData));
         this._dragType = dragData.type;
     }
-    _onDrop(event){
+    async _onDrop(event){
         event.stopPropagation();
         let li = event.currentTarget.closest("li.folder");
         if (li.dataset.folderId === 'default' || !game.user.isGM)
@@ -947,7 +952,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
 
         if (folderId){
             if (data.type === this.constructor.entity){
-                game.customFolders.compendium.folders.get(folderId).addCompendium(data.id)
+                await game.customFolders.compendium.folders.get(folderId).addCompendium(data.id)
             }else if (data.type === 'Folder'){
                 // Move folder
                 let destFolderId = folderId;
@@ -1196,6 +1201,105 @@ async function createNewFolderWithinCompendium(folderObj){
     console.log(`${modName} | Created temp entity for folder in ${pack.collection}`);
     return newPath
 }
+async function closeFolder(parent,save){
+    let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
+    let cogLink = parent.querySelector('a.edit-folder')
+    let newFolderLink = parent.querySelector('a.create-folder');
+    let moveFolderLink = parent.querySelector('a.move-folder');
+    let contents = parent.querySelector('.folder-contents');
+    if (folderIcon != null){
+        //Closing folder
+        folderIcon.classList.remove('fa-folder-open')
+        folderIcon.classList.add('fa-folder') 
+    }
+    contents.style.display='none'
+    if (game.user.isGM && cogLink != null && newFolderLink != null && moveFolderLink != null){
+        cogLink.style.display='none'
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            newFolderLink.style.display='none'
+        }
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            moveFolderLink.style.display='none'
+        }
+    }
+    parent.setAttribute('collapsed','');
+    if (save){
+        let openFolders = game.settings.get(mod,'open-folders');
+        openFolders.splice(openFolders.indexOf(parent.getAttribute('data-cfolder-id')),1);
+        await game.settings.set(mod,'open-folders',openFolders);
+    }
+}
+async function openFolder(parent,save){
+    let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
+    let cogLink = parent.querySelector('a.edit-folder')
+    let newFolderLink = parent.querySelector('a.create-folder');
+    let moveFolderLink = parent.querySelector('a.move-folder');
+    let contents = parent.querySelector('.folder-contents');
+    if (folderIcon != null){
+        folderIcon.classList.remove('fa-folder')
+        folderIcon.classList.add('fa-folder-open')
+    }
+    contents.style.display=''
+    if (game.user.isGM && cogLink != null && newFolderLink != null && moveFolderLink != null){
+        cogLink.style.display=''
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            newFolderLink.style.display=''
+        }
+        if (parent.getAttribute('data-cfolder-id')!='default'){
+            moveFolderLink.style.display=''
+        }
+    }
+    parent.removeAttribute('collapsed');
+    if (save){
+        let openFolders = game.settings.get(mod,'open-folders');
+        openFolders.push(parent.getAttribute('data-cfolder-id'));
+        await game.settings.set(mod,'open-folders',openFolders)   
+    }
+}
+function filterSelectorBySearchTerm(parent,searchTerm,selector){
+    if (searchTerm == null || searchTerm.length==0){
+        for (let compendium of parent.querySelectorAll(selector)){
+            //Show all
+            if (!compendium.classList.contains('hidden')){
+                compendium.style.display='';
+                compendium.removeAttribute('search-failed')
+            }
+        }
+        parent.querySelectorAll('.compendium-folder').forEach(function(folder){
+            folder.style.display='';
+            closeFolder(folder);
+        });
+    }else{
+        for (let compendium of parent.querySelectorAll(selector)){
+            if (!compendium.innerText.toLowerCase().includes(searchTerm.toLowerCase())){
+                //Hide not matching
+                compendium.style.display='none';
+                compendium.setAttribute('search-failed','')
+            }else{
+                //Show matching
+                if (!compendium.classList.contains('hidden')){
+                    compendium.style.display='';
+                    compendium.removeAttribute('search-failed')
+                }
+            }
+        }
+        parent.querySelectorAll('.compendium-folder').forEach(function(folder){
+            let shouldHide = true;
+            folder.querySelectorAll(selector).forEach(function(comp){
+                if (!comp.hasAttribute('search-failed')){
+                    shouldHide = false;
+                }
+            });
+            if (shouldHide){
+                folder.style.display='none';
+                closeFolder(folder);
+            }else{
+                folder.style.display='';
+                openFolder(folder);
+            }
+        });
+    }
+}
 // Edit functions
 class ImportExportConfig extends FormApplication {
     static get defaultOptions() {
@@ -1396,10 +1500,11 @@ class CompendiumFolderEditConfig extends FormApplication {
             await this.object.addCompendium(packKey,false);
         }
         for (let packKey of packsToRemove){
-            await this.object.removeCompendium(packKey,false,false);
+            await this.object.removeCompendiumByCode(packKey,false,false);
         }
-        if (this.object.data.parent){
-            await this.object.moveFolder(this.object.data.parent._id);
+        //If folder needs to be moved to parent (for some reason)
+        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent).children.some(x => x._id === this.object._id)){
+            await this.object.moveFolder(this.object.data.parent);
         }
         await this.object.save();
 
@@ -2519,7 +2624,7 @@ async function initFolders(refresh=false){
     let missingCompendiums = false
     let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
     for (let c of goneCompendiums){
-        c.parent.removeCompendium(c.code,true,false);
+        c.parent.removeCompendium(c,true,false);
         missingCompendiums = true;
     }
     if (missingCompendiums){
