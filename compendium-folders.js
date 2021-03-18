@@ -906,8 +906,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             },{
                 name: "CF.moveFolder",
                 icon: '<i class="fas fa-sitemap"></i>',
-                condition: () => { 
-                    return game.user.isGM
+                condition: header => { 
+                    return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
                 },
                 callback: header => {
                     const li = header.parent();
@@ -1026,6 +1026,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     /** @override */
 	_onDragStart(event) {
         let li = event.currentTarget.closest("li");
+        if (li.dataset.folderId === 'default' || !game.user.isGM)
+            return;
         const dragData = li.classList.contains("folder") ?
             { type: "Folder", id: li.dataset.folderId, entity: this.constructor.entity } :
             { type: this.constructor.entity, id: li.dataset.pack };
@@ -1035,6 +1037,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     _onDrop(event){
         event.stopPropagation();
         let li = event.currentTarget.closest("li.folder");
+        if (li.dataset.folderId === 'default' || !game.user.isGM)
+            return;
         if (li) li.classList.remove("droptarget");
         let data;
         try{
@@ -3776,8 +3780,8 @@ async function initFolders(refresh=false){
             new CompendiumEntry(pack,'default');
         }
     }
-    game.customFolders.compendium.folders.default.compendiumList = unassigned.map(y => y.collection);
-    game.customFolders.compendium.folders.default.content = unassigned;
+    game.customFolders.compendium.folders.default.compendiumList = game.customFolders.compendium.folders.default.compendiumList.concat(unassigned.map(y => y.collection));
+    game.customFolders.compendium.folders.default.content = game.customFolders.compendium.folders.default.content.concat(unassigned);
     
     // Check for removed compendiums
     let missingCompendiums = false
