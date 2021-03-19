@@ -952,7 +952,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
 
         if (folderId){
             if (data.type === this.constructor.entity){
-                await game.customFolders.compendium.folders.get(folderId).addCompendium(data.id)
+                if (game.customFolders.compendium.entries.get(data.id).folder != folderId)
+                    await game.customFolders.compendium.folders.get(folderId).addCompendium(data.id)
             }else if (data.type === 'Folder'){
                 // Move folder
                 let destFolderId = folderId;
