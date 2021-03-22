@@ -782,11 +782,11 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         // New context menu button - Adds compendium to hidden folder
         return x.concat([
             {
-                name: "Hide for GM",
+                name: "CF.hideForGM",
                 icon: '<i class="fas fa-eye"></i>',
                 callback: li => {
                     game.customFolders.compendium.folders.hidden.addCompendium(li.data("pack")).then(() => {
-                        ui.notifications.notify("Moved compendium to hidden folder. Edit a compendium folder to see hidden/unassigned folders");
+                        ui.notifications.notify(game.i18n.localize("CF.hideMessage"));
                     });
                    
                 }
@@ -841,7 +841,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                 }
             },{
                 
-                name: "Show All To Players",
+                name: "CF.showToPlayers",
                 icon: '<i class="far fa-eye"></i>',
                 condition: header => { 
                     return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
@@ -866,7 +866,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                     await game.settings.set('core','compendiumConfiguration',allConfig);
                 }
             },{
-                name: "Hide All From Players",
+                name: "CF.hideFromPlayers",
                 icon: '<i class="far fa-eye-slash"></i>',
                 condition: header => { 
                     return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
@@ -891,7 +891,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                     await game.settings.set('core','compendiumConfiguration',allConfig);
                 }
             },{
-                name: "Lock All Contents",
+                name: "CF.lockAll",
                 icon: '<i class="fas fa-lock"></i>',
                 condition: header => { 
                     return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
@@ -916,7 +916,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                     await game.settings.set('core','compendiumConfiguration',allConfig);
                 }
             },{
-                name: "Unlock All Contents",
+                name: "CF.unlockAll",
                 icon: '<i class="fas fa-unlock"></i>',
                 condition: header => { 
                     return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
@@ -1379,7 +1379,7 @@ class CompendiumFolderMoveDialog extends FormApplication {
         return options;
     }
     get title() {
-        return "Move Folder: "+this.object.name;
+        return game.i18n.localize("CF.moveFolder")+': '+this.object.name;
     }
     async getData(options) { 
         let formData = []
@@ -1674,7 +1674,7 @@ async function toggleFolderInsideCompendium(event,parent,pack){
 
 function addMacroFoldersExportButton(){
     let newContextOption = {
-        name: "Export Folder Structure",
+        name: "CF.exportFolderHint",
         icon: '<i class="fas fa-upload"></i>',
         condition: header => {
             return game.user?.isGM && header.parent().find('.entity').length > 0
@@ -2683,7 +2683,7 @@ Hooks.once('setup',async function(){
     })
     // Adding export buttons to context menus for folders
     let newContextOption = {
-        name: "Export Folder Structure",
+        name: "CF.exportFolderHint",
         icon: '<i class="fas fa-upload"></i>',
         condition: header => {
             return game.user?.isGM && header.parent().find('.entity').length > 0
