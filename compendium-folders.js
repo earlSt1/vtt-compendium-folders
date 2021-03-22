@@ -583,6 +583,16 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             this.folders = [...this.constructor.folders].filter(x => x?.content?.find(y => !y?.pack?.private));
             this.entities = [...this.constructor.collection].filter(z => !z?.pack?.private);
         }
+        let toAdd = [];
+        for (let folder of this.folders){
+            let parent = folder.parent
+            while (parent){
+                if (!this.folders.some(x => x._id === parent._id))
+                    toAdd.push(parent);
+                parent = parent.parent;
+            }
+        }
+        this.folders =this.folders.concat(toAdd)
         let tree = this.constructor.setupFolders(this.folders, this.entities);
         
         this.tree = this._sortTreeAlphabetically(tree)
