@@ -52,14 +52,6 @@ li.compendium-folder.collapsed > .compendium-folder-header h3 > i:before {
 li.compendium-folder.collapsed > .compendium-folder-header .edit-folder {
   display: none;
 }
-li.compendium-folder img{
-  width:22px !important;
-  height:22px !important;
-  margin: 0 8px 0 0px !important;
-  margin-bottom: -6px !important;
-  border:0px !important; 
-  border-radius:0px !important;
-}
 li.compendium-folder  label{
   cursor:pointer;
 }

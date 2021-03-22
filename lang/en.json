@@ -53,7 +53,12 @@
     "CF.updateFolderNotificationStart":"Updating folder ...",
     "CF.updateFolderNotificationFinish":"Updating complete!",
     "CF.createFolderWithinCompendiumL1":"Folder name must be unique, else it will update existing folders on the same path",
+    
+    "CF.deletePromptL1":"Are you sure you want to delete the folder <strong>{folderName}</strong>?",
+    "CF.deletePromptL2":"This will delete <strong>all</strong> subfolders",
+    "CF.deletePromptL3":"Compendiums in these folders will not be deleted",
     "CF.hideMessage":"Moved compendium to hidden folder. Edit a compendium folder to see hidden/unassigned folders",
+
     "CF.hideForGM":"Hide for GM",
     "CF.showToPlayers": "Show All to Players",
     "CF.hideFromPlayers":"Hide All From Players",
