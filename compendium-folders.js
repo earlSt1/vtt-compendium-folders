@@ -510,8 +510,10 @@ export class CompendiumFolder extends Folder{
             currentFolder.path = parent.path.concat(parent.id);
             await currentFolder.update(currentFolder.data,false);
         }
-        for (let child of currentFolder.children){
-            child._updatePath(child,currentFolder);
+        if (currentFolder.children){
+            for (let child of currentFolder.children){
+                child._updatePath(child,currentFolder);
+            }
         }
     }
     /** @override */
@@ -2655,7 +2657,7 @@ async function initFolders(refresh=false){
     }
     
     // Set child folders
-    let allEntries = [...CompendiumFolder.collection.values()]
+    let allEntries = [...game.customFolders.compendium.folders.values()]
     for (let cf of allEntries){
         let directChildren = allEntries.filter(f => f.data?.pathToFolder?.length > 0 && f.data.pathToFolder[f.data.pathToFolder.length-1] === cf._id)
         cf.children = directChildren;
