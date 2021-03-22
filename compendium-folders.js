@@ -395,14 +395,22 @@ export class CompendiumFolder extends Folder{
     }
     async delete(refresh=true){
         let nextFolder = (this.parent) ? this.parent : this.collection.default;
-        for (let pack of this.content){
-            nextFolder.addCompendium(pack);
+        for (let pack of this.compendiumList){
+            await nextFolder.addCompendium(pack);
         }
-        if (this.content?.length>0)
-            nextFolder.update(false);
+
+        for (let child of this.children){
+            if (this.parent){
+                await child.moveFolder(this.parent._id,false);
+            }else{
+                await child.moveToRoot();
+            }
+        }
+
         if (this.collection.get(this.id)){
             this.collection.remove(this.id)
         }
+        
         let allFolders = game.settings.get(mod,'cfolders')
         // create folder
         delete allFolders[this.id];
@@ -448,11 +456,15 @@ export class CompendiumFolder extends Folder{
     async removeCompendiumByCode(packCode,del=false,refresh=true){
         await this.removeCompendium(game.customFolders.compendium.entries.get(packCode),del,refresh);
     }
-    async moveFolder(destId){
+    async moveFolder(destId,updateParent=true){
         let destFolder = this.collection.get(destId);
-
-        this._moveToFolder(destFolder);
-        
+        await this._moveToFolder(destFolder,updateParent);
+    }
+    async moveToRoot(){
+        this.path = []
+        this.parent = null
+        await this._updatePath()
+        await this.save(false);
     }
     _addPack(pack){
         if (!this.data.compendiumList.includes(pack.packCode)){
@@ -470,24 +482,26 @@ export class CompendiumFolder extends Folder{
     _removeFolder(child){
         this.children = this.children.filter(c => c.id != child.id);
     }
-    async _moveToFolder(destFolder){
+    async _moveToFolder(destFolder, updateParent=true){
 
         this.path = (destFolder) ? destFolder.path.concat(destFolder.id) : [];
-        if (this.parent){
+        if (this.parent && updateParent){
             this.parent._removeFolder(this);
-            this.parent.save(false); 
+            await this.parent.save(false); 
         }
         if (destFolder){
             this.parent = destFolder._id;
             this.parent.children = this.parent.children.concat(this);
-            this.parent.save(false);
+            await this.parent.save(false);
+            this.path = this.parent.path.concat(destFolder._id)
         }else{
             this.parent = null;
+            this.path = [];
         }
         
-        await this.save();
+        await this.save(false);
         
-        this._updatePath()
+        await this._updatePath()
         ui.compendium.refresh();
     }
     // Update path of this and all child folders
@@ -1514,8 +1528,8 @@ class CompendiumFolderEditConfig extends FormApplication {
             await this.object.removeCompendiumByCode(packKey,false,false);
         }
         //If folder needs to be moved to parent (for some reason)
-        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent).children.some(x => x._id === this.object._id)){
-            await this.object.moveFolder(this.object.data.parent);
+        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent._id).children.some(x => x._id === this.object._id)){
+            await this.object.moveFolder(this.object.data.parent._id);
         }
         await this.object.save();
 
@@ -2183,7 +2197,7 @@ function createNewFolderButtonWithinCompendium(window,packCode){
 // ==========================
 async function importFolderData(e){
     let isMacro = e.entity === 'Macro'
-    if (e.data.flags.cf != null && e.data.flags.cf.import != null){
+    if (e.data.flags.cf != null && e.data.flags.cf.import != null && !e.folder){
         let path = e.data.flags.cf.path;
         let color = e.data.flags.cf.color;
         //a.data.folder -> id;
@@ -2268,8 +2282,10 @@ async function createFolderPath(path,pColor,entityType,e){
         index++;
     }
 }
+///TODO fix
 async function createMacroFolderPath(path,pColor,e){
-    let allMacroFolders = game.settings.get('macro-folders','mfolders')  
+    let allMacroFolders = game.settings.get('macro-folders','mfolders')
+    game.settings.set('macro-folders','updating',true)  
     let lastId = null;
     let segments = path.split(FOLDER_SEPARATOR);
     let index = 0;
@@ -2278,41 +2294,36 @@ async function createMacroFolderPath(path,pColor,e){
         if (index==0){
             folderPath = seg
         }
-        let results = Object.values(allMacroFolders).filter(f => f.pathToFolder != null 
-            && f.pathToFolder.map(m => allMacroFolders[m].titleText).join(FOLDER_SEPARATOR)+(index>0?FOLDER_SEPARATOR:"")+f.titleText === folderPath)
+        let results = game.customFolders.macro.folders.filter(f => f.data.pathToFolder != null 
+            && getFullPath(f) === folderPath)
         if (results.length==0 ){
             //create folder
-            let newFolder = {
-                _id:generateRandomFolderName('mfolder'),
+            let newFolder = await CONFIG.MacroFolder.entityClass.create({
                 titleText:seg,
                 macroList:[],
                 pathToFolder:[]
-            }
+            });
             if (index == segments.length-1){
-                newFolder.colorText = pColor;
-                newFolder.macroList.push(e._id)
+                newFolder.color = pColor;
+                await newFolder.addMacro(e._id)
             }
             if (lastId != null){
-                newFolder.pathToFolder = Array.from(allMacroFolders[lastId].pathToFolder)
-                newFolder.pathToFolder.push(lastId);
+                newFolder.data.pathToFolder = Array.from(allMacroFolders[lastId].pathToFolder)
+                newFolder.data.pathToFolder.push(lastId);
             }
-            allMacroFolders[newFolder._id]=newFolder
+            await newFolder.save(false);
             lastId = newFolder._id;
         }else{
             //Folder exists, add entity to thing
             lastId = results[0]._id
             if (index == segments.length-1){
-                allMacroFolders[lastId].macroList.push(e._id)
+                await results[0].addMacro(e._id);
             }
         }
         index++;
     }
-    for (let key of Object.keys(allMacroFolders)){
-        if (key != lastId){
-            allMacroFolders[key].macroList.filter(m => m != e._id)
-        }
-    }
-    await game.settings.set('macro-folders','mfolders',allMacroFolders)
+   
+    game.settings.set('macro-folders','updating',false)  
 }
 // ==========================
 // For cleaning folder data from a compendium pack
@@ -2385,7 +2396,7 @@ async function loadCachedFolderStructure(packCode){
         return cache.groupedFolders;
     return null;
 }
-async function moveEntryInCache(packCode,entryId,toFolderId,fromFolderId){
+async function moveEntryInCache(packCode,entryId,folderId){
     let cache = game.settings.get(mod,'cached-folder');
     if (Object.keys(cache).length === 0 || cache.pack != packCode){
         // shouldnt be reachable....
@@ -2393,10 +2404,10 @@ async function moveEntryInCache(packCode,entryId,toFolderId,fromFolderId){
     }
     let x = await game.packs.get(packCode).getEntity(entryId)
     let fromFolderMetadata = null
-    //if (x.data.flags.cf != null && x.data.flags.cf.id != null && x.data.flags.cf.id != toFolderId){
-        fromFolderMetadata = cache.groupedFolderMetadata[fromFolderId]
-    //}
-    let toFolderMetadata = cache.groupedFolderMetadata[toFolderId]
+    if (x.data.flags.cf != null && x.data.flags.cf.id != null){
+        fromFolderMetadata = cache.groupedFolderMetadata[x.data.flags.cf.id]
+    }
+    let toFolderMetadata = cache.groupedFolderMetadata[folderId]
     
     //if (folderId === id){
         // Add entry to this folder
@@ -2822,7 +2833,7 @@ Hooks.once('setup',async function(){
                                     }
                                 }
                             }
-                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'),fromFolderId)
+                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
                             if (data) await p.updateEntity(data)
                         }
                     })
