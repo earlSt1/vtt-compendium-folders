@@ -39,6 +39,11 @@
         "lang": "sv",
         "name": "Swedish",
         "path": "lang/sv.json"
+      },
+      {
+        "lang": "ja",
+        "name": "日本語",
+        "path": "lang/ja.json"
       }
     ],
     "styles": ["./styles.css"],
