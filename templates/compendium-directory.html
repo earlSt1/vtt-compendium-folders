@@ -73,5 +73,22 @@
 	</ul>
 
 	<!-- Directory Footer -->
-	<footer class="directory-footer"></footer>
+	<footer class="directory-footer">
+        {{#if isPF1}}
+            <div class="compendium-footer flexcol">
+                <div class="flexrow">
+                    <button class="compendium spells">{{localize "PF1.BrowseSpells"}}</button>
+                    <button class="compendium items">{{localize "PF1.BrowseItems"}}</button>
+                </div>
+                <div class="flexrow">
+                    <button class="compendium bestiary">{{localize "PF1.BrowseBestiary"}}</button>
+                    <button class="compendium feats">{{localize "PF1.BrowseFeats"}}</button>
+                </div>
+                <div class="flexrow">
+                    <button class="compendium classes">{{localize "PF1.BrowseClasses"}}</button>
+                    <button class="compendium races">{{localize "PF1.BrowseRaces"}}</button>
+                </div>
+            </div>
+        {{/if}}
+    </footer>
 </section>

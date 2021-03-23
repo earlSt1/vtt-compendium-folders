@@ -658,6 +658,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         return {
             user: game.user,
             tree: this.tree,
+            isPF1: game.system.id === "pf1"
         };
     }
     _onCreateFolder(event) {
@@ -715,8 +716,23 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                 oldTag.parentNode.replaceChild(folderCustomIcon,oldTag);
             }
         });
+        if (game.system.id === 'pf1'){
+            html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowseCompendium(e, "spells"));
+            html.find(".compendium-footer .compendium.items").click((e) => this._onBrowseCompendium(e, "items"));
+            html.find(".compendium-footer .compendium.bestiary").click((e) => this._onBrowseCompendium(e, "bestiary"));
+            html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowseCompendium(e, "feats"));
+            html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowseCompendium(e, "classes"));
+            html.find(".compendium-footer .compendium.races").click((e) => this._onBrowseCompendium(e, "races"));
+        }
         
     }
+    _onBrowseCompendium(event, type) {
+        event.preventDefault();
+    
+        if (game.pf1.isMigrating) return ui.notifications.warn(game.i18n.localize("PF1.Migration.Ongoing"));
+    
+        game.pf1.compendiums[type]._render(true);
+      }    
 
     /** @override */
     _getEntryContextOptions(){
@@ -1094,6 +1110,7 @@ CompendiumFolderDirectory._onCreateCompendium = CompendiumDirectory.prototype._o
 
 CONFIG.CompendiumEntry = {entityClass : CompendiumEntry};
 CONFIG.CompendiumFolder = {entityClass : CompendiumFolder};
+
 
 async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     //ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))
