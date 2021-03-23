@@ -2727,9 +2727,9 @@ Hooks.once('setup',async function(){
     oldFn = SceneDirectory.prototype._getFolderContextOptions
     SceneDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
 
-    Hooks.on('renderCompendiumFolderDirectory',()=>{
+    Hooks.on('renderCompendiumFolderDirectory',(_data,html)=>{
         // Call old hook to keep compatibility with modules like compendium browser
-        Hooks.call('renderCompendiumDirectory');
+        Hooks.call('renderCompendiumDirectory',_data,html);
     })
     // Folders In Compendium changes
     if (post073){
