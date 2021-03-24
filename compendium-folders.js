@@ -329,7 +329,7 @@ export class CompendiumFolder extends Folder{
         },data));
     }
     _getSaveData(){
-        let data = duplicate(this.data);
+        let data = Object.assign({},this.data);
         delete data.compendiums;
         delete data.content;
         delete data.children;
@@ -389,7 +389,7 @@ export class CompendiumFolder extends Folder{
             }
             await game.settings.set(mod,'cfolders',allFolders)
         }
-        game.customFolders.compendium.folders.get(this._id).data = duplicate(this.data);
+        game.customFolders.compendium.folders.get(this._id).data = Object.assign({},this.data);
         if (refresh)
             ui.compendium.render(true);
     }
