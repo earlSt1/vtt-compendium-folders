@@ -1547,7 +1547,7 @@ class CompendiumFolderEditConfig extends FormApplication {
             await this.object.removeCompendiumByCode(packKey,false,false);
         }
         //If folder needs to be moved to parent (for some reason)
-        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent._id).children.some(x => x._id === this.object._id)){
+        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent._id)?.children?.some(x => x._id === this.object._id)){
             await this.object.moveFolder(this.object.data.parent._id);
         }
         await this.object.save();
