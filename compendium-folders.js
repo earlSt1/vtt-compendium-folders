@@ -2468,6 +2468,51 @@ async function resetCache(){
     await game.settings.set(mod,'cached-folder',{});
     console.log(modName+' | Cleared cached folder structure');
 }
+
+function updateFolderPathForTempEntity(entity,content){
+    // This constructs the folder path for temp entities
+    // for each entity in contents with sub-path in entity path, add id
+    let parents = content.filter(e => e.data.flags != null 
+        && e.data.flags.cf != null 
+        && entity.data.flags.cf.path.startsWith(e.data.flags.cf.path,0) 
+        && e.name === TEMP_ENTITY_NAME);
+    console.debug(entity.data.flags.cf.path+" is entity");
+    let updateData = {
+        flags:{
+            cf:{
+                folderPath:[]
+            }
+        }
+    }
+    // sort by path
+    // should end up with something along the lines of 
+    // temp entity has path = Folder1/Folder2/Folder3/Folder4
+    // parents = [
+    //    Folder1,
+    //    Folder1/Folder2
+    //    Folder1/Folder2/Folder3
+    // }
+    //
+    parents = parents.sort((a,b) => {
+        if (a.data.flags.cf.path > b.data.flags.cf.path){
+            return 1;
+        }else if (a.data.flags.cf.path < b.data.flags.cf.path){
+            return -1;
+        }
+        return 0;
+    });
+    for (let parent of parents){
+        
+        if (entity.data.flags.cf.path != parent.data.flags.cf.path){
+            console.debug(parent.data.flags.cf.path);
+            updateData.flags.cf.folderPath.push(parent.data.flags.cf.id);
+        }
+    }
+    updateData._id = entity.id
+    console.debug(updateData);
+    
+    return updateData;
+}
 //==========================
 // Settings utilities
 //==========================
@@ -2760,14 +2805,19 @@ Hooks.once('setup',async function(){
                         let entryId = entry._id
                         if (folderId != null){
                             if (entry.name === TEMP_ENTITY_NAME){
-                                let name = entry.data.flags.cf.name
-                                let color = entry.data.flags.cf.color;
-                                let folderPath = entry.data.flags.cf.folderPath;
-                                let folderIcon = entry.data.flags.cf.icon
-                                let data = {
-                                    id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
+                                if (entry.data.flags.cf.folderPath == null){
+                                    let result = updateFolderPathForTempEntity(entry,contents);
+                                    updateData.push(result);
+                                }else{
+                                    let name = entry.data.flags.cf.name
+                                    let color = entry.data.flags.cf.color;
+                                    let folderPath = entry.data.flags.cf.folderPath;
+                                    let folderIcon = entry.data.flags.cf.icon
+                                    let data = {
+                                        id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
+                                    }
+                                    allFolderData[folderId]=data
                                 }
-                                allFolderData[folderId]=data
                             }
                             if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
                                 allFolderData[folderId].children.push(entryId);
@@ -2780,6 +2830,24 @@ Hooks.once('setup',async function(){
                 for (let key of Object.keys(folderChildren)){
                     allFolderData[key].children = folderChildren[key].children
                 }          
+
+                if (updateData.length>0){
+                    ui.notifications.notify('Updating folder structure. Please wait...')
+                    e.close().then(async () => {
+                        if (game.user.isGM){
+                            for (let d of updateData){
+                                await e.updateEntity(d);
+                            }
+                            resetCache()
+                            ui.notifications.notify('Updating complete!')
+                            e.render(true);
+                        }else{
+                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                        }
+                    });
+                    return;
+                }  
+                
                 //Group folders in terms of depth
                 let groupedFolderMetadata = {}
                 Object.keys(allFolderData).forEach(function(key) {
