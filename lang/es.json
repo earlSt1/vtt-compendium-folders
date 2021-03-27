@@ -22,22 +22,13 @@
     "CF.moveFolder":"Mover Directorio",
     "CF.createSubfolder":"Crear Subdirectorio",
     "CF.editFolder":"Editar Directorio",
-    "CF.deletePromptL1":"¿Está seguro de querer borrar el directorio <strong>{folderName}</strong>?",
-    "CF.deletePromptL2":"Se borrarán <strong>todos</strong> los subdirectorios",
-    "CF.deletePromptL3":"Los compendios en estos directorios no serán borrados",
-    "CF.deleteNotification":"Borrando el directorio {folderName} y todos sus subdirectorios",
-    "CF.addSinglePackNotification":"Eliminando 1 compendio de otro directorio",
-    "CF.addMultiPackNotification":"Eliminando {packNum} compendios de otros directorios",
-    "CF.removeSinglePackNotification":"Añadiendo 1 compendio al directorio sin asignar/oculto",
-    "CF.removeMultiPackNotification":"Añadiendo {packNum} compendios al directorio sin asignar/oculto",
     "CF.folderDepthError":"Profundidad máxima de directorio alcanzada",
     "CF.folderImportSuccess":"La importación de la configuración de directorios se completó con éxito",
     "CF.folderImportFailure":"La importación de la configuración de directorios ha fallado",
     "CF.folderImportMaxDepth":"La cadena importada contiene directorios que exceden la profundidad máxima permitida",
-    "CF.moveFolderNotification":"Directorio movideo de {src} a {dest}",
     "CF.searchCompendiums":"Buscar Compendios",
     "CF.configuration":"Configuración",
-
+	
     "CF.cleanup":"Limpiar",
     "CF.cleanupHint":"Quitar los Datos del Directorio de un Compendio",
     "CF.cleanupTitle":"Limpiar Compendio",
@@ -45,7 +36,7 @@
     "CF.cleanupL2":"AVISO: Esta acción es permanente y no se puede deshacer",
     "CF.cleanupNotificationStart":"Eliminando datos del directorio de {pack}",
     "CF.cleanupNotificationFinish":"¡Limpieza completada con éxito!",
-
+	
     "CF.exportFolderHint":"Exportar Estructura de Directorios",
     "CF.exportFolderL1":"Puede exportar las entidades incluidas en este directorio a un paquete de Compendios que no esté bloqueado y sea del tipo apropiado.",
     "CF.exportFolderDestPack":"Paquete de Destino",
@@ -64,5 +55,17 @@
     "CF.deleteFolderNotificationFinish":"¡Eliminación completado con éxito!",
     "CF.updateFolderNotificationStart":"Actualizando directorio ...",
     "CF.updateFolderNotificationFinish":"¡Actualización completada con éxito!",
-    "CF.createFolderWithinCompendiumL1":"El nombre del directorio debe ser único, si no se actualizará el directorio existente en la misma ruta"
+    "CF.createFolderWithinCompendiumL1":"El nombre del directorio debe ser único, si no se actualizará el directorio existente en la misma ruta",
+	
+    "CF.deletePromptL1":"¿Está seguro de querer borrar el directorio <strong>{folderName}</strong>?",
+    "CF.deletePromptL2":"Se borrarán <strong>todos</strong> los subdirectorios",
+    "CF.deletePromptL3":"Los compendios en estos directorios no serán borrados",
+    "CF.hideMessage":"Se han movido los compendios a un directorio oculto. Edite un directorio de compendios para ver directorios ocultos/sin asignar",
+
+    "CF.hideForGM":"Ocultar para el GM",
+    "CF.showToPlayers": "Mostrar a todos los jugadores",
+    "CF.hideFromPlayers":"Ocultar a todos los jugadores",
+    "CF.lockAll":"Bloquear contenidos",
+    "CF.unlockAll":"Desbloquear contenidos"
+
 }
