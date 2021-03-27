@@ -46,6 +46,12 @@
         "path": "lang/ja.json"
       }
     ],
+    "media":[
+      {
+        "type":"cover",
+        "link":"https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/example.png"
+      }
+    ],
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
     "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/module.json",
