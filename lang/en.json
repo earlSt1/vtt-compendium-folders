@@ -19,19 +19,10 @@
     "CF.moveFolder":"Move Folder",
     "CF.createSubfolder":"Create Subfolder",
     "CF.editFolder":"Edit Folder",
-    "CF.deletePromptL1":"Are you sure you want to delete the folder <strong>{folderName}</strong>?",
-    "CF.deletePromptL2":"This will delete <strong>all</strong> subfolders",
-    "CF.deletePromptL3":"Compendiums in these folders will not be deleted",
-    "CF.deleteNotification":"Deleting folder {folderName} and all its subfolders",
-    "CF.addSinglePackNotification":"Removing 1 compendium from another folder",
-    "CF.addMultiPackNotification":"Removing {packNum} compendiums from other folders",
-    "CF.removeSinglePackNotification":"Adding 1 compendium to unassigned/hidden folder",
-    "CF.removeMultiPackNotification":"Adding {packNum} compendiums to unassigned/hidden folder",
     "CF.folderDepthError":"Max folder depth reached",
     "CF.folderImportSuccess":"Folder data imported successfully",
     "CF.folderImportFailure":"Failed to import folder data",
     "CF.folderImportMaxDepth":"Imported string contains folders that exceed max folder limit",
-    "CF.moveFolderNotification":"Moved folder {src} to {dest}",
     "CF.searchCompendiums":"Search Compendiums",
     "CF.configuration":"Configuration",
 
@@ -61,5 +52,17 @@
     "CF.deleteFolderNotificationFinish":"Deleting complete!",
     "CF.updateFolderNotificationStart":"Updating folder ...",
     "CF.updateFolderNotificationFinish":"Updating complete!",
-    "CF.createFolderWithinCompendiumL1":"Folder name must be unique, else it will update existing folders on the same path"
+    "CF.createFolderWithinCompendiumL1":"Folder name must be unique, else it will update existing folders on the same path",
+    
+    "CF.deletePromptL1":"Are you sure you want to delete the folder <strong>{folderName}</strong>?",
+    "CF.deletePromptL2":"This will delete <strong>all</strong> subfolders",
+    "CF.deletePromptL3":"Compendiums in these folders will not be deleted",
+    "CF.hideMessage":"Moved compendium to hidden folder. Edit a compendium folder to see hidden/unassigned folders",
+
+    "CF.hideForGM":"Hide for GM",
+    "CF.showToPlayers": "Show All to Players",
+    "CF.hideFromPlayers":"Hide All From Players",
+    "CF.lockAll":"Lock All Contents",
+    "CF.unlockAll":"Unlock All Contents"
+
 }

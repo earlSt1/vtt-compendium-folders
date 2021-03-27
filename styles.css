@@ -1,6 +1,22 @@
 /* ----------------------------------------- */
 /*  Folders and Subfolders
 /* ----------------------------------------- */
+.directory-item.compendium-folder[data-folder-id="hidden"]{
+  display:none !important;
+}
+.compendium-pack{
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  margin: 0px !important;
+}
+#compendium .directory-item{
+  line-height:normal !important;
+}
+.directory-item.compendium-folder h4{
+  margin: 0 0 0.5rem !important;
+}
 li.compendium-folder > .compendium-folder-header {
   padding: 6px ;
   line-height: 24px;
@@ -35,14 +51,6 @@ li.compendium-folder.collapsed > .compendium-folder-header h3 > i:before {
 }
 li.compendium-folder.collapsed > .compendium-folder-header .edit-folder {
   display: none;
-}
-li.compendium-folder img{
-  width:22px;
-  height:22px;
-  margin-bottom:-6px;
-  margin-right:7px;
-  border:0px;
-  border-radius:0px;
 }
 li.compendium-folder  label{
   cursor:pointer;

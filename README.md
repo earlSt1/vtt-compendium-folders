@@ -4,6 +4,8 @@
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used to organize compendiums in the directory, in addition to organize entries *inside* compendiums.
 
+The module functionality is split into 2 parts. **Folders In Compendiums** (or **FIC**), and **Folders For Compendiums** (or **FFC**)
+
 ## Folders In Compendiums
 
 _This feature only works for FVTT 0.7.3+_
@@ -25,19 +27,18 @@ A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/
 - Create new folders and drag/drop entries between them
 
 #### Instructions
-- To use the new functionality, each folder has a new button to the right of the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick a compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
+- To use the new functionality, each folder has a new button to the right of the Create Entity button (looking like an arrow pointing up). This will open up a prompt to pick an unlocked compendium to export to. Once you do, the folder structure will appear in the compendium you picked.
 - To import the folders from a compendium, there is a similar button for each folder. This will import the folder structure you have stored into your current world, in addition to creating entities and adding them to the correct folders.
-- As of v2.0.8 you can now create folders in compendiums. Next to the search bar there is a button to Create Folder at Root, and next to each rendered folder there is a similar Create Subfolder button to what you will see in the core application.
-
-#### Limitations
-- Folders containing slashes `/` will likely break when exported. This is something I'll need to look into in the future. For now you will have to use another character.
+- As of v2.0.8 you can now create folders in compendiums that have folders already in them. Next to the search bar there is a button to Create Folder at Root, and next to each rendered folder there is a similar Create Subfolder button to what you will see in the core application.
+- If you dont have any folders in the current compendium, you wont be able to make use of this functionality. To fix this you can export an empty folder into the compendium, then the folder create buttons will appeaar.
 
 #### Future
 - ~~Fix search bar not repopulating when you view a compendium entry~~ Now in 2.0.2!
 - ~~Merge-by-name tickbox on Import process~~ Now in 2.0.7!
-- Fix path separator so folders containing slashes `/` can be used
+- ~~Fix path separator so folders containing slashes `/` can be used~~ Fixed in 2.1.4!
 - ~~Create folder in compendium?~~ Now in 2.0.8!
 - Drag+drop folders into eachother
+- Auto-create folders based on attributes of entries in compendium
 
 ## Folders for Compendiums
 
@@ -76,6 +77,7 @@ Special thanks to the translators who contributed to this project:
 - CarnVanBeck (German)
 - rinnocent (Brazilian Portugese)
 - Himeroos#4803 (French)
+- xdy (Swedish)
 
 ## Contribution
 If you'd like to support my work, feel free to leave a tip through [my paypal](http://paypal.me/cre463)

@@ -1,0 +1,94 @@
+{{#*inline "folderPartial"}}
+<li class="directory-item compendium-folder folder flexcol {{#unless folder.expanded}}collapsed{{/unless}}"
+    data-folder-id="{{folder._id}}" data-folder-depth="{{folder.depth}}">
+  <header class="folder-header compendium-folder-header flexrow" style="background-color: {{folder.color}}">
+    <h3 style="color:{{folder.fontColor}}"><i class="fas fa-folder-open fa-fw"></i>{{folder.name}}</h3>
+    {{#if user.isGM}}
+      {{#unless folder.isDefault}}
+      <a class="create-folder" style="flex:0 0 20px" data-parent-folder="{{folder._id}}"><i class="fas fa-folder-plus fa-fw"></i></a>
+      <a class="create-entity" style="flex:0 0 20px" data-folder="{{folder._id}}"><i class="fas fa-atlas"></i></a>
+      {{/unless}}
+	{{/if}}
+  </header>
+  <ol class="subdirectory">
+	{{~#each folder.children as |child i|}}
+      {{> folderPartial folder=child user=../user}}
+    {{/each}}
+    {{#each folder.content}}
+      {{> entityPartial}}
+    {{/each}}
+  </ol>
+</li>
+{{/inline}}
+
+{{#*inline "entityPartial"}}
+<li class="compendium-pack entity" data-pack="{{this.pack.collection}}" data-open="0">
+    <h4 class="pack-title">
+        <a><i class="folder fas fa-folder"></i> {{this.pack.metadata.label}}</a>
+        <div class="status-icons">
+            {{#if this.pack.private}}<i class="fas fa-eye-slash"></i>{{/if}}
+            {{#if this.pack.locked}}<i class="fas fa-lock"></i>{{/if}}
+        </div>
+    </h4>
+    <footer class="compendium-footer">
+        <span class="entity-type">{{this.pack.entity}}</span>
+        <span> ({{this.pack.metadata.package}})</span>
+    </footer>
+</li>
+{{/inline}}
+<section class="sidebar-tab sidebar-directory tab flexcol" id="compendium" data-tab="compendium">
+    <!-- Directory Header -->
+    <header class="directory-header">
+        <div class="header-actions action-buttons flexrow">
+            {{#if user.isGM }}
+            <button class="create-compendium" ><i class="fas fa-atlas"></i> {{localize "COMPENDIUM.Create"}}</button>
+            <button class="create-folder"><i class="fas fa-folder"></i> {{localize 'FOLDER.Create'}}</button>
+            {{/if}}
+        </div>
+        <div class="header-search flexrow">
+        <a class="header-control refresh-directory" title="Refresh"><i class='fa fa-sync'></i></a>
+            <!--<i class="fas fa-search"></i>-->
+            <input type="text" name="search" value="" placeholder="{{localize 'CF.searchCompendiums'}}" autocomplete="off"/>
+            
+            <a class="header-control collapse-all" title="{{localize 'FOLDER.Collapse'}}"><i class="fas fa-sort-amount-up fa-fw"></i></a>
+            
+        </div>
+    </header>
+
+    <!-- Directories List -->
+	<ul class="directory-list">
+	    {{~#each tree.children as |f fi|}}
+            {{#if f.content.length }}
+                {{> folderPartial folder=f user=../user}}
+            {{else}}
+                {{#unless f.isDefault }}
+                    {{> folderPartial folder=f user=../user}}
+                {{/unless}}
+            {{/if}}
+
+	    {{/each}}
+	    {{#each tree.content}}
+        {{> entityPartial}}
+	    {{/each~}}
+	</ul>
+
+	<!-- Directory Footer -->
+	<footer class="directory-footer">
+        {{#if isPF1}}
+            <div class="compendium-footer flexcol">
+                <div class="flexrow">
+                    <button class="compendium spells">{{localize "PF1.BrowseSpells"}}</button>
+                    <button class="compendium items">{{localize "PF1.BrowseItems"}}</button>
+                </div>
+                <div class="flexrow">
+                    <button class="compendium bestiary">{{localize "PF1.BrowseBestiary"}}</button>
+                    <button class="compendium feats">{{localize "PF1.BrowseFeats"}}</button>
+                </div>
+                <div class="flexrow">
+                    <button class="compendium classes">{{localize "PF1.BrowseClasses"}}</button>
+                    <button class="compendium races">{{localize "PF1.BrowseRaces"}}</button>
+                </div>
+            </div>
+        {{/if}}
+    </footer>
+</section>

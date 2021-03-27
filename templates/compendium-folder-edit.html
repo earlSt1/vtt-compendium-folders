@@ -2,28 +2,28 @@
 
     <div class="form-group">
         <label>{{localize "FOLDER.Name"}}</label>
-        <input type="text" name="name" placeholder="Folder Name" value="{{folder.titleText}}"/>
+        <input type="text" name="name" placeholder="Folder Name" value="{{folder.name}}"/>
     </div>
 
     <div class="form-group">
         <label>{{localize "FOLDER.Color"}}</label>
         <div class="flexrow">
-            <input type="text" name="color" value="{{folder.colorText}}" data-dtype="String"/>
-            <input type="color" value="{{folder.colorText}}" data-edit="color"/>
+            <input type="text" name="color" value="{{folder.color}}" data-dtype="String"/>
+            <input type="color" value="{{folder.color}}" data-edit="color"/>
         </div>
     </div>
     <div class="form-group">
         <label>{{localize "CF.textColor"}}</label>
         <div class="flexrow">
-            <input type="text" name="fontColor" value="{{folder.fontColorText}}" data-dtype="String"/>
-            <input type="color" value="{{folder.fontColorText}}" data-edit="fontColor"/>
+            <input type="text" name="fontColor" value="{{folder.fontColor}}" data-dtype="String"/>
+            <input type="color" value="{{folder.fontColor}}" data-edit="fontColor"/>
         </div>
     </div>
     <div class="form-group">
         <label>{{localize "CF.folderIcon"}}</label>
         <div class="form-fields">
             {{filePicker target="icon" type="image"}}
-            <input class="image" type="text" name="icon" placeholder="default folder" value="{{folder.folderIcon}}"/>
+            <input class="image" type="text" name="icon" placeholder="default folder" value="{{folder.icon}}"/>
         </div>
     </div>
     {{#if defaultFolder}}
@@ -63,15 +63,15 @@
             <h2>{{localize "CF.assigned"}}</h2>
             {{#each apacks}}
                 <div class='flexrow pack-select pack-assigned'>
-                    <input type="checkbox" name="{{this.metadata.package}}{{this.metadata.name}}" {{#ifIn metadata ../folder.compendiumList}} checked {{/ifIn}}/>
-                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} [{{this.metadata.package}}]</label>
+                    <input type="checkbox" name="{{this.metadata.package}}{{this.metadata.name}}" {{#ifIn metadata ../folder.data.compendiumList}} checked {{/ifIn}}/>
+                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} - {{this.entity}} ({{this.metadata.package}})  </label>
                 </div>
             {{/each}}
             <h2>{{localize "CF.unassigned"}}</h2>
             {{#each upacks}}
                 <div class='flexrow pack-select pack-unassigned'>
                     <input type="checkbox" name="{{this.metadata.package}}{{this.metadata.name}}"/>
-                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px;color:#666;'><i>{{this.metadata.label}} [{{this.metadata.package}}]</i></label>
+                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px;color:#666;'><i>{{this.metadata.label}} - {{this.entity}} ({{this.metadata.package}}) </i></label>
                 </div>
             {{/each}}
         </div>
@@ -79,9 +79,5 @@
     {{/unless}}
     <div class='flexrow'>
         <button class='cfolder-submit' type="submit"><i class="fas fa-check"></i> {{submitText}}</button>
-        {{#if deleteText}}
-            <input type='hidden' name='delete' id='deleteValue' value=''/>
-            <button class='cfolder-submit' id='delete' type="submit" onclick="document.querySelector('#deleteValue').value='1';"><i class="fas fa-trash"></i> {{localize "CF.deleteFolder"}}</button>
-        {{/if}}
     </div>
 </form>

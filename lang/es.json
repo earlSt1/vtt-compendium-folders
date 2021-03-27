@@ -59,5 +59,10 @@
     "CF.importFolderL3":"Se crearán los directorios que sean necesarios",
     "CF.importFolderL4":"Si ya existe un directorio en el mismo lugar, será utilizado en lugar de crear uno nuevo",
     "CF.importFolderNotificationStart":"Importando en el mundo la estructura de directorios...",
-    "CF.importFolderNotificationFinish":"¡Importación completada con éxito!" 
+    "CF.importFolderNotificationFinish":"¡Importación completada con éxito!",
+    "CF.deleteFolderNotificationStart":"Eliminando directorio ...",
+    "CF.deleteFolderNotificationFinish":"¡Eliminación completado con éxito!",
+    "CF.updateFolderNotificationStart":"Actualizando directorio ...",
+    "CF.updateFolderNotificationFinish":"¡Actualización completada con éxito!",
+    "CF.createFolderWithinCompendiumL1":"El nombre del directorio debe ser único, si no se actualizará el directorio existente en la misma ruta"
 }
