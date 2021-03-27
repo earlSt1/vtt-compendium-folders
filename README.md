@@ -14,7 +14,7 @@ A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/
 
 Export             | Import
 :-------------------------:|:-------------------------:
-<img src="./cf_export1.gif" width="500" /> |  <img src="./cf_import1.gif" width="500" />
+<img src="./cf_export1.gif" width="700" /> |  <img src="./cf_import1.gif" width="700" />
 
 #### Features
 - Entity folder structure import/export into compendiums.
