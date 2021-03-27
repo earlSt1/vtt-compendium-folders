@@ -12,10 +12,9 @@ _This feature only works for FVTT 0.7.3+_
 
 A module that works GREAT with this is [__MoarFolders__](https://foundryvtt.com/packages/moar-folders/). I recommend installing this if you don't have it already.
 
-##### Exporting a folder
-![Exporting a folder](./cf_export1.gif)
-##### Importing a folder
-![Importing a folder](./cf_import1.gif)
+Export             | Import
+:-------------------------:|:-------------------------:
+<img src="./cf_export1.gif" width="500" /> |  <img src="./cf_import1.gif" width="500" />
 
 #### Features
 - Entity folder structure import/export into compendiums.
