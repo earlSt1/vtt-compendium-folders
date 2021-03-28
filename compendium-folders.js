@@ -2738,12 +2738,17 @@ async function initFolders(refresh=false){
         await ui.compendium.render(true);
     }
 }
-
 Hooks.once('setup',async function(){
     let post073 = game.data.version >= '0.7.3';
     
     Settings.registerSettings()
     Hooks.once('ready',async function(){
+        // change hook that runs to trigger compendium browser
+        if (game.modules.has('compendium-browser')){
+            Hooks.on('renderCompendiumFolderDirectory',() => {
+                game.compendiumBrowser.hookCompendiumList();
+            });
+        }
         while (!ui.compendium.rendered){
             // wait for old compendium directory to render
             // else we get a race condition
