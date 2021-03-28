@@ -603,7 +603,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         for (let folder of this.folders){
             let parent = folder.parent
             while (parent){
-                if (!this.folders.some(x => x._id === parent._id))
+                if (!this.folders.some(x => x._id === parent._id) && !toAdd.some(x => x._id === parent._id))
                     toAdd.push(parent);
                 parent = parent.parent;
             }
@@ -2513,6 +2513,24 @@ function updateFolderPathForTempEntity(entity,content){
     
     return updateData;
 }
+function removeOrUpdateFolderIdForEntity(entity,content){
+    let parent = content.find(e => e.name === TEMP_ENTITY_NAME 
+        && e.data.flags.cf.path != null 
+        && e.data.flags.cf.path === entity.data.flags.cf.path);
+    let folderId = null
+    if (parent != null){
+        folderId = parent.data.flags.cf.id
+    }
+    let updateData = {
+        flags:{
+            cf:{
+                id:folderId
+            }
+        },
+        _id:entity.id
+    }
+    return updateData
+}
 //==========================
 // Settings utilities
 //==========================
@@ -2772,10 +2790,6 @@ Hooks.once('setup',async function(){
     oldFn = SceneDirectory.prototype._getFolderContextOptions
     SceneDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
 
-    Hooks.on('renderCompendiumFolderDirectory',(_data,html)=>{
-        // Call old hook to keep compatibility with modules like compendium browser
-        Hooks.call('renderCompendiumDirectory',_data,html);
-    })
     // Folders In Compendium changes
     if (post073){
         Settings.clearSearchTerms()
@@ -2791,12 +2805,18 @@ Hooks.once('setup',async function(){
             let allFolderData={};
             let groupedFoldersSorted = {}
             let groupedFolders = {}
+            
             if (cachedFolderStructure != null){
                groupedFoldersSorted = cachedFolderStructure;
             }else{
                 let folderChildren = {}
                 let checkedPaths = []
                 let contents = await e.getContent();
+                let allFolderIds = contents.filter(e => e.data.flags != null 
+                    && e.data.flags.cf != null
+                    && e.data.flags.cf.id != null 
+                    && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
+                let updateData = [];
                 //First parse folder data
                 for (let entry of contents){
                     if (entry != null 
@@ -2808,6 +2828,10 @@ Hooks.once('setup',async function(){
                                 if (entry.data.flags.cf.folderPath == null){
                                     let result = updateFolderPathForTempEntity(entry,contents);
                                     updateData.push(result);
+                                } else if (entry.data.flags.cf.id != null
+                                        && entry.name != TEMP_ENTITY_NAME
+                                        && !allFolderIds.includes(entry.data.flags.cf.id)){
+                                    updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
                                 }else{
                                     let name = entry.data.flags.cf.name
                                     let color = entry.data.flags.cf.color;
