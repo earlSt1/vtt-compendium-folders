@@ -705,17 +705,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         // Create Compendium
         html.find('.create-compendium').click(this._onCreateEntity.bind(this));
 
-        //Manually set icons in here for now
-        $('#compendium .directory-item.folder').each((i,el) => {
-            let li = $(el);
-            let folder = game.customFolders.compendium.folders.get(li.data("folderId"));
-            if (folder?.icon){
-                let oldTag = el.querySelector('i');
-                let folderCustomIcon = document.createElement('img');
-                folderCustomIcon.src = folder.icon;
-                oldTag.parentNode.replaceChild(folderCustomIcon,oldTag);
-            }
-        });
         if (game.system.id === 'pf1'){
             html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowseCompendium(e, "spells"));
             html.find(".compendium-footer .compendium.items").click((e) => this._onBrowseCompendium(e, "items"));
