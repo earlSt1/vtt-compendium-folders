@@ -670,7 +670,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         const data = new CompendiumFolder();
         if (parent){
             data.path = parent.path.concat(parent.id)
-            data.parent = parent;
+            data.parent = parent._id;
         }
         const options = {top: button.offsetTop, left: window.innerWidth - 310 - FolderConfig.defaultOptions.width};
         new CompendiumFolderEditConfig(data, options).showDialog(false);
@@ -1462,7 +1462,7 @@ class CompendiumFolderEditConfig extends FormApplication {
         let assigned = {};
         let unassigned = {};
         Object.keys(allFolders).forEach(function(key){
-            if (key != 'hidden'){
+            if (key != 'hidden' && key != 'default'){
                 for (let a of allFolders[key].compendiumList){
                     if (Array.from(game.packs.keys()).includes(a)){
                         assigned[a]=game.packs.get(a);
@@ -1536,8 +1536,8 @@ class CompendiumFolderEditConfig extends FormApplication {
             await this.object.removeCompendiumByCode(packKey,false,false);
         }
         //If folder needs to be moved to parent (for some reason)
-        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent._id)?.children?.some(x => x._id === this.object._id)){
-            await this.object.moveFolder(this.object.data.parent._id);
+        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent)?.children?.some(x => x._id === this.object._id)){
+            await this.object.moveFolder(this.object.data.parent);
         }
         await this.object.save();
 
