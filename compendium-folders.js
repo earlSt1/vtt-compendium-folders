@@ -1515,29 +1515,30 @@ class CompendiumFolderEditConfig extends FormApplication {
         }else{
             this.object.folderIcon = null;
         }
-
-        let packsToAdd = []
-        let packsToRemove = []
-
-        for (let entry of game.packs.entries){
-            let formEntryId = entry.collection.replace('.','');
-            if (formData[formEntryId] && !this.object?.content?.map(c => c.id)?.includes(entry.collection)){
-                // Box ticked AND compendium not in folder
-                packsToAdd.push(entry.collection);
-            }else if (!formData[formEntryId] && this.object?.content?.map(c => c.id)?.includes(entry.collection)){
-                // Box unticked AND compendium in folder
-                packsToRemove.push(entry.collection);
+        if (this.object._id != 'default'){
+            let packsToAdd = []
+            let packsToRemove = []
+            for (let entry of game.packs.entries){
+                let formEntryId = entry.collection.replace('.','');
+                if (formData[formEntryId] && !this.object?.content?.map(c => c.id)?.includes(entry.collection)){
+                    // Box ticked AND compendium not in folder
+                    packsToAdd.push(entry.collection);
+                }else if (!formData[formEntryId] && this.object?.content?.map(c => c.id)?.includes(entry.collection)){
+                    // Box unticked AND compendium in folder
+                    packsToRemove.push(entry.collection);
+                }
             }
-        }
-        for (let packKey of packsToAdd){
-            await this.object.addCompendium(packKey,false);
-        }
-        for (let packKey of packsToRemove){
-            await this.object.removeCompendiumByCode(packKey,false,false);
-        }
-        //If folder needs to be moved to parent (for some reason)
-        if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent)?.children?.some(x => x._id === this.object._id)){
-            await this.object.moveFolder(this.object.data.parent);
+            for (let packKey of packsToAdd){
+                await this.object.addCompendium(packKey,false);
+            }
+            for (let packKey of packsToRemove){
+                await this.object.removeCompendiumByCode(packKey,false,false);
+            }
+        
+            //If folder needs to be moved to parent (for some reason)
+            if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent)?.children?.some(x => x._id === this.object._id)){
+                await this.object.moveFolder(this.object.data.parent);
+            }
         }
         await this.object.save();
 
@@ -2712,7 +2713,7 @@ async function initFolders(refresh=false){
     }
     game.customFolders.compendium.folders.default.compendiumList = game.customFolders.compendium.folders.default.compendiumList.concat(unassigned.map(y => y.collection));
     game.customFolders.compendium.folders.default.content = game.customFolders.compendium.folders.default.content.concat(unassigned);
-    
+
     // Check for removed compendiums
     let missingCompendiums = false
     let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
