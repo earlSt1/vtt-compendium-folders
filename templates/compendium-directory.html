@@ -3,10 +3,12 @@
     data-folder-id="{{folder._id}}" data-folder-depth="{{folder.depth}}">
   <header class="folder-header compendium-folder-header flexrow" style="background-color: {{folder.color}}">
     {{#if folder.icon}}
-        <img src="{{folder.icon}}"/>
+        <img src="{{folder.icon}}" style="height:24px!important;object-fit:scale-down;object-position:left!important;margin-left:0px"/>
+        <h3 style="color:{{folder.fontColor}};margin-left:-23px">
     {{/if}}
-    <h3 style="color:{{folder.fontColor}}">
+    
     {{#unless folder.icon}}
+    <h3 style="color:{{folder.fontColor}}">
         <i class="fas fa-folder-open fa-fw"></i>
     {{/unless}}
     {{folder.name}}</h3>
