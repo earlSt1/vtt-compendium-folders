@@ -152,7 +152,7 @@ button.create-compendium{
 .folder-header a.export-folder,a.import-folder,a.create-fic{
   flex: 0 0 20px;
     text-align: center;
-    color: #CCC;
+    /*color: #CCC;*/
     font-size: 14px;
 }
 div.compendium .compendium-folder-header > h3 > img {

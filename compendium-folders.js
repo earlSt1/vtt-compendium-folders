@@ -1181,23 +1181,16 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
     pack.render(true);
 }
-async function updateFolderWithinCompendium(folderObj){
+async function updateFolderWithinCompendium(folderObj,packCode,tempEntityId){
     //ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationStart'))
-    let packCode = folderObj.packCode;
     let pack = game.packs.get(packCode);
-    let newFolderName = folderObj.newName;
-    let newColor = folderObj.newColor;
-    let entity = await pack.getEntity(folderObj.tempEntityId);
+    let entity = await pack.getEntity(tempEntityId);
 
     if (entity != null){
 
         let data = {
             flags:{
-                cf:{
-                    name:newFolderName,
-                    color:newColor,
-                    icon:folderObj.icon
-                }
+                cf:mergeObject(entity.data.flags.cf,folderObj)
             }
         }
         // if (entity.data.flags.cf.folderPath === null){
@@ -1210,20 +1203,21 @@ async function updateFolderWithinCompendium(folderObj){
     }
     ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationFinish'));
 }
-async function createNewFolderWithinCompendium(folderObj){
+async function createNewFolderWithinCompendium(folderObj,packCode,parentTempEntityId){
     // Exporting temp entity to allow for empty folders being editable
-    let pack = game.packs.get(folderObj.packCode);
+    let pack = game.packs.get(packCode);
     let newPath = []
-    if (folderObj.tempEntityId != null){
-        let parent = await pack.getEntity(folderObj.tempEntityId)
-        newPath = parent.data.flags.cf.folderPath
+    if (parentTempEntityId != null){
+        let parent = await pack.getEntity(parentTempEntityId)
+        newPath = parent.data.flags.cf.folderPath.concat(parent.data.flags.cf.id)
     }
-    newPath.push(folderObj.parentId);
+    
     let tempData = getTempEntityData(pack.entity);
     tempData.flags.cf={
         id:folderObj.id,
         folderPath:newPath,
         color:folderObj.color,
+        fontColor:folderObj.fontColor,
         name:folderObj.name,
         children:[],
         icon:folderObj.icon
@@ -1564,6 +1558,7 @@ class FICFolderEditDialog extends FormApplication{
         return {
             name:this.object.name,
             color:this.object.color,
+            fontColor:this.object.fontColor,
             id:this.object.id,
             icon:this.object.icon
         };
@@ -1571,16 +1566,13 @@ class FICFolderEditDialog extends FormApplication{
     async _updateObject(options,formData){
         let folderObj = {
             id:this.object.id,
-            oldName:this.object.name,
-            newName:formData.name,
-            newColor:formData.color,
-            path:this.object.path,
-            packCode:this.object.packCode,
-            tempEntityId:this.object.tempEntityId,
-            icon:formData.icon
-        }
-        await updateFolderInCache(folderObj.packCode,folderObj); 
-        await updateFolderWithinCompendium(folderObj);      
+            name:formData.name,
+            color:formData.color,
+            icon:formData.icon,
+            fontColor:formData.fontColor
+        }            
+        await updateFolderInCache(this.object.packCode,folderObj); 
+        await updateFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);      
     }
 }
 class FICFolderCreateDialog extends FormApplication{
@@ -1599,6 +1591,7 @@ class FICFolderCreateDialog extends FormApplication{
         return {
             name:'New Folder',
             color:'#000000',
+            fontColor:'#FFFFFF',
             id:this.object.id
         };
     }
@@ -1607,12 +1600,10 @@ class FICFolderCreateDialog extends FormApplication{
             id:this.object.id,
             name:formData.name,
             color:formData.color,
-            packCode:this.object.packCode,
-            parentId:this.object.parentId,
-            tempEntityId:this.object.tempEntityId,
+            fontColor:formData.fontColor,
             icon:formData.icon
         }
-        let newPath = await createNewFolderWithinCompendium(folderObj); 
+        await createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId); 
         //folderObj.path = newPath
         //await createFolderInCache(folderObj.packCode,folderObj);   
         resetCache();    
@@ -2042,8 +2033,12 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
     header.classList.add('compendium-folder-header','flexrow')
     let headerTitle = document.createElement('h3');
     
-    header.style.color='#ffffff';
+    if (folderData.fontColor)
+        header.style.color=folderData.fontColor;
+    else
+        header.style.color='#ffffff';
     header.style.backgroundColor=folderData.color
+    
     if (game.user.isGM && !game.packs.get(packCode).locked){
         header.addEventListener('contextmenu',function(event){
             createContextMenu(header,event);
@@ -2442,9 +2437,10 @@ async function updateFolderInCache(packCode,folderObj){
     }
     let folderMetadata = cache.groupedFolderMetadata[folderObj.id]
     let index = cache.groupedFolders[folderMetadata.depth].findIndex(x => x.id === folderObj.id)
-    cache.groupedFolders[folderMetadata.depth][index].color = folderObj.newColor
-    cache.groupedFolders[folderMetadata.depth][index].name = folderObj.newName
+    cache.groupedFolders[folderMetadata.depth][index].color = folderObj.color
+    cache.groupedFolders[folderMetadata.depth][index].name = folderObj.name
     cache.groupedFolders[folderMetadata.depth][index].icon = folderObj.icon
+    cache.groupedFolders[folderMetadata.depth][index].fontColor = folderObj.fontColor
     cache.groupedFolders[folderMetadata.depth] = alphaSortFolders(cache.groupedFolders[folderMetadata.depth],'name')
     cache.groupedFolderMetadata[folderObj.id].index = cache.groupedFolders[folderMetadata.depth].findIndex(f => f.id === folderObj.id)
     console.debug(modName+' | Updating folder in cache')
@@ -2830,8 +2826,16 @@ Hooks.once('setup',async function(){
                                     let color = entry.data.flags.cf.color;
                                     let folderPath = entry.data.flags.cf.folderPath;
                                     let folderIcon = entry.data.flags.cf.icon
+                                    let fontColor = entry.data.flags.cf.fontColor;
                                     let data = {
-                                        id:folderId,color:color, children:[entryId],name:name,folderPath:folderPath,tempEntityId:entryId,icon:folderIcon
+                                        id:folderId,
+                                        color:color, 
+                                        children:[entryId],
+                                        name:name,
+                                        folderPath:folderPath,
+                                        tempEntityId:entryId,
+                                        icon:folderIcon,
+                                        fontColor:fontColor
                                     }
                                     allFolderData[folderId]=data
                                 }
