@@ -155,6 +155,14 @@ button.create-compendium{
     color: #CCC;
     font-size: 14px;
 }
+div.compendium .compendium-folder-header > h3 > img {
+  width:22px !important;
+  height:22px !important;
+  margin: 0 8px 0 0px !important;
+  margin-bottom: -6px !important;
+  border:0px !important; 
+  border-radius:0px !important;
+}
 /*Context menu*/
 .compendium-folder > #folder-context-menu{
   margin-top:-7px

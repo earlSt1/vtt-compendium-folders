@@ -10,10 +10,10 @@ const FOLDER_SEPARATOR = '#/CF_SEP/'
 function arraysEqual(array1,array2){
     return array1.length === array2.length && array1.every(function(value, index) { return value === array2[index]})
 }
-async function getFolderColor(packCode,tempEntityId){
+async function getFolderData(packCode,tempEntityId){
     let pack = game.packs.get(packCode)
     let tempEntity = await pack.getEntity(tempEntityId);
-    return tempEntity.data.flags.cf.color
+    return tempEntity.data.flags.cf;
 }
 function closeContextMenu(){
     let contextMenu = document.querySelector('nav#folder-context-menu');
@@ -45,15 +45,13 @@ function createContextMenu(header,event){
             ev.stopPropagation();
             closeContextMenu();
             let path = getRenderedFolderPath(folder);
-            let folderColor = await getFolderColor(packCode,tempEntityId);
-            let formObj = {
-                id:folderId,
-                name:folderName,
-                color:folderColor,
+            let folderData = await getFolderData(packCode,tempEntityId);
+            let formObj = mergeObject({
                 path:path,
                 packCode:packCode,
                 tempEntityId:tempEntityId
-            }
+            },folderData)
+            
             new FICFolderEditDialog(formObj).render(true);
         })
         contextMenuList.appendChild(editOption);
@@ -1555,7 +1553,7 @@ class FICFolderEditDialog extends FormApplication{
         const options = super.defaultOptions;
         options.id = "fic-folder-edit";
         options.template = "modules/compendium-folders/templates/fic-folder-edit.html";
-
+        options.width = 350;
         return options;
     }
   
