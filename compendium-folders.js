@@ -598,6 +598,20 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             this.entities = [...this.constructor.collection].filter(z => !z?.pack?.private);
         }
         let toAdd = [];
+        //Check for cyclic looping folders
+        for (let folder of this.folders){
+            let parent = folder.parent;
+            while (parent){
+                if (parent.path.includes(folder._id)){
+                    console.debug(modName+ " | Cyclic folders identified, moving one to root for safety")
+                    folder.parent = null;
+                    folder.path = []
+                    folder.save(false)
+                    break;
+                }
+                parent = parent.parent
+            }
+        }
         for (let folder of this.folders){
             let parent = folder.parent
             while (parent){
