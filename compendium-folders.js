@@ -612,6 +612,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
                 parent = parent.parent
             }
         }
+        // Add parents if needed
         for (let folder of this.folders){
             let parent = folder.parent
             while (parent){
@@ -3095,6 +3096,9 @@ Hooks.once('setup',async function(){
             if (!importing && game.macros.entities.some(m => m.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('Macro')
             }
+        })
+        Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html,options) => {
+            Hooks.call("getCompendiumDirectoryEntryContext",html,options)
         })
     }
 });
