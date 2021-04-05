@@ -2760,7 +2760,7 @@ Hooks.once('setup',async function(){
     Settings.registerSettings()
     Hooks.once('ready',async function(){
         // change hook that runs to trigger compendium browser
-        if (game.modules.has('compendium-browser')){
+        if (game.modules.has('compendium-browser') || game.modules.has('compendium-browser-t20')){
             Hooks.on('renderCompendiumFolderDirectory',() => {
                 game.compendiumBrowser.hookCompendiumList();
             });
