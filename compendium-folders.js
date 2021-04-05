@@ -2768,13 +2768,11 @@ Hooks.once('setup',async function(){
     
     Settings.registerSettings()
     Hooks.once('ready',async function(){
-        // change hook that runs to trigger compendium browser
-        // TODO pf2e compendium browser
-        if (game.modules.has('compendium-browser') || game.modules.has('compendium-browser-t20')){
-            Hooks.on('renderCompendiumFolderDirectory',() => {
-                game.compendiumBrowser.hookCompendiumList();
-            });
-        }
+        // Ensure compatibility with other modules that rely on the old directory.
+        Hooks.on('renderCompendiumFolderDirectory',(html,e) => {
+            Hooks.call('renderCompendiumDirectory',html,e);
+        });
+        
         while (!ui.compendium.rendered){
             // wait for old compendium directory to render
             // else we get a race condition
