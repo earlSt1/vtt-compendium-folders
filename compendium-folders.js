@@ -1119,6 +1119,12 @@ CompendiumFolderDirectory._onCreateCompendium = CompendiumDirectory.prototype._o
 CONFIG.CompendiumEntry = {entityClass : CompendiumEntry};
 CONFIG.CompendiumFolder = {entityClass : CompendiumFolder};
 
+let old = Compendium.create;
+Compendium.create =  async function(metadata,options){
+    let result = await old.bind(this,metadata,options)()
+    await initFolders(true);
+    return result;
+}
 
 async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     //ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))
