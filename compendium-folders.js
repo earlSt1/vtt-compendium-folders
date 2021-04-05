@@ -625,6 +625,12 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         let tree = this.constructor.setupFolders(this.folders, this.entities);
         
         this.tree = this._sortTreeAlphabetically(tree)
+        //Check cache
+        let cache = game.settings.get(mod,'cached-folder');
+        if (cache.pack && !this.entities.some(x => cache.pack === x.code)){
+            console.debug(modName+ ' | Compendium '+cache.pack+' no longer exists. Clearing cache')
+            game.settings.set(mod,'cached-folder',{})
+        }
     }
     async refresh(){
         // Check for new packs
@@ -2581,7 +2587,7 @@ export class Settings{
             default:[]
         });
         game.settings.register(mod,'cached-folder',{
-            scope:'client',
+            scope:'world',
             config:false,
             type:Object,
             default:{}
@@ -2831,11 +2837,7 @@ Hooks.once('setup',async function(){
                             if (entry.name === TEMP_ENTITY_NAME){
                                 if (entry.data.flags.cf.folderPath == null){
                                     let result = updateFolderPathForTempEntity(entry,contents);
-                                    updateData.push(result);
-                                } else if (entry.data.flags.cf.id != null
-                                        && entry.name != TEMP_ENTITY_NAME
-                                        && !allFolderIds.includes(entry.data.flags.cf.id)){
-                                    updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
+                                    updateData.push(result); 
                                 }else{
                                     let name = entry.data.flags.cf.name
                                     let color = entry.data.flags.cf.color;
@@ -2854,6 +2856,11 @@ Hooks.once('setup',async function(){
                                     }
                                     allFolderData[folderId]=data
                                 }
+                            }
+                            else if (entry.data.flags.cf.id != null
+                                && entry.name != TEMP_ENTITY_NAME
+                                && !allFolderIds.includes(entry.data.flags.cf.id)){
+                                updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
                             }
                             if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
                                 allFolderData[folderId].children.push(entryId);
