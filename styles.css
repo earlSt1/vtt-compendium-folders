@@ -55,6 +55,13 @@ li.compendium-folder.collapsed > .compendium-folder-header .edit-folder {
 li.compendium-folder  label{
   cursor:pointer;
 }
+/* pf2e specific */
+#compendium .directory-header .header-search a.header-control{
+  visibility:visible !important;
+}
+#compendium .create-compendium{
+  flex-basis:0%;
+}
 /* Fix for issue #2 */
 #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
 /* Form styles */
