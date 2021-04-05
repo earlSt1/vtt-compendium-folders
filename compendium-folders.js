@@ -2780,8 +2780,8 @@ Hooks.once('setup',async function(){
             // else we get a race condition
             await new Promise(res => setTimeout(res,500));
         }
-        ui.compendium = new CompendiumFolderDirectory();
-        await initFolders(true);
+        //ui.compendium = new CompendiumFolderDirectory();
+        //await initFolders(true);
     })
     // Adding export buttons to context menus for folders
     let newContextOption = {
