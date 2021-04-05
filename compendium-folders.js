@@ -1624,10 +1624,13 @@ class FICFolderCreateDialog extends FormApplication{
             fontColor:formData.fontColor,
             icon:formData.icon
         }
-        await createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId); 
+        await resetCache()
+        createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);
+        
+         
         //folderObj.path = newPath
         //await createFolderInCache(folderObj.packCode,folderObj);   
-        resetCache();    
+            
     }
 }
 
