@@ -718,12 +718,6 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             //ui.compendium = new CompendiumFolderDirectory();
             ui.compendium.render(true);
         })
-        // Options below are GM only
-        if ( !game.user.isGM ) return;
-
-        // Create Compendium
-        html.find('.create-compendium').click(this._onCreateEntity.bind(this));
-
         if (game.system.id === 'pf1'){
             html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowseCompendium(e, "spells"));
             html.find(".compendium-footer .compendium.items").click((e) => this._onBrowseCompendium(e, "items"));
@@ -732,7 +726,11 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowseCompendium(e, "classes"));
             html.find(".compendium-footer .compendium.races").click((e) => this._onBrowseCompendium(e, "races"));
         }
-        
+        // Options below are GM only
+        if ( !game.user.isGM ) return;
+
+        // Create Compendium
+        html.find('.create-compendium').click(this._onCreateEntity.bind(this));
     }
     _onBrowseCompendium(event, type) {
         event.preventDefault();
