@@ -627,7 +627,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         this.tree = this._sortTreeAlphabetically(tree)
         //Check cache
         let cache = game.settings.get(mod,'cached-folder');
-        if (cache.pack && !this.entities.some(x => cache.pack === x.code)){
+        if (game.user.isGM && cache.pack && !this.entities.some(x => cache.pack === x.code)){
             console.debug(modName+ ' | Compendium '+cache.pack+' no longer exists. Clearing cache')
             game.settings.set(mod,'cached-folder',{})
         }
@@ -2408,6 +2408,7 @@ class CleanupPackConfig extends FormApplication{
     }
 }
 async function cacheFolderStructure(packCode,groupedFolders,groupedFolderMetadata){
+    if (!game.user.isGM) return;
     let cache = {
         pack:packCode,
         groupedFolders:groupedFolders,
@@ -2477,6 +2478,7 @@ async function updateFolderInCache(packCode,folderObj){
     console.log(modName+' | Updated cached folder structure');
 }
 async function resetCache(){
+    if (!game.user.isGM) return;
     await game.settings.set(mod,'cached-folder',{});
     console.log(modName+' | Cleared cached folder structure');
 }
