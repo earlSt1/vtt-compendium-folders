@@ -2793,20 +2793,20 @@ Hooks.once('setup',async function(){
             exportFolderStructureToCompendium(game.folders.get(li.dataset.folderId))
         }  
     }
-    let oldFn = ActorDirectory.prototype._getFolderContextOptions
-    ActorDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+    let oldActorFolderCtxOptions = ActorDirectory.prototype._getFolderContextOptions
+    ActorDirectory.prototype._getFolderContextOptions = () => oldActorFolderCtxOptions().concat(newContextOption);
 
-    oldFn = ItemDirectory.prototype._getFolderContextOptions
-    ItemDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+    let oldItemFolderCtxOptions = ItemDirectory.prototype._getFolderContextOptions
+    ItemDirectory.prototype._getFolderContextOptions = () => oldItemFolderCtxOptions().concat(newContextOption);
 
-    oldFn = JournalDirectory.prototype._getFolderContextOptions
-    JournalDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+    let oldJournalFolderCtxOptions = JournalDirectory.prototype._getFolderContextOptions
+    JournalDirectory.prototype._getFolderContextOptions = () => oldJournalFolderCtxOptions().concat(newContextOption);
 
-    oldFn = RollTableDirectory.prototype._getFolderContextOptions
-    RollTableDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+    let oldRollTableFolderCtxOptions = RollTableDirectory.prototype._getFolderContextOptions
+    RollTableDirectory.prototype._getFolderContextOptions = () => oldRollTableFolderCtxOptions().concat(newContextOption);
 
-    oldFn = SceneDirectory.prototype._getFolderContextOptions
-    SceneDirectory.prototype._getFolderContextOptions = () => oldFn().concat(newContextOption);
+    let oldSceneFolderCtxOptions = SceneDirectory.prototype._getFolderContextOptions
+    SceneDirectory.prototype._getFolderContextOptions = () => oldSceneFolderCtxOptions().concat(newContextOption);
 
     // Folders In Compendium changes
     if (post073){
