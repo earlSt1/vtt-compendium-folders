@@ -1,6 +1,6 @@
 {{#*inline "folderPartial"}}
 <li class="directory-item compendium-folder folder flexcol {{#unless folder.expanded}}collapsed{{/unless}}"
-    data-folder-id="{{folder._id}}" data-folder-depth="{{folder.depth}}">
+    data-folder-id="{{folder.id}}" data-folder-depth="{{folder.depth}}">
   <header class="folder-header compendium-folder-header flexrow" style="background-color: {{folder.color}}">
     {{#if folder.icon}}
         <img src="{{folder.icon}}" style="height:24px!important;object-fit:scale-down;object-position:left!important;margin-left:0px"/>
@@ -14,8 +14,8 @@
     {{folder.name}}</h3>
     {{#if user.isGM}}
       {{#unless folder.isDefault}}
-      <a class="create-folder" style="flex:0 0 20px;color:{{folder.fontColor}}" data-parent-folder="{{folder._id}}"><i class="fas fa-folder-plus fa-fw"></i></a>
-      <a class="create-entity" style="flex:0 0 20px;color:{{folder.fontColor}}" data-folder="{{folder._id}}"><i class="fas fa-atlas"></i></a>
+      <a class="create-folder" style="flex:0 0 20px;color:{{folder.fontColor}}" data-parent-folder="{{folder.id}}"><i class="fas fa-folder-plus fa-fw"></i></a>
+      <a class="create-entity-c" style="flex:0 0 20px;color:{{folder.fontColor}}" data-folder="{{folder.id}}"><i class="fas fa-atlas"></i></a>
       {{/unless}}
 	{{/if}}
   </header>
@@ -40,17 +40,17 @@
         </div>
     </h4>
     <footer class="compendium-footer">
-        <span class="entity-type">{{this.pack.entity}}</span>
+        <span class="entity-type">{{this.pack.documentClass.documentName}}</span>
         <span> ({{this.pack.metadata.package}})</span>
     </footer>
 </li>
 {{/inline}}
-<section class="sidebar-tab sidebar-directory tab flexcol" id="compendium" data-tab="compendium">
+<section class="tab sidebar-tab directory flexcol" id="compendium" data-tab="compendium">
     <!-- Directory Header -->
     <header class="directory-header">
         <div class="header-actions action-buttons flexrow">
             {{#if user.isGM }}
-            <button class="create-compendium" ><i class="fas fa-atlas"></i> {{localize "COMPENDIUM.Create"}}</button>
+            <button class="create-compendium"><i class="fas fa-atlas"></i> {{localize "COMPENDIUM.Create"}}</button>
             <button class="create-folder"><i class="fas fa-folder"></i> {{localize 'FOLDER.Create'}}</button>
             {{/if}}
         </div>

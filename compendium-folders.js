@@ -236,7 +236,7 @@ function alphaSortCompendiums(compendiums){
 // ==========================
 // Folder object structure
 // ==========================
-export class CompendiumEntryCollection extends EntityCollection{
+export class CompendiumEntryCollection extends WorldCollection{
     constructor(...args) {
         super(...args);
     }
@@ -244,8 +244,11 @@ export class CompendiumEntryCollection extends EntityCollection{
     get entity() {
         return "CompendiumEntry";
     }
+    get documentClass(){
+        return CompendiumEntry;
+    }
 }
-export class CompendiumEntry {
+export class CompendiumEntry  {
     constructor(pc,parentId){
         this._id = pc;
         this.data = {}
@@ -260,7 +263,15 @@ export class CompendiumEntry {
                 folders:new CompendiumFolderCollection([])
             }
         }
-        game.customFolders.compendium.entries.insert(this);
+        game.customFolders.compendium.entries.set(this._id,this);
+    }
+    static get metadata(){
+        return {
+            collection:'game.customFolders.compendium.entries'
+        }
+    }
+    toJSON(){
+        return this.data;
     }
      /** @override */
      static create(data={}){
@@ -292,7 +303,7 @@ export class CompendiumEntry {
     }
     get name(){return this.pack.title}
 }
-export class CompendiumFolderCollection extends EntityCollection{
+export class CompendiumFolderCollection extends WorldCollection{
     constructor(...args) {
         super(...args);
     }
@@ -306,25 +317,28 @@ export class CompendiumFolderCollection extends EntityCollection{
     get default(){
         return this.find(f => f.isDefault);
     }
-    
+    get documentClass(){
+        return CompendiumFolder;
+    }
 }
-export class CompendiumFolder extends Folder{
+export class CompendiumFolder {
     constructor(data={}){
-        super(mergeObject({
+        this.data = mergeObject({
             titleText:'New Folder',
             colorText:'#000000',
             fontColorText:'#FFFFFF',
-            type:"CompendiumEntry",
+            type:'CompendiumEntry',
             _id:'cfolder_'+randomID(10),
-            entity:"CompendiumFolder",
+            entity:'CompendiumFolder',
             sorting:'a',
             parent:null,
             pathToFolder:[],
             compendiumList:[],
             compendiums:[],
             folderIcon:null,
-            expanded:false
-        },data));
+            expanded:false,
+            visible:true
+        },data);
     }
     _getSaveData(){
         let data = Object.assign({},this.data);
@@ -332,6 +346,9 @@ export class CompendiumFolder extends Folder{
         delete data.content;
         delete data.children;
         return data;
+    }
+    toJSON(){
+        return this.data;
     }
     /** @override */
     static create(data={}){
@@ -345,7 +362,7 @@ export class CompendiumFolder extends Folder{
                 folders:new CompendiumFolderCollection([])
             }
         }
-        game.customFolders.compendium.folders.insert(newFolder);
+        game.customFolders.compendium.folders.set(newFolder.id,newFolder);
 
         return newFolder;
     }
@@ -387,8 +404,9 @@ export class CompendiumFolder extends Folder{
             }
             await game.settings.set(mod,'cfolders',allFolders)
         }
-        game.customFolders.compendium.folders.get(this._id).data = Object.assign({},this.data);
+        game.customFolders.compendium.folders.get(this.id).data = Object.assign({},this.data);
         if (refresh)
+            await initFolders(false);
             ui.compendium.render(true);
     }
     async delete(refresh=true){
@@ -555,6 +573,8 @@ export class CompendiumFolder extends Folder{
     get isDefault(){return this.id === 'default'}
     get isHidden(){return this.id === 'hidden'}
     set expanded(e){this.data.expanded = e}
+    get id(){return this.data._id}
+    get displayed(){return this.data.visible}
     // Recursively generate a pretty name
     get pathName(){
         if (this.parent)
@@ -565,7 +585,7 @@ export class CompendiumFolder extends Folder{
 export class CompendiumFolderDirectory extends SidebarDirectory{
     /** @override */
 	static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
+        return foundry.utils.mergeObject(super.defaultOptions, {
             id: "compendium",
             template: "modules/compendium-folders/templates/compendium-directory.html",
             title: "Compendium Packs",
@@ -573,9 +593,12 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             filters: [{inputSelector: 'input[name="search"]', contentSelector: ".directory-list"}]
       });
     }
+
     constructor(...args) {
         super(...args);
     }
+
+    static documentName = 'CompendiumEntry';
 
     async checkDeleted(){
         let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
@@ -588,14 +611,14 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         //filter out gone compendiums
         if (!this.constructor.folders && !this.constructor.collection){
             this.folders = [];
-            this.entities = [];
+            this.documents = [];
         }
         else if (game.user.isGM){
             this.folders = [...this.constructor.folders];
-            this.entities = [...this.constructor.collection];
+            this.documents = [...this.constructor.collection];
         }else{
             this.folders = [...this.constructor.folders].filter(x => x?.content?.find(y => !y?.pack?.private));
-            this.entities = [...this.constructor.collection].filter(z => !z?.pack?.private);
+            this.documents = [...this.constructor.collection].filter(z => !z?.pack?.private);
         }
         let toAdd = [];
         //Check for cyclic looping folders
@@ -622,12 +645,12 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             }
         }
         this.folders =this.folders.concat(toAdd)
-        let tree = this.constructor.setupFolders(this.folders, this.entities);
+        let tree = this.constructor.setupFolders(this.folders, this.documents);
         
         this.tree = this._sortTreeAlphabetically(tree)
         //Check cache
         let cache = game.settings.get(mod,'cached-folder');
-        if (game.user.isGM && cache.pack && !this.entities.some(x => cache.pack === x.code)){
+        if (game.user.isGM && cache.pack && !this.documents.some(x => cache.pack === x.code)){
             console.debug(modName+ ' | Compendium '+cache.pack+' no longer exists. Clearing cache')
             game.settings.set(mod,'cached-folder',{})
         }
@@ -638,7 +661,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
 
         // Check for removed packs
         await this.checkDeleted()
-        ui.compendium.render(true,'update')
+        ui.compendium.render(true)
     }
     _sortTreeAlphabetically(tree){
         let fn = (a,b) => {
@@ -730,7 +753,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         if ( !game.user.isGM ) return;
 
         // Create Compendium
-        html.find('.create-compendium').click(this._onCreateEntity.bind(this));
+        html.find('.create-compendium').click(this._onCreateDocument.bind(this));
+        html.find('.create-entity-c').click(this._onCreateDocument.bind(this));
     }
     _onBrowseCompendium(event, type) {
         event.preventDefault();
@@ -978,8 +1002,8 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
         if (li.dataset.folderId === 'default' || !game.user.isGM)
             return;
         const dragData = li.classList.contains("folder") ?
-            { type: "Folder", id: li.dataset.folderId, entity: this.constructor.entity } :
-            { type: this.constructor.entity, id: li.dataset.pack };
+            { type: "Folder", id: li.dataset.folderId, entity: this.constructor.documentName } :
+            { type: this.constructor.documentName, id: li.dataset.pack };
         event.dataTransfer.setData("text/plain", JSON.stringify(dragData));
         this._dragType = dragData.type;
     }
@@ -1020,7 +1044,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             }
         }
     }
-    async _onCreateEntity(event) {
+    async _onCreateDocument(event) {
         let parentId = 'default' 
         if (!event.currentTarget.classList.contains('create-compendium')){
             // is a button on folder
@@ -1044,16 +1068,9 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
               }
 
               // Snippet taken from Compendium.create() (just so I can intercept the pack before it's declared unassigned)
-              const response = await SocketInterface.dispatch("manageCompendium", {
-                action: "create",
-                data: data,
-                options: {}
-              });
-          
-              // Add the new pack to the World
-              game.data.packs.push(response.result);
-              game.initializePacks().then(() => {
-                game.customFolders.compendium.folders.get(parentId).addCompendium(`${response.result.package}.${response.result.name}`);
+              CompendiumCollection.createCompendium(data).then((pack) => {
+                  console.log(pack);
+                game.customFolders.compendium.folders.get(parentId).addCompendium(`${pack.metadata.package}.${pack.metadata.name}`);
               });
             },
           options: { jQuery: false }
@@ -1061,7 +1078,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
       }
     // Taken from SidebarDirectory._onSearchFilter()
     // modified slightly for custom data structures
-    _onSearchFilter(event, query, html) {
+    _onSearchFilter(event, query, rgx, html) {
         const isSearch = !!query;
         let entityIds = new Set();
         let folderIds = new Set();
@@ -1071,7 +1088,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
           const rgx = new RegExp(RegExp.escape(query), "i");
     
           // Match entity names
-          for ( let e of this.entities ) {
+          for ( let e of this.documents ) {
             if ( rgx.test(e.name) ) {
               entityIds.add(e.id);
               if ( e.parent.id ) folderIds.add(e.parent.id);
@@ -1107,15 +1124,14 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
           }
         }
       }
-
+      
+      get documentName(){return "CompendiumFolderDirectory"}
 }
 // extend _getEntryContextOptions()
 //CompendiumFolderDirectory._getEntryContextOptions = CompendiumDirectory.prototype._getEntryContextOptions;
 CompendiumFolderDirectory._onCreateCompendium = CompendiumDirectory.prototype._onCreateCompendium;
 //CompendiumFolderDirectory._onDeleteCompendium = CompendiumDirectory.prototype._onDeleteCompendium;
 
-CONFIG.CompendiumEntry = {entityClass : CompendiumEntry};
-CONFIG.CompendiumFolder = {entityClass : CompendiumFolder};
 
 let old = Compendium.create;
 Compendium.create =  async function(metadata,options){
@@ -1535,7 +1551,7 @@ class CompendiumFolderEditConfig extends FormApplication {
         if (this.object._id != 'default'){
             let packsToAdd = []
             let packsToRemove = []
-            for (let entry of game.packs.entries){
+            for (let entry of game.packs.contents){
                 let formEntryId = entry.collection.replace('.','');
                 if (formData[formEntryId] && !this.object?.content?.map(c => c.id)?.includes(entry.collection)){
                     // Box ticked AND compendium not in folder
@@ -1940,19 +1956,19 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
     let search = null
     if (merge){
         switch (entName){
-            case 'Actor':search = game.actors.entities.filter(a => a.name === source.name && getFolderPath(a.folder)===folderPath)
+            case 'Actor':search = game.actors.contents.filter(a => a.name === source.name && getFolderPath(a.folder)===folderPath)
                         break;
-            case 'Item':search = game.items.entities.filter(i => i.name === source.name && getFolderPath(i.folder)===folderPath)
+            case 'Item':search = game.items.contents.filter(i => i.name === source.name && getFolderPath(i.folder)===folderPath)
                         break;
-            case 'JournalEntry':search = game.journal.entities.filter(j => j.name === source.name && getFolderPath(j.folder)===folderPath)
+            case 'JournalEntry':search = game.journal.contents.filter(j => j.name === source.name && getFolderPath(j.folder)===folderPath)
                         break;
-            case 'Macro':search = game.macros.entities.filter(m => m.name === source.name && getMacroFolderPath(m.id)===folderPath)
+            case 'Macro':search = game.macros.contents.filter(m => m.name === source.name && getMacroFolderPath(m.id)===folderPath)
                         break;
-            case 'Playlist':search = game.playlists.entities.filter(p => p.name === source.name)
+            case 'Playlist':search = game.playlists.contents.filter(p => p.name === source.name)
                         break;
-            case 'RollTable':search = game.tables.entities.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
+            case 'RollTable':search = game.tables.contents.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
                         break;
-            case 'Scene':search = game.scenes.entities.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
+            case 'Scene':search = game.scenes.contents.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
             
         }
     }
@@ -2687,7 +2703,7 @@ async function initFolders(refresh=false){
                 colorText:'#000000'
             }
         };
-        for (let pack of game.packs.entries){
+        for (let pack of game.packs.contents){
             if (allFolders[entityId[pack.entity]]){
                 allFolders[entityId[pack.entity]].compendiumList.push(pack.collection);
             }else{
@@ -2725,7 +2741,7 @@ async function initFolders(refresh=false){
 
     }
     // Set default folder content
-    let unassigned = game.packs.entries.filter(x => !assigned.includes(x.collection))
+    let unassigned = game.packs.contents.filter(x => !assigned.includes(x.collection))
     for (let pack of unassigned.map(y => y.collection)){
         if (game.customFolders.compendium.entries.has(pack)){
             // Pack has an entry (assigned to default folder)
@@ -2765,7 +2781,9 @@ async function initFolders(refresh=false){
 }
 Hooks.once('setup',async function(){
     let post073 = game.data.version >= '0.7.3';
-    
+    CONFIG.CompendiumEntry = {documentClass : CompendiumEntry};
+    CONFIG.CompendiumFolder = {documentClass : CompendiumFolder};
+    CONFIG.CompendiumFolderDirectory = {documentClass : CompendiumFolderDirectory};
     Settings.registerSettings()
     Hooks.once('ready',async function(){
         // Ensure compatibility with other modules that rely on the old directory.
@@ -3068,37 +3086,37 @@ Hooks.once('setup',async function(){
         
         Hooks.on('renderActorDirectory',async function(a){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.actors.entities.some(a => a.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.actors.contents.some(a => a.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('Actor')
             }
         })
         Hooks.on('renderItemDirectory',async function(e){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.items.contents.some(i => i.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('Item')
             }
         })
         Hooks.on('renderJournalDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.journal.contents.some(j => j.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('JournalEntry')
             }
         })
         Hooks.on('renderPlaylistDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.playlists.entities.some(p => p.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.playlists.contents.some(p => p.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('Playlist')
             }
         })
         Hooks.on('renderRollTableDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.tables.contents.some(r => r.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('RollTable')
             }
         })
         Hooks.on('renderSceneDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.scenes.contents.some(s => s.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('Scene')
             }
         })
@@ -3108,7 +3126,7 @@ Hooks.once('setup',async function(){
         })
         Hooks.on('renderMacroDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.macros.entities.some(m => m.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.macros.contents.some(m => m.name === TEMP_ENTITY_NAME)){
                 await removeTempEntities('Macro')
             }
         })

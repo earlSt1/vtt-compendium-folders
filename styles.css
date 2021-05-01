@@ -10,6 +10,7 @@
   padding-left: 5px !important;
   padding-right: 5px !important;
   margin: 0px !important;
+  line-height:20px !important;
 }
 #compendium .directory-item{
   line-height:normal !important;
@@ -61,6 +62,12 @@ li.compendium-folder  label{
 }
 #compendium .create-compendium{
   flex-basis:0%;
+}
+/* 0.8.x */
+li.compendium-folder > .compendium-folder-header .create-entity-c{
+  flex: 0 0 20px;
+  text-align: center;
+  font-size: 14px;
 }
 /* Fix for issue #2 */
 #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
