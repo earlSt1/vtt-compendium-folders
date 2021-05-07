@@ -725,6 +725,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
             html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowseCompendium(e, "feats"));
             html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowseCompendium(e, "classes"));
             html.find(".compendium-footer .compendium.races").click((e) => this._onBrowseCompendium(e, "races"));
+            html.find(".compendium-footer .compendium.buffs").click((e) => this._onBrowseCompendium(e, "buffs"));
         }
         // Options below are GM only
         if ( !game.user.isGM ) return;
