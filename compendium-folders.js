@@ -8,9 +8,9 @@ const FOLDER_SEPARATOR = '#/CF_SEP/'
 // Utility functions
 // ==========================
 async function packUpdateEntity(pack,data){
-        const document = await pack.getDocument(data.id);
-        const options = {pack:pack.collection};
-        return await document.update(data, options);
+    const document = await pack.getDocument(data.id);
+    const options = {pack:pack.collection};
+    return await document.update(data, options);
 }
 async function packDeleteEntity(pack,id){
         const document = await pack.getDocument(id);
@@ -23,7 +23,7 @@ function arraysEqual(array1,array2){
 }
 async function getFolderData(packCode,tempEntityId){
     let pack = game.packs.get(packCode)
-    let tempEntity = await pack.getDocument(id);
+    let tempEntity = await pack.getDocument(tempEntityId);
     return tempEntity.data.flags.cf;
 }
 function closeContextMenu(){
@@ -112,8 +112,12 @@ function createContextMenu(header,event){
 function getFullPath(folderObj){
     let path = folderObj.name;
     let currentFolder = folderObj;
-    while (currentFolder.parent != null){
-        currentFolder = currentFolder.parent;
+    // while (currentFolder.parent != null){
+    //     currentFolder = currentFolder.parent;
+    //     path = currentFolder.name+FOLDER_SEPARATOR+path;
+    // }
+    while (currentFolder.data.parent != null){
+        currentFolder = game.folders.get(currentFolder.data.parent);
         path = currentFolder.name+FOLDER_SEPARATOR+path;
     }
     return path;
@@ -175,13 +179,21 @@ function getFolderPath(folder){
     if (folder.macroList)
         path = folder.name;
     let currentFolder = folder;
-    while (currentFolder.parent != null){
+    // while (currentFolder.parent != null){
+    //     if (folder.macroList)
+    //         path = currentFolder.parent.name+FOLDER_SEPARATOR+path;
+    //     else
+    //         path = currentFolder.parent.data.name+FOLDER_SEPARATOR+path;
+        
+    //     currentFolder = currentFolder.parent;
+    // }
+    while (currentFolder.data.parent != null){
         if (folder.macroList)
             path = currentFolder.parent.name+FOLDER_SEPARATOR+path;
         else
-            path = currentFolder.parent.data.name+FOLDER_SEPARATOR+path;
+            path = game.folders.get(currentFolder.data.parent).data.name+FOLDER_SEPARATOR+path;
         
-        currentFolder = currentFolder.parent;
+        currentFolder = game.folders.get(currentFolder.data.parent);
     }
     return path;
 }
@@ -1172,6 +1184,16 @@ function defineClasses(){
                         folder.removeAttribute('collapsed');
                         folder.querySelector('header > h3 > i')?.classList.remove('fa-folder');
                         folder.querySelector('header > h3 > i')?.classList.add('fa-folder-open');
+                    } else {
+                        folder.querySelector('.folder-contents').style.display = 'none';
+                        folder.setAttribute('collapsed','');
+                        folder.querySelector('header > h3 > i')?.classList.add('fa-folder');
+                        folder.querySelector('header > h3 > i')?.classList.remove('fa-folder-open');
+                    }
+                }
+                for (let entry of html.querySelectorAll('.directory-item')){
+                    if (!entry.classList.contains('hidden')){
+                        entry.style.display=''
                     }
                 }
             }
@@ -1286,7 +1308,7 @@ async function updateFolderWithinCompendium(folderObj,packCode,tempEntityId){
 
         let data = {
             flags:{
-                cf:mergeObject(entity.data.flags.cf,folderObj)
+                cf:foundry.utils.mergeObject(entity.data.flags.cf,folderObj)
             }
         }
         // if (entity.data.flags.cf.folderPath === null){
@@ -1295,7 +1317,8 @@ async function updateFolderWithinCompendium(folderObj,packCode,tempEntityId){
 
         
 
-        await packUpdateEntity(pack,data)
+        const options = {pack:pack.collection};
+        await entity.update(data, options);
     }
     ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationFinish'));
 }
@@ -2009,26 +2032,27 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
     const document = await pack.getDocument(entryId);
     const destination = game.collections.get(pack.documentName);
     const sourceData = destination.fromCompendium(document);
-    const createData = foundry.utils.mergeObject(sourceData, updateData);
-
+    const updateDataWithFolderPath = foundry.utils.mergeObject(updateData,{flags:{cf:{path:folderPath}}});
+    const createData = foundry.utils.mergeObject(sourceData, updateDataWithFolderPath);
+    
     // Create the Entity
     
     let search = null
     if (merge){
         switch (cls.documentName){
-            case 'Actor':search = game.actors.contents.filter(a => a.name === source.name && getFolderPath(a.folder)===folderPath)
+            case 'Actor':search = game.actors.contents.filter(a => a.name === sourceData.name && getFolderPath(a.folder)===folderPath)
                         break;
-            case 'Item':search = game.items.contents.filter(i => i.name === source.name && getFolderPath(i.folder)===folderPath)
+            case 'Item':search = game.items.contents.filter(i => i.name === sourceData.name && getFolderPath(i.folder)===folderPath)
                         break;
-            case 'JournalEntry':search = game.journal.contents.filter(j => j.name === source.name && getFolderPath(j.folder)===folderPath)
+            case 'JournalEntry':search = game.journal.contents.filter(j => j.name === sourceData.name && getFolderPath(j.folder)===folderPath)
                         break;
-            case 'Macro':search = game.macros.contents.filter(m => m.name === source.name && getMacroFolderPath(m.id)===folderPath)
+            case 'Macro':search = game.macros.contents.filter(m => m.name === sourceData.name && getMacroFolderPath(m.id)===folderPath)
                         break;
-            case 'Playlist':search = game.playlists.contents.filter(p => p.name === source.name)
+            case 'Playlist':search = game.playlists.contents.filter(p => p.name === sourceData.name)
                         break;
-            case 'RollTable':search = game.tables.contents.filter(r => r.name === source.name && getFolderPath(r.folder)===folderPath)
+            case 'RollTable':search = game.tables.contents.filter(r => r.name === sourceData.name && getFolderPath(r.folder)===folderPath)
                         break;
-            case 'Scene':search = game.scenes.contents.filter(s => s.name === source.name && getFolderPath(s.folder)===folderPath)
+            case 'Scene':search = game.scenes.contents.filter(s => s.name === sourceData.name && getFolderPath(s.folder)===folderPath)
         }
     }
     if (search === null || search.length === 0){
@@ -2038,7 +2062,7 @@ async function importFromCollectionWithMerge(clsColl,collection, entryId, folder
     }
     console.log(`${modName} | ${cls.documentName} ${sourceData.name} already exists on correct path. Updating`);
     createData._id = search[0].id;
-    return await pack.documentClass.create(createData,options);
+    return await pack.documentClass.updateDocuments([createData],options);
   }
 // ==========================
 // Importing folders from compendiums
@@ -2048,10 +2072,8 @@ async function recursivelyImportFolders(pack,coll,folder,merge){
     let folderPath = getRenderedFolderPath(folder)
     for (let entry of folder.querySelectorAll(':scope > .folder-contents > .entry-list > li.directory-item')){
         // Will invoke importFolderData()
-        let updateData = {}
-        // if (folder.classList.contains('hidden'))
-        //     updateData = {flags:{cf:{import:true}}};
-        await importFromCollectionWithMerge(coll,pack.collection,entry.getAttribute('data-document-id'),folderPath, updateData, {renderSheet:false},merge)
+        //if (!entry.classList.contains('hidden'))
+        await importFromCollectionWithMerge(coll,pack.collection,entry.getAttribute('data-document-id'),folderPath, {}, {renderSheet:false},merge)
         // Wait a short amount of time for folder to fully create
         await new Promise(res => setTimeout(res,100));
     }
@@ -2065,13 +2087,12 @@ async function recursivelyImportFolders(pack,coll,folder,merge){
 }
 async function importAllParentFolders(pack,coll,folder,merge){
     if (!folder.parentElement.classList.contains('directory-list')){
-        let parentList = []
+        let parentList = [folder]
         let parent = folder
         while (!parent.parentElement.parentElement.classList.contains('directory-list')){
             parent = parent.parentElement.parentElement.parentElement
             parentList.push(parent);            
         }
-        parentList.push(parent);
 
         for (let p of parentList.reverse()){
             if (p.querySelector(':scope > .folder-contents > .entry-list > li.directory-item.hidden')){
@@ -2308,7 +2329,7 @@ function createNewFolderButtonWithinCompendium(window,packCode){
 async function importFolderData(e){
     if (e.compendium) return;
     let isMacro = e.documentName === 'Macro'
-    if (e.data.flags.cf != null && e.data.flags.cf.import != null && !e.folder){
+    if (e.data.flags.cf != null && !e.folder){
         let path = e.data.flags.cf.path;
         let color = e.data.flags.cf.color;
         //a.data.folder -> id;
@@ -2372,7 +2393,9 @@ async function createFolderPath(path,pColor,entityType,e){
             let parentId = null
             let tContent = [];
             if (index>0){
-                parentId = game.folders.filter(f => f.type===entityType && f.name===segments[index-1] && getFolderPath(f)===segments.slice(0,index).join(FOLDER_SEPARATOR))[0]
+                parentId = game.folders.filter(f => f.type===entityType 
+                    && f.name===segments[index-1] 
+                    && getFolderPath(f) === segments.slice(0,index).join(FOLDER_SEPARATOR))[0].id
             }
             let data = {
                 name:seg,
@@ -2916,10 +2939,8 @@ Hooks.once('setup',async function(){
             let folderChildren = {}
             let checkedPaths = []
             let contents = await e.collection.getDocuments();
-            let allFolderIds = contents.filter(e => e.data.flags != null 
-                && e.data.flags.cf != null
-                && e.data.flags.cf.id != null 
-                && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
+            let allFolderIds = contents.filter(x => x.data?.flags?.cf?.id != null 
+                && x.name === TEMP_ENTITY_NAME).map(y => y.data.flags.cf.id)
             let updateData = [];
             //First parse folder data
             for (let entry of contents){
@@ -2976,7 +2997,7 @@ Hooks.once('setup',async function(){
                 e.close().then(async () => {
                     if (game.user.isGM){
                         for (let d of updateData){
-                            await e.updateEntity(d);
+                            await packUpdateEntity(e.collection,d);
                         }
                         resetCache()
                         ui.notifications.notify('Updating complete!')
@@ -3051,18 +3072,20 @@ Hooks.once('setup',async function(){
 
                         let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
                         let p = game.packs.get(packCode);                          
-                        
+                        let targetFolder = await  p.getDocument(folder.getAttribute('data-temp-entity-id'))
                         let data = {
-                            _id:movingItemId,
+                            id:movingItemId,
                             flags:{
                                 cf:{
-                                    id:folder.getAttribute('data-folder-id')   
+                                    id:folder.getAttribute('data-folder-id'),
+                                    path:targetFolder.data.flags.cf.path,
+                                    color:targetFolder.data.flags.cf.color   
                                 }
                             }
                         }
                         await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
                         if (data){ 
-                            const document = await p.getDocument(data._id);
+                            const document = await p.getDocument(data.id);
                             await document.update(data,{pack:p.collection})
                         }   
                     }
