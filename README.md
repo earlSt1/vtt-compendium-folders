@@ -1,6 +1,8 @@
 # Compendium Folders
 
- <a href='https://ko-fi.com/T6T44L01B' target='_blank'><img height='35' style='border:0px;height:35px;' src='https://cdn.ko-fi.com/cdn/kofi5.png?v=2' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> ![GitHub release (latest by date)](https://img.shields.io/github/v/release/earlSt1/vtt-compendium-folders)  ![GitHub issues](https://img.shields.io/github/issues-raw/earlSt1/vtt-compendium-folders) ![GitHub all releases](https://img.shields.io/github/downloads/earlSt1/vtt-compendium-folders/total) ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fcompendium-folders)
+<a href="https://ko-fi.com/erceron"><img src="https://ko-fi.com/img/githubbutton_sm.svg" /></a> 
+
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/earlSt1/vtt-compendium-folders)  ![GitHub issues](https://img.shields.io/github/issues-raw/earlSt1/vtt-compendium-folders) ![GitHub all releases](https://img.shields.io/github/downloads/earlSt1/vtt-compendium-folders/total) ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fcompendium-folders)
 
 This is a module for FoundryVTT which allows you to manage compendiums a bit easier by implementing a folder system. This folder structure can be used to organize compendiums in the directory, in addition to organize entries *inside* compendiums.
 
