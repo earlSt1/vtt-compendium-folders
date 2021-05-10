@@ -119,8 +119,8 @@ function getFullPath(folderObj){
     //     currentFolder = currentFolder.parent;
     //     path = currentFolder.name+FOLDER_SEPARATOR+path;
     // }
-    while (currentFolder.data.parent != null){
-        currentFolder = game.folders.get(currentFolder.data.parent);
+    while (currentFolder.parentFolder != null){
+        currentFolder = currentFolder.parentFolder;
         path = currentFolder.name+FOLDER_SEPARATOR+path;
     }
     return path;
@@ -190,13 +190,13 @@ function getFolderPath(folder){
         
     //     currentFolder = currentFolder.parent;
     // }
-    while (currentFolder.data.parent != null){
+    while (currentFolder.parentFolder != null){
         if (folder.macroList)
             path = currentFolder.parent.name+FOLDER_SEPARATOR+path;
         else
-            path = game.folders.get(currentFolder.data.parent).data.name+FOLDER_SEPARATOR+path;
+            path = currentFolder.parentFolder.name+FOLDER_SEPARATOR+path;
         
-        currentFolder = game.folders.get(currentFolder.data.parent);
+        currentFolder = currentFolder.parentFolder;
     }
     return path;
 }
@@ -778,6 +778,7 @@ function defineClasses(){
                 html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowseCompendium(e, "feats"));
                 html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowseCompendium(e, "classes"));
                 html.find(".compendium-footer .compendium.races").click((e) => this._onBrowseCompendium(e, "races"));
+                html.find(".compendium-footer .compendium.buffs").click((e) => this._onBrowseCompendium(e, "buffs"));
             }
             // Options below are GM only
             if ( !game.user.isGM ) return;
@@ -1182,6 +1183,8 @@ function defineClasses(){
         if (this.collection.index.contents.some(x => x.name === TEMP_ENTITY_NAME)){
             //Do custom search
             let existingSearchTerms = game.settings.get(mod,'last-search-packs')
+            let query = [...args][1]
+            let html = [...args][3]
             existingSearchTerms[this.collection.collection] = query
             game.settings.set(mod,'last-search-packs',existingSearchTerms);
             if (query?.length>0){
@@ -1210,7 +1213,7 @@ function defineClasses(){
         }else{
             wrapped(...args)     
         }
-    }, 'WRAPPER');
+    }, 'MIXED');
 
     CONFIG.CompendiumEntry = {documentClass : CompendiumEntry};
     CONFIG.CompendiumFolder = {documentClass : CompendiumFolder};
@@ -1223,7 +1226,8 @@ function defineClasses(){
         CompendiumFolder:CompendiumFolder,
         CompendiumEntryCollection:CompendiumEntryCollection,
         CompendiumFolderCollection:CompendiumFolderCollection,
-        CompendiumFolderDirectory:CompendiumFolderDirectory
+        CompendiumFolderDirectory:CompendiumFolderDirectory,
+        TEMP_ENTITY_NAME:TEMP_ENTITY_NAME
     }
 }
 async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
@@ -1237,10 +1241,12 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     let folderChildren = tempEntity.data.flags.cf.children;
     let parentFolderId = null;
     let parentEntity = null;
+    let parentPath = null;
     let tempEntityData = tempEntity.data.flags.cf
     if (tempEntityData.folderPath != null && tempEntityData.folderPath.length>0){
         parentFolderId = tempEntityData.folderPath[tempEntityData.folderPath.length-1];
         parentEntity = contents.find(e => e.name === TEMP_ENTITY_NAME && e.data.flags.cf.id === parentFolderId);
+        parentPath = parentEntity.data.flags.cf.path;
     }
     
     let allData = {};
@@ -1264,20 +1270,23 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
                         let parentChildren = parentEntity.data.flags.cf.children;
                         parentChildren.push(entity.id);
                         if (allData[parentEntity.id] == null){
-                            allData[parentEntity.id] = {flags:{cf:{children:parentChildren}},_id:parentEntity.id}
+                            allData[parentEntity.id] = {flags:{cf:{children:parentChildren}},id:parentEntity.id}
                         }else{
                             allData[parentEntity.id].flags.cf.children = parentChildren;
-                            allData[parentEntity.id]._id=parentEntity.id
+                            allData[parentEntity.id].id=parentEntity.id
                         }
                     }
                     // Update parent folderID of entity
 
                     if (allData[entity.id] == null){
-                        allData[entity.id] = {flags:{cf:{id:parentFolderId}},_id:entity.id}
+                        allData[entity.id] = {flags:{cf:{id:parentFolderId}},id:entity.id}
                     }else{
                         allData[entity.id].flags.cf.id = parentFolderId;
-                        allData[entity.id]._id=entity.id
+                        allData[entity.id].flags.cf.path = parentEntity.data.flags.cf.path
+                        allData[entity.id].id=entity.id
                     }
+                    if (parentPath)
+                        allData[entity.id].flags.cf.path = parentPath;
                 }else{
                     if (entity.name === TEMP_ENTITY_NAME 
                         && entity.data.flags.cf.folderPath.includes(tempEntityFolderId)){
@@ -1286,11 +1295,13 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
                         newPath.splice(newPath.indexOf(tempEntityFolderId),1)
                         //let newPath = tempEntity.data.flags.cf.folderPath.splice(tempEntity.data.flags.cf.folderPath.length-1,1);
                         if (allData[entity.id] == null){
-                            allData[entity.id] = {flags:{cf:{folderPath:newPath}},_id:entity.id}
+                            allData[entity.id] = {flags:{cf:{folderPath:newPath}},id:entity.id}
                         }else{
-                            allData[entity.id].flags.cf.folderPath = newPath
-                            allData[entity.id]._id=entity.id
+                            allData[entity.id].flags.cf.folderPath = newPath             
+                            allData[entity.id].id=entity.id
                         }      
+                        if (parentPath)
+                        allData[entity.id].flags.cf.path = parentPath;
                     }
                 }
             }
@@ -1304,6 +1315,7 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
         for (let data of Object.values(allData)){
             await packUpdateEntity(pack,data);
         }
+        await tempEntity.delete({pack:pack.collection});
     }
     //await packDeleteEntity(pack,tempEntity.id)
     ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationFinish'));
