@@ -744,7 +744,7 @@ export class CompendiumFolderDirectory extends SidebarDirectory{
     /** @override */
     _getEntryContextOptions(){
         if (!game.user.isGM)
-            return;
+            return [];
         let x = CompendiumDirectory.prototype._getEntryContextOptions()
         // Modify the Duplicate callback to place duplicated compendium in folder of parent.
         x.find(c => c.name === 'COMPENDIUM.Duplicate').callback = li => {
