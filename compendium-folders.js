@@ -1,3 +1,6 @@
+'use strict';
+import {libWrapper} from './shim.js';
+
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
@@ -488,7 +491,7 @@ function defineClasses(){
         async removeCompendium(pack,del=false,refresh=true){
             this._removePack(pack,del);
             if (del){
-                game.customFolders.compendium.entries.remove(pack.packCode);
+                game.customFolders.compendium.entries.delete(pack.packCode);
             }else{
                 let entry = game.customFolders.compendium.entries.get(pack.packCode);
                 let hiddenFolder = this.collection.hidden;
@@ -794,7 +797,7 @@ function defineClasses(){
         /** @override */
         _getEntryContextOptions(){
             if (!game.user.isGM)
-                return;
+                return [];
             let x = CompendiumDirectory.prototype._getEntryContextOptions()
             // Modify the Duplicate callback to place duplicated compendium in folder of parent.
             x.find(c => c.name === 'COMPENDIUM.Duplicate').callback = li => {
@@ -825,26 +828,26 @@ function defineClasses(){
                 });
             }
             let i = x.findIndex(c => c.name === 'COMPENDIUM.Delete')
-            x[i].callback = async (li) => {
-                let pack = game.packs.get(li.data("pack"));
-                return Dialog.confirm({
-                    title: `${game.i18n.localize("COMPENDIUM.Delete")}: ${pack.metadata.label}`,
-                    content: game.i18n.localize("COMPENDIUM.DeleteHint"),
-                    yes: async () => {
-                        pack._assertUserCanModify();
-                        await SocketInterface.dispatch("manageCompendium", {
-                            action: "delete",
-                            data: pack.metadata.name
-                        });
+            // x[i].callback = async (li) => {
+            //     let pack = game.packs.get(li.data("pack"));
+            //     return Dialog.confirm({
+            //         title: `${game.i18n.localize("COMPENDIUM.Delete")}: ${pack.metadata.label}`,
+            //         content: game.i18n.localize("COMPENDIUM.DeleteHint"),
+            //         yes: async () => {
+            //             pack._assertUserCanModify();
+            //             await SocketInterface.dispatch("manageCompendium", {
+            //                 action: "delete",
+            //                 data: pack.metadata.name
+            //             });
 
-                        // Remove the pack from the game World
-                        game.data.packs.findSplice(p => (p.package === "world") && (p.name === pack.metadata.name) );
-                        await game.customFolders.compendium.folders.find(x => x.compendiumList.includes(pack.collection)).removeCompendiumByCode(pack.collection,true,true);
-                        game.initializePacks().then(() => ui.compendium.render());
-                    },
-                    defaultYes: false
-                })
-            }
+            //             // Remove the pack from the game World
+            //             game.data.packs.findSplice(p => (p.package === "world") && (p.name === pack.metadata.name) );
+            //             await game.customFolders.compendium.folders.find(x => x.compendiumList.includes(pack.collection)).removeCompendiumByCode(pack.collection,true,true);
+            //             game.initializePacks().then(() => ui.compendium.render());
+            //         },
+            //         defaultYes: false
+            //     })
+            // }
             i = x.findIndex(c => c.name === 'COMPENDIUM.ImportAll')
             let oldCallback = x[i].callback;
             x[i].callback = async (li) => {
@@ -1157,18 +1160,25 @@ function defineClasses(){
     // extend _getEntryContextOptions()
     //CompendiumFolderDirectory._getEntryContextOptions = CompendiumDirectory.prototype._getEntryContextOptions;
     CompendiumFolderDirectory._onCreateCompendium = CompendiumDirectory.prototype._onCreateCompendium;
-    //CompendiumFolderDirectory._onDeleteCompendium = CompendiumDirectory.prototype._onDeleteCompendium;
+    CompendiumFolderDirectory._onDeleteCompendium = CompendiumDirectory.prototype._onDeleteCompendium;
 
-
-    let old = Compendium.create;
-    Compendium.create =  async function(metadata,options){
-        let result = await old.bind(this,metadata,options)()
+    //was Compendium.create
+    libWrapper.register(mod, 'CompendiumCollection.createCompendium', async function (wrapped, ...args) {
+        let result = await wrapped(...args)
         await initFolders(true);
         return result;
-    }
+    }, 'WRAPPER');
+    //was Compendium.delete
+    libWrapper.register(mod, 'CompendiumCollection.prototype.deleteCompendium', async function (wrapped, ...args) {
+        let packCode = this.collection;
+        await game.customFolders.compendium.folders.contents.find(x => x.compendiumList.includes(packCode)).removeCompendiumByCode(packCode,true,false);
+        let result = await wrapped(...args) 
+        await initFolders(true); 
+        return result;
+    }, 'WRAPPER');
+
     // Override search filter for compendiums
-    let oldSearchFilter = Compendium.prototype._onSearchFilter;
-    Compendium.prototype._onSearchFilter = function(event,query,rgx,html){
+    libWrapper.register(mod, 'Compendium.prototype._onSearchFilter', function (wrapped, ...args) {
         if (this.collection.index.contents.some(x => x.name === TEMP_ENTITY_NAME)){
             //Do custom search
             let existingSearchTerms = game.settings.get(mod,'last-search-packs')
@@ -1198,9 +1208,10 @@ function defineClasses(){
                 }
             }
         }else{
-            oldSearchFilter.bind(this)(event,query,rgx,html);       
+            wrapped(...args)     
         }
-    }
+    }, 'WRAPPER');
+
     CONFIG.CompendiumEntry = {documentClass : CompendiumEntry};
     CONFIG.CompendiumFolder = {documentClass : CompendiumFolder};
     CONFIG.CompendiumEntryCollection = {documentClass : CompendiumEntryCollection};
@@ -2840,8 +2851,10 @@ async function initFolders(refresh=false){
             // Pack has an entry (assigned to default folder)
             game.customFolders.compendium.entries.get(pack).folder = 'default';
         }else{
+            if (pack.length > 1){
             // Pack does not have an entry (because it is new)
-            new CompendiumEntry(pack,'default');
+                new CompendiumEntry(pack,'default');
+            }
         }
     }
     game.customFolders.compendium.folders.default.compendiumList = game.customFolders.compendium.folders.default.compendiumList.concat(unassigned.map(y => y.collection));
@@ -2903,21 +2916,27 @@ Hooks.once('setup',async function(){
             exportFolderStructureToCompendium(game.folders.get(li.dataset.folderId))
         }  
     }
-    let oldActorFolderCtxOptions = ActorDirectory.prototype._getFolderContextOptions
-    ActorDirectory.prototype._getFolderContextOptions = () => oldActorFolderCtxOptions().concat(newContextOption);
+    
+    libWrapper.register(mod, 'ActorDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+        return wrapped(...args).concat(newContextOption);
+    }, 'WRAPPER');
+    //ActorDirectory.prototype._getFolderContextOptions = () => oldActorFolderCtxOptions().concat(newContextOption);
+    libWrapper.register(mod, 'ItemDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+        return wrapped(...args).concat(newContextOption);
+    }, 'WRAPPER');
+    
+    libWrapper.register(mod, 'JournalDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+        return wrapped(...args).concat(newContextOption);
+    }, 'WRAPPER');
+    
+    libWrapper.register(mod, 'RollTableDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+        return wrapped(...args).concat(newContextOption);
+    }, 'WRAPPER');
 
-    let oldItemFolderCtxOptions = ItemDirectory.prototype._getFolderContextOptions
-    ItemDirectory.prototype._getFolderContextOptions = () => oldItemFolderCtxOptions().concat(newContextOption);
-
-    let oldJournalFolderCtxOptions = JournalDirectory.prototype._getFolderContextOptions
-    JournalDirectory.prototype._getFolderContextOptions = () => oldJournalFolderCtxOptions().concat(newContextOption);
-
-    let oldRollTableFolderCtxOptions = RollTableDirectory.prototype._getFolderContextOptions
-    RollTableDirectory.prototype._getFolderContextOptions = () => oldRollTableFolderCtxOptions().concat(newContextOption);
-
-    let oldSceneFolderCtxOptions = SceneDirectory.prototype._getFolderContextOptions
-    SceneDirectory.prototype._getFolderContextOptions = () => oldSceneFolderCtxOptions().concat(newContextOption);
-
+    libWrapper.register(mod, 'SceneDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+        return wrapped(...args).concat(newContextOption);
+    }, 'WRAPPER');
+    
     // Folders In Compendium changes
     Settings.clearSearchTerms()
     Hooks.on('renderCompendium',async function(e){
