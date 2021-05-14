@@ -2856,7 +2856,7 @@ Hooks.once('setup',async function(){
                                     let data = {
                                         id:folderId,
                                         color:color, 
-                                        children:[entryId],
+                                        children:[entryId].concat(allFolderData[folderId]?.children || []),
                                         name:name,
                                         folderPath:folderPath,
                                         tempEntityId:entryId,
