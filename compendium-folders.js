@@ -2490,13 +2490,13 @@ async function createMacroFolderPath(path,pColor,e){
 // This is accessible from the module settings
 // ==========================
 async function cleanupCompendium(pack){
-    ui.notifications.notify(game.i18n.format("CF.cleanupNotificationStart"),{pack:pack})
+    ui.notifications.notify(game.i18n.format("CF.cleanupNotificationStart",{pack:pack}))
     let p = game.packs.get(pack);
     let index = await p.getIndex();
-    let allData = await p.getContent();
+    let allData = await p.getDocuments();
     for (let entry of allData){
-        if (entry.name.includes(TEMP_ENTITY_NAME)){
-            await p.deleteEntity(entry.id)
+        if (entry.name === TEMP_ENTITY_NAME){
+            await packDeleteEntity(p,entry.id)
         }else{
             let matchingIndex = index.find(i => i._id === entry.id);
             let data = await entry.toCompendium();
@@ -2504,9 +2504,9 @@ async function cleanupCompendium(pack){
                 data.flags['cf'] = null
             }
             if (matchingIndex){
-                data._id = matchingIndex._id;
+                data.id = matchingIndex._id;
             }
-            await p.update(data)
+            await packUpdateEntity(p,data)
         }
     }
     ui.notifications.notify(game.i18n.localize("CF.cleanupNotificationFinish"))
@@ -2525,7 +2525,7 @@ class CleanupPackConfig extends FormApplication{
     /** @override */
     async getData(options) { 
         return {
-            packs : game.packs.values()
+            packs : game.packs.contents.filter(x => !x.locked)
         }
     }
     
@@ -2957,7 +2957,7 @@ Hooks.once('setup',async function(){
     Hooks.on('renderCompendium',async function(e){
         let packCode = e.metadata.package+'.'+e.metadata.name;
         let window = e._element[0]
-        if (!e.locked && game.user.isGM)
+        if (!e.collection.locked && game.user.isGM)
             createNewFolderButtonWithinCompendium(window,packCode);
         if (!e.collection.index.contents.some(x => x.name === TEMP_ENTITY_NAME)) return;
 
