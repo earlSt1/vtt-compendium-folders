@@ -669,7 +669,7 @@ function defineClasses(){
             for (let folder of this.folders){
                 let parent = folder.parent
                 while (parent){
-                    if (!this.folders.some(x => x._id === parent._id) && !toAdd.some(x => x._id === parent._id))
+                    if (!this.folders.some(x => x.id === parent.id) && !toAdd.some(x => x.id === parent.id))
                         toAdd.push(parent);
                     parent = parent.parent;
                 }

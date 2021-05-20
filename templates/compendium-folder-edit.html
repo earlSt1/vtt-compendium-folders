@@ -64,14 +64,14 @@
             {{#each apacks}}
                 <div class='flexrow pack-select pack-assigned'>
                     <input type="checkbox" name="{{this.metadata.package}}{{this.metadata.name}}" {{#ifIn metadata ../folder.data.compendiumList}} checked {{/ifIn}}/>
-                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} - {{this.entity}} ({{this.metadata.package}})  </label>
+                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px'>{{this.metadata.label}} - {{this.documentClass.documentName}} ({{this.metadata.package}})  </label>
                 </div>
             {{/each}}
             <h2>{{localize "CF.unassigned"}}</h2>
             {{#each upacks}}
                 <div class='flexrow pack-select pack-unassigned'>
                     <input type="checkbox" name="{{this.metadata.package}}{{this.metadata.name}}"/>
-                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px;color:#666;'><i>{{this.metadata.label}} - {{this.entity}} ({{this.metadata.package}}) </i></label>
+                    <label for="{{this.metadata.package}}{{this.metadata.name}}" style='margin-top:2px;color:#666;'><i>{{this.metadata.label}} - {{this.documentClass.documentName}} ({{this.metadata.package}}) </i></label>
                 </div>
             {{/each}}
         </div>
