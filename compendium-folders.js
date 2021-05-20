@@ -1906,9 +1906,9 @@ async function createParentFoldersWithinCompendium(folder,pack){
     let content = await pack.getDocuments();
     let tempEntities = content.filter(e => e.name === TEMP_ENTITY_NAME);
 
-    while (currentFolder.parent != null){
-        parents.push(currentFolder.parent);
-        currentFolder = currentFolder.parent;
+    while (currentFolder.parentFolder != null){
+        parents.push(currentFolder.parentFolder);
+        currentFolder = currentFolder.parentFolder;
     }
     let previousParent = null;
     let previousPath = []
@@ -1988,22 +1988,22 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
             color:color,
         }
         let existing = merge ? index.find(i => i.name === data.name) : index.find(i => i._id === e.id);
-        if ( existing ) data._id = existing._id;
-        if ( data._id ){
+        if ( existing ) data.id = existing._id;
+        if ( data.id ){
             // Remove child from old parent
-            let oldParent = content.find(n => n.name === TEMP_ENTITY_NAME && n.data?.flags?.cf?.children?.includes(data._id) && n.data.flags.cf.id != folderId)
+            let oldParent = content.find(n => n.name === TEMP_ENTITY_NAME && n.data?.flags?.cf?.children?.includes(data.id) && n.data.flags.cf.id != folderId)
             if (oldParent){
                 let nData = {
-                    _id: oldParent._id,
+                    id: oldParent.id,
                     flags:{
                         cf:{
-                            children:oldParent.data.flags.cf.children.filter(m => m != data._id)
+                            children:oldParent.data.flags.cf.children.filter(m => m != data.id)
                         }
                     }
                 }
                 await packUpdateEntity(pack,nData);
                  //Update saved content for future reference
-                oldParent.data.flags.cf.children = oldParent.data.flags.cf.children.filter(m => m != data._id);
+                oldParent.data.flags.cf.children = oldParent.data.flags.cf.children.filter(m => m != data.id);
             }
            
             packEntities.push(existing._id)
@@ -2033,7 +2033,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
         await pack.documentClass.create(tempData,{pack:pack.collection});
     }else{
         let folderData = {
-            _id:existingFolder.id,
+            id:existingFolder.id,
             flags:{
                 cf:{
                     children:[...new Set(existingFolder.data.flags.cf.children.concat(packEntities))]
