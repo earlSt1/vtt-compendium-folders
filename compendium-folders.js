@@ -898,7 +898,10 @@ function defineClasses(){
                         // TODO 
                         Dialog.confirm({
                         title: `${game.i18n.localize("FOLDER.Remove")} ${folder.name}`,
-                        content: game.i18n.localize("FOLDER.RemoveConfirm"),
+                        content: `
+                                <p>${game.i18n.localize("AreYouSure")}</p>
+                                <p>${game.i18n.localize("FOLDER.DeleteWarning")}</p>
+                            `,
                         yes: () => folder.delete(),
                         options: {
                             top: Math.min(li[0].offsetTop, window.innerHeight - 350),
@@ -1116,26 +1119,26 @@ function defineClasses(){
         
             // Match entities and folders
             if ( isSearch ) {
-            const rgx = new RegExp(RegExp.escape(query), "i");
-        
-            // Match entity names
-            for ( let e of this.documents ) {
-                if ( rgx.test(e.name) ) {
-                entityIds.add(e.id);
-                if ( e.parent.id ) folderIds.add(e.parent.id);
+                const rgx = new RegExp(RegExp.escape(query), "i");
+            
+                // Match entity names
+                for ( let e of this.documents ) {
+                    if ( rgx.test(e.name) ) {
+                    entityIds.add(e.id);
+                    if ( e.parent.id ) folderIds.add(e.parent.id);
+                    }
                 }
-            }
-        
-            // Match folder tree
-            const includeFolders = fids => {
-                const folders = this.folders.filter(f => fids.has(f._id));
-                const pids = new Set(folders.filter(f => f.data.parent).map(f => f.data.parent));
-                if ( pids.size ) {
-                pids.forEach(p => folderIds.add(p));
-                includeFolders(pids);
-                }
-            };
-            includeFolders(folderIds);
+            
+                // Match folder tree
+                const includeFolders = fids => {
+                    const folders = this.folders.filter(f => fids.has(f.id));
+                    const pids = new Set(folders.filter(f => f.data.parent).map(f => f.data.parent));
+                    if ( pids.size ) {
+                        pids.forEach(p => folderIds.add(p));
+                        includeFolders(pids);
+                    }
+                };
+                includeFolders(folderIds);
             }
         
             // Toggle each directory item
