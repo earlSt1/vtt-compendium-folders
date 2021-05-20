@@ -1241,7 +1241,7 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     let contents = await pack.getDocuments()
     let tempEntity = await pack.getDocument(folderElement.getAttribute('data-temp-entity-id'));
     let tempEntityFolderId = tempEntity.data.flags.cf.id
-    let folderChildren = tempEntity.data.flags.cf.children;
+    let folderChildren = contents.filter(e => e.data?.flags?.cf?.id === tempEntityFolderId && e.id != tempEntity.id).map(d => d.id);
     let parentFolderId = null;
     let parentEntity = null;
     let parentPath = null;
@@ -2652,7 +2652,7 @@ function updateFolderPathForTempEntity(entity,content){
             updateData.flags.cf.folderPath.push(parent.data.flags.cf.id);
         }
     }
-    updateData._id = entity.id
+    updateData.id = entity.id
     console.debug(updateData);
     
     return updateData;
@@ -2671,7 +2671,7 @@ function removeOrUpdateFolderIdForEntity(entity,content){
                 id:folderId
             }
         },
-        _id:entity.id
+        id:entity.id
     }
     return updateData
 }
