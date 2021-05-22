@@ -215,7 +215,7 @@ function getMacroFolderPath(macroId){
     let folder = Object.values(allFolders).find(f => f.macroList != null && f.macroList.includes(macroId))
     if (folder != null){
         let folderPath = folder.titleText;
-        if (folder.pathToFolder != null){
+        if (folder.pathToFolder != null && folder.pathToFolder.length > 0){
             folderPath = folder.pathToFolder.map(p => allFolders[p].titleText).join(FOLDER_SEPARATOR)+FOLDER_SEPARATOR+folderPath
         }
         return folderPath
@@ -1981,6 +1981,8 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     let packEntities = []
     let result = null;
     for ( let e of entities ) {
+        if (e instanceof game.MF?.MacroEntry)
+            e = e.macro
         let data = await e.toCompendium();
         data.flags.cf={
             id:folderId,
@@ -2154,22 +2156,14 @@ async function importFolderFromCompendium(event,folder){
             let packCode = folder.closest('.directory.compendium').getAttribute('data-pack');
             let pack = await game.packs.get(packCode);
             let coll = pack.contents;
-            let packEntity = pack.documentClass.documentName;
-            if (packEntity === 'Macro'){
-                if (document.querySelector('#macros-popout') != null){
-                    document.querySelector('#macros-popout').querySelector('a.header-button.close').click()
-                }
-            }
+            let packEntity = pack.documentClass.documentName;    
             await importAllParentFolders(pack,coll,folder,merge);
             await recursivelyImportFolders(pack,coll,folder,merge);
             ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
             await removeTempEntities(packEntity);
+            if (packEntity === 'Macro')
+                ui.macros.refresh();
             await game.settings.set(mod,'importing',false);
-            if (packEntity === 'Macro'){
-                if (document.querySelector('#macros-popout') != null){
-                    document.querySelector('#macros-popout').querySelector('a.header-button.close').click()
-                }
-            }
         }
     });
     
@@ -2242,7 +2236,8 @@ function createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
                 }).render(true)
             });
         }
-        if (game.packs.get(packCode).documentClass.documentName != 'Playlist'){
+        if (game.packs.get(packCode).documentClass.documentName != 'Playlist'
+            && game.packs.get(packCode).documentClass.documentName != 'Macro'){ // Temporarily disabling the Import Folder structure for Macros (needs to be fixed later)
             let importButton = document.createElement('a');
             importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
             importButton.classList.add('import-folder');
@@ -2458,7 +2453,7 @@ async function createMacroFolderPath(path,pColor,e){
             && getFullPath(f) === folderPath)
         if (results.length==0 ){
             //create folder
-            let newFolder = await CONFIG.MacroFolder.entityClass.create({
+            let newFolder = await game.MF.MacroFolder.create({
                 titleText:seg,
                 macroList:[],
                 pathToFolder:[]
@@ -2901,7 +2896,6 @@ async function initFolders(refresh=false){
     }
 }
 Hooks.once('setup',async function(){
-    let post073 = game.data.version >= '0.7.3';
     defineClasses();
     Settings.registerSettings()
     Hooks.once('ready',async function(){
