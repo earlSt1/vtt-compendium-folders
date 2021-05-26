@@ -2765,7 +2765,7 @@ async function initFolders(refresh=false){
     }
 }
 Hooks.once('setup',async function(){
-    let post073 = game.data.version >= '0.7.3';
+
     
     Settings.registerSettings()
     Hooks.once('ready',async function(){
@@ -2810,311 +2810,311 @@ Hooks.once('setup',async function(){
     SceneDirectory.prototype._getFolderContextOptions = () => oldSceneFolderCtxOptions().concat(newContextOption);
 
     // Folders In Compendium changes
-    if (post073){
-        Settings.clearSearchTerms()
-        Hooks.on('renderCompendium',async function(e){
-            let packCode = e.metadata.package+'.'+e.metadata.name;
-            let window = e._element[0]
-            if (!e.locked && game.user.isGM)
-                createNewFolderButtonWithinCompendium(window,packCode);
-            if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
 
-            removeStaleOpenFolderSettings(packCode);
-            let cachedFolderStructure = await loadCachedFolderStructure(packCode);
-            let allFolderData={};
-            let groupedFoldersSorted = {}
-            let groupedFolders = {}
-            
-            if (cachedFolderStructure != null){
-               groupedFoldersSorted = cachedFolderStructure;
-            }else{
-                let folderChildren = {}
-                let checkedPaths = []
-                let contents = await e.getContent();
-                let allFolderIds = contents.filter(e => e.data.flags != null 
-                    && e.data.flags.cf != null
-                    && e.data.flags.cf.id != null 
-                    && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
-                let updateData = [];
-                //First parse folder data
-                for (let entry of contents){
-                    if (entry != null 
-                        && entry.data.flags.cf != null){
-                        let folderId = entry.data.flags.cf.id;
-                        let entryId = entry._id
-                        if (folderId != null){
-                            if (entry.name === TEMP_ENTITY_NAME){
-                                if (entry.data.flags.cf.folderPath == null){
-                                    let result = updateFolderPathForTempEntity(entry,contents);
-                                    updateData.push(result); 
-                                }else{
-                                    let name = entry.data.flags.cf.name
-                                    let color = entry.data.flags.cf.color;
-                                    let folderPath = entry.data.flags.cf.folderPath;
-                                    let folderIcon = entry.data.flags.cf.icon
-                                    let fontColor = entry.data.flags.cf.fontColor;
-                                    let data = {
-                                        id:folderId,
-                                        color:color, 
-                                        children:[entryId].concat(allFolderData[folderId]?.children || []),
-                                        name:name,
-                                        folderPath:folderPath,
-                                        tempEntityId:entryId,
-                                        icon:folderIcon,
-                                        fontColor:fontColor
-                                    }
-                                    allFolderData[folderId]=data
-                                }
-                            }
-                            else if (entry.data.flags.cf.id != null
-                                && entry.name != TEMP_ENTITY_NAME
-                                && !allFolderIds.includes(entry.data.flags.cf.id)){
-                                updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
-                            }
-                            if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
-                                allFolderData[folderId].children.push(entryId);
+    Settings.clearSearchTerms()
+    Hooks.on('renderCompendium',async function(e){
+        let packCode = e.metadata.package+'.'+e.metadata.name;
+        let window = e._element[0]
+        if (!e.locked && game.user.isGM)
+            createNewFolderButtonWithinCompendium(window,packCode);
+        if (!e.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
+
+        removeStaleOpenFolderSettings(packCode);
+        let cachedFolderStructure = await loadCachedFolderStructure(packCode);
+        let allFolderData={};
+        let groupedFoldersSorted = {}
+        let groupedFolders = {}
+        
+        if (cachedFolderStructure != null){
+            groupedFoldersSorted = cachedFolderStructure;
+        }else{
+            let folderChildren = {}
+            let checkedPaths = []
+            let contents = await e.getContent();
+            let allFolderIds = contents.filter(e => e.data.flags != null 
+                && e.data.flags.cf != null
+                && e.data.flags.cf.id != null 
+                && e.name === TEMP_ENTITY_NAME).map(e => e.data.flags.cf.id)
+            let updateData = [];
+            //First parse folder data
+            for (let entry of contents){
+                if (entry != null 
+                    && entry.data.flags.cf != null){
+                    let folderId = entry.data.flags.cf.id;
+                    let entryId = entry._id
+                    if (folderId != null){
+                        if (entry.name === TEMP_ENTITY_NAME){
+                            if (entry.data.flags.cf.folderPath == null){
+                                let result = updateFolderPathForTempEntity(entry,contents);
+                                updateData.push(result); 
                             }else{
-                                allFolderData[folderId] = {children:[entryId]}
+                                let name = entry.data.flags.cf.name
+                                let color = entry.data.flags.cf.color;
+                                let folderPath = entry.data.flags.cf.folderPath;
+                                let folderIcon = entry.data.flags.cf.icon
+                                let fontColor = entry.data.flags.cf.fontColor;
+                                let data = {
+                                    id:folderId,
+                                    color:color, 
+                                    children:[entryId].concat(allFolderData[folderId]?.children || []),
+                                    name:name,
+                                    folderPath:folderPath,
+                                    tempEntityId:entryId,
+                                    icon:folderIcon,
+                                    fontColor:fontColor
+                                }
+                                allFolderData[folderId]=data
                             }
                         }
-                    }
-                }
-                for (let key of Object.keys(folderChildren)){
-                    allFolderData[key].children = folderChildren[key].children
-                }          
-
-                if (updateData.length>0){
-                    ui.notifications.notify('Updating folder structure. Please wait...')
-                    e.close().then(async () => {
-                        if (game.user.isGM){
-                            for (let d of updateData){
-                                await e.updateEntity(d);
-                            }
-                            resetCache()
-                            ui.notifications.notify('Updating complete!')
-                            e.render(true);
+                        else if (entry.data.flags.cf.id != null
+                            && entry.name != TEMP_ENTITY_NAME
+                            && !allFolderIds.includes(entry.data.flags.cf.id)){
+                            updateData.push(removeOrUpdateFolderIdForEntity(entry,contents));
+                        }
+                        if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
+                            allFolderData[folderId].children.push(entryId);
                         }else{
-                            ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                            allFolderData[folderId] = {children:[entryId]}
                         }
-                    });
-                    return;
-                }  
-                
-                //Group folders in terms of depth
-                let groupedFolderMetadata = {}
-                Object.keys(allFolderData).forEach(function(key) {
-                    let depth = 0;
-                    if (allFolderData[key].folderPath == null || allFolderData[key].folderPath.length===0){
-                        depth = 0;
-                    }else{
-                        depth = allFolderData[key].folderPath.length
-                        // Add all parent folders to list
-                        // Need to make sure to render them
                     }
-                    if (groupedFolders[depth] == null){
-                        groupedFolders[depth] = [allFolderData[key]];
-                    }else{
-                        groupedFolders[depth].push(allFolderData[key]);
-                    }
-                    groupedFolderMetadata[key] = {depth:depth, index:groupedFolders[depth].length-1}
-                });
-                Object.keys(groupedFolders).sort(function(o1,o2){
-                    if (parseInt(o1)<parseInt(o2)){
-                        return -1;
-                    }else if (parseInt(o1>parseInt(o2))){
-                        return 1;
-                    }return 0;
-                }).forEach((key) => {
-                    groupedFoldersSorted[key] = groupedFolders[key]
-                })
-                await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
-            }
-            console.log(modName+' | Creating folder structure inside compendium.');
-            let openFolders = game.settings.get(mod,'open-temp-folders');
-            await createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
-            //createNewFolderButtonWithinCompendium(window,packCode);
-            for (let entity of window.querySelectorAll('.directory-item')){
-                if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
-                    entity.style.display = 'none';
-                    entity.classList.add('hidden')
                 }
             }
-            if (game.user.isGM && !e.locked){
-                // Moving between folders
-                let hiddenMoveField = document.createElement('input');
-                hiddenMoveField.type='hidden'
-                hiddenMoveField.style.display='none';
-                hiddenMoveField.classList.add('folder-to-move');
-                window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
-                
-                for (let entity of window.querySelectorAll('.directory-item')){
-                    entity.addEventListener('dragstart',async function(){
-                        let currentId = this.getAttribute('data-entry-id');
-                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
-                    })
-                }
-                for (let folder of window.querySelectorAll('.compendium-folder')){
-                    folder.addEventListener('drop',async function(event){
-                        let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                        if (movingItemId.length>0){
-                            console.log(modName+' | Moving entry '+movingItemId+' to new folder.')
-                            this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
-                            //let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
+            for (let key of Object.keys(folderChildren)){
+                allFolderData[key].children = folderChildren[key].children
+            }          
 
-                            let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
-                            let p = game.packs.get(packCode);                          
-                           
-                            let data = {
-                                _id:movingItemId,
-                                flags:{
-                                    cf:{
-                                        id:folder.getAttribute('data-folder-id')   
-                                    }
+            if (updateData.length>0){
+                ui.notifications.notify('Updating folder structure. Please wait...')
+                e.close().then(async () => {
+                    if (game.user.isGM){
+                        for (let d of updateData){
+                            await e.updateEntity(d);
+                        }
+                        resetCache()
+                        ui.notifications.notify('Updating complete!')
+                        e.render(true);
+                    }else{
+                        ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
+                    }
+                });
+                return;
+            }  
+            
+            //Group folders in terms of depth
+            let groupedFolderMetadata = {}
+            Object.keys(allFolderData).forEach(function(key) {
+                let depth = 0;
+                if (allFolderData[key].folderPath == null || allFolderData[key].folderPath.length===0){
+                    depth = 0;
+                }else{
+                    depth = allFolderData[key].folderPath.length
+                    // Add all parent folders to list
+                    // Need to make sure to render them
+                }
+                if (groupedFolders[depth] == null){
+                    groupedFolders[depth] = [allFolderData[key]];
+                }else{
+                    groupedFolders[depth].push(allFolderData[key]);
+                }
+                groupedFolderMetadata[key] = {depth:depth, index:groupedFolders[depth].length-1}
+            });
+            Object.keys(groupedFolders).sort(function(o1,o2){
+                if (parseInt(o1)<parseInt(o2)){
+                    return -1;
+                }else if (parseInt(o1>parseInt(o2))){
+                    return 1;
+                }return 0;
+            }).forEach((key) => {
+                groupedFoldersSorted[key] = groupedFolders[key]
+            })
+            await cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
+        }
+        console.log(modName+' | Creating folder structure inside compendium.');
+        let openFolders = game.settings.get(mod,'open-temp-folders');
+        await createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
+        //createNewFolderButtonWithinCompendium(window,packCode);
+        for (let entity of window.querySelectorAll('.directory-item')){
+            if (entity.querySelector('h4').innerText.includes(TEMP_ENTITY_NAME)){
+                entity.style.display = 'none';
+                entity.classList.add('hidden')
+            }
+        }
+        if (game.user.isGM && !e.locked){
+            // Moving between folders
+            let hiddenMoveField = document.createElement('input');
+            hiddenMoveField.type='hidden'
+            hiddenMoveField.style.display='none';
+            hiddenMoveField.classList.add('folder-to-move');
+            window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
+            
+            for (let entity of window.querySelectorAll('.directory-item')){
+                entity.addEventListener('dragstart',async function(){
+                    let currentId = this.getAttribute('data-entry-id');
+                    this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
+                })
+            }
+            for (let folder of window.querySelectorAll('.compendium-folder')){
+                folder.addEventListener('drop',async function(event){
+                    let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
+                    if (movingItemId.length>0){
+                        console.log(modName+' | Moving entry '+movingItemId+' to new folder.')
+                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
+                        //let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
+
+                        let packCode = this.closest('.sidebar-tab.compendium').getAttribute('data-pack');
+                        let p = game.packs.get(packCode);                          
+                        
+                        let data = {
+                            _id:movingItemId,
+                            flags:{
+                                cf:{
+                                    id:folder.getAttribute('data-folder-id')   
                                 }
                             }
-                            await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
-                            if (data) await p.updateEntity(data)
                         }
-                    })
-                }
-            }         
-            
-        })
-
-        Hooks.on('renderApplication',async function(a){
-            //When compendium window renders, recreate the search bar and register custom listener
-            if (a.template != null && a.template === 'templates/apps/compendium.html'){
-                let pack = game.packs.get(a.collection);
-                if (!pack.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
-                
-                let window = a._element[0]
-                let searchBar = window.querySelector('input[name=\'search\']')
-                let newSearchBar = document.createElement('input')
-                newSearchBar.name='search2';
-                newSearchBar.placeholder='Search';
-                newSearchBar.type='text';
-                newSearchBar.autocomplete='off';
-                newSearchBar.setAttribute('data-pack',a.collection)
-                let existingSearchTerms = game.settings.get(mod,'last-search-packs')
-                if (!Object.keys(existingSearchTerms).includes(a.collection)){
-                    existingSearchTerms[a.collection] = ""
-                    await game.settings.set(mod,'last-search-packs',existingSearchTerms)
-                }
-                newSearchBar.value = existingSearchTerms[a.collection]
-                if (newSearchBar.value.length>0){
-                    filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
-                }
-                
-                newSearchBar.addEventListener('keyup',async function(event){
-                    event.stopPropagation();
-                    let existingSearchTerms = game.settings.get(mod,'last-search-packs')
-                    existingSearchTerms[event.currentTarget.getAttribute('data-pack')] = event.currentTarget.value
-                    game.settings.set(mod,'last-search-packs',existingSearchTerms);
-                    filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
+                        await moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
+                        if (data) await p.updateEntity(data)
+                    }
                 })
-                let header = searchBar.parentElement;
-                header.replaceChild(newSearchBar,searchBar);
             }
-        });
-        // Hooking into the update/create methods to extract
-        // folder data from the entity
-        // and create folders based on them
-        Hooks.on('createActor',async function(a){
-            await importFolderData(a);
-        })
-        Hooks.on('createItem',async function(i){
-            await importFolderData(i);
-        })
-        Hooks.on('createJournalEntry',async function(j){
-            await importFolderData(j);
-        })
-        Hooks.on('createMacro',async function(m){
-            await importFolderData(m);
-        })
-        Hooks.on('createPlaylist',async function(p){
-            await importFolderData(p);
-        })
-        Hooks.on('createRollTable',async function(r){
-            await importFolderData(r);
-        })
-        Hooks.on('createScene',async function(s){
-            await importFolderData(s);
-        })
+        }         
         
+    })
 
-        Hooks.on('updateActor',async function(a){
-            await importFolderData(a);
-        })
-        Hooks.on('updateItem',async function(i){
-            await importFolderData(i);
-        })
-        Hooks.on('updateJournalEntry',async function(j){
-            await importFolderData(j);
-        })
-        Hooks.on('updateMacro',async function(m){
-            await importFolderData(m);
-        })
-        Hooks.on('updatePlaylist',async function(p){
-            await importFolderData(p);
-        })
-        Hooks.on('updateRollTable',async function(r){
-            await importFolderData(r);
-        })
-        Hooks.on('updateScene',async function(s){
-            await importFolderData(s);
-        })
+    Hooks.on('renderApplication',async function(a){
+        //When compendium window renders, recreate the search bar and register custom listener
+        if (a.template != null && a.template === 'templates/apps/compendium.html'){
+            let pack = game.packs.get(a.collection);
+            if (!pack.index.some(x => x.name === TEMP_ENTITY_NAME)) return;
+            
+            let window = a._element[0]
+            let searchBar = window.querySelector('input[name=\'search\']')
+            let newSearchBar = document.createElement('input')
+            newSearchBar.name='search2';
+            newSearchBar.placeholder='Search';
+            newSearchBar.type='text';
+            newSearchBar.autocomplete='off';
+            newSearchBar.setAttribute('data-pack',a.collection)
+            let existingSearchTerms = game.settings.get(mod,'last-search-packs')
+            if (!Object.keys(existingSearchTerms).includes(a.collection)){
+                existingSearchTerms[a.collection] = ""
+                await game.settings.set(mod,'last-search-packs',existingSearchTerms)
+            }
+            newSearchBar.value = existingSearchTerms[a.collection]
+            if (newSearchBar.value.length>0){
+                filterSelectorBySearchTerm(window,newSearchBar.value,'.directory-item')
+            }
+            
+            newSearchBar.addEventListener('keyup',async function(event){
+                event.stopPropagation();
+                let existingSearchTerms = game.settings.get(mod,'last-search-packs')
+                existingSearchTerms[event.currentTarget.getAttribute('data-pack')] = event.currentTarget.value
+                game.settings.set(mod,'last-search-packs',existingSearchTerms);
+                filterSelectorBySearchTerm(window,event.currentTarget.value,'.directory-item')
+            })
+            let header = searchBar.parentElement;
+            header.replaceChild(newSearchBar,searchBar);
+        }
+    });
+    // Hooking into the update/create methods to extract
+    // folder data from the entity
+    // and create folders based on them
+    Hooks.on('createActor',async function(a){
+        await importFolderData(a);
+    })
+    Hooks.on('createItem',async function(i){
+        await importFolderData(i);
+    })
+    Hooks.on('createJournalEntry',async function(j){
+        await importFolderData(j);
+    })
+    Hooks.on('createMacro',async function(m){
+        await importFolderData(m);
+    })
+    Hooks.on('createPlaylist',async function(p){
+        await importFolderData(p);
+    })
+    Hooks.on('createRollTable',async function(r){
+        await importFolderData(r);
+    })
+    Hooks.on('createScene',async function(s){
+        await importFolderData(s);
+    })
+    
 
-        // Adding the export button to all folders
-        // ONLY if it contains an entity (either direct child or in child folder)
-        
-        Hooks.on('renderActorDirectory',async function(a){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.actors.entities.some(a => a.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('Actor')
-            }
-        })
-        Hooks.on('renderItemDirectory',async function(e){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('Item')
-            }
-        })
-        Hooks.on('renderJournalDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('JournalEntry')
-            }
-        })
-        Hooks.on('renderPlaylistDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.playlists.entities.some(p => p.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('Playlist')
-            }
-        })
-        Hooks.on('renderRollTableDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('RollTable')
-            }
-        })
-        Hooks.on('renderSceneDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('Scene')
-            }
-        })
-        // Integration with Macro Folders
-        Hooks.on('addExportButtonsForCF',async function(){
-            addMacroFoldersExportButton();
-        })
-        Hooks.on('renderMacroDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.macros.entities.some(m => m.name === TEMP_ENTITY_NAME)){
-                await removeTempEntities('Macro')
-            }
-        })
-        Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html,options) => {
-            Hooks.call("getCompendiumDirectoryEntryContext",html,options)
-        })
-    }
+    Hooks.on('updateActor',async function(a){
+        await importFolderData(a);
+    })
+    Hooks.on('updateItem',async function(i){
+        await importFolderData(i);
+    })
+    Hooks.on('updateJournalEntry',async function(j){
+        await importFolderData(j);
+    })
+    Hooks.on('updateMacro',async function(m){
+        await importFolderData(m);
+    })
+    Hooks.on('updatePlaylist',async function(p){
+        await importFolderData(p);
+    })
+    Hooks.on('updateRollTable',async function(r){
+        await importFolderData(r);
+    })
+    Hooks.on('updateScene',async function(s){
+        await importFolderData(s);
+    })
+
+    // Adding the export button to all folders
+    // ONLY if it contains an entity (either direct child or in child folder)
+    
+    Hooks.on('renderActorDirectory',async function(a){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.actors.entities.some(a => a.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('Actor')
+        }
+    })
+    Hooks.on('renderItemDirectory',async function(e){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.items.entities.some(i => i.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('Item')
+        }
+    })
+    Hooks.on('renderJournalDirectory',async function(){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.journal.entities.some(j => j.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('JournalEntry')
+        }
+    })
+    Hooks.on('renderPlaylistDirectory',async function(){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.playlists.entities.some(p => p.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('Playlist')
+        }
+    })
+    Hooks.on('renderRollTableDirectory',async function(){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.tables.entities.some(r => r.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('RollTable')
+        }
+    })
+    Hooks.on('renderSceneDirectory',async function(){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.scenes.entities.some(s => s.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('Scene')
+        }
+    })
+    // Integration with Macro Folders
+    Hooks.on('addExportButtonsForCF',async function(){
+        addMacroFoldersExportButton();
+    })
+    Hooks.on('renderMacroDirectory',async function(){
+        let importing = game.settings.get(mod,'importing');
+        if (!importing && game.macros.entities.some(m => m.name === TEMP_ENTITY_NAME)){
+            await removeTempEntities('Macro')
+        }
+    })
+    Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html,options) => {
+        Hooks.call("getCompendiumDirectoryEntryContext",html,options)
+    })
+    
 });
