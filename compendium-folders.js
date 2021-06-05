@@ -1981,7 +1981,7 @@ async function exportSingleFolderToCompendium(index,pack,entities,folderObj,fold
     let packEntities = []
     let result = null;
     for ( let e of entities ) {
-        if (e instanceof game.MF?.MacroEntry)
+        if (game.modules.get('macro-folders')?.active && e instanceof game.MF?.MacroEntry)
             e = e.macro
         let data = await e.toCompendium();
         data.flags.cf={
