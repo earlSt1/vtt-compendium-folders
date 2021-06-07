@@ -212,3 +212,9 @@ div.compendium .compendium-folder-header > h3 > img {
 button.dialog-button.deleteAll  {
   background-color:#c51c1c
 }
+.d35ecustom #sidebar li.folder::before{
+	background:none
+}
+.d35ecustom #sidebar li.folder h3 i{
+	display:inline	
+}

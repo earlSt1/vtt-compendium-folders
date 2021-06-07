@@ -730,7 +730,8 @@ function defineClasses(){
             return {
                 user: game.user,
                 tree: this.tree,
-                isPF1: game.system.id === "pf1"
+                isPF1: game.system.id === "pf1",
+                isD35E: game.system.id === 'D35E'
             };
         }
         _onCreateFolder(event) {
@@ -772,13 +773,21 @@ function defineClasses(){
                 ui.compendium.render(true);
             })
             if (game.system.id === 'pf1'){
-                html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowseCompendium(e, "spells"));
-                html.find(".compendium-footer .compendium.items").click((e) => this._onBrowseCompendium(e, "items"));
-                html.find(".compendium-footer .compendium.bestiary").click((e) => this._onBrowseCompendium(e, "bestiary"));
-                html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowseCompendium(e, "feats"));
-                html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowseCompendium(e, "classes"));
-                html.find(".compendium-footer .compendium.races").click((e) => this._onBrowseCompendium(e, "races"));
-                html.find(".compendium-footer .compendium.buffs").click((e) => this._onBrowseCompendium(e, "buffs"));
+                html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowsePF1Compendium(e, "spells"));
+                html.find(".compendium-footer .compendium.items").click((e) => this._onBrowsePF1Compendium(e, "items"));
+                html.find(".compendium-footer .compendium.bestiary").click((e) => this._onBrowsePF1Compendium(e, "bestiary"));
+                html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowsePF1Compendium(e, "feats"));
+                html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowsePF1Compendium(e, "classes"));
+                html.find(".compendium-footer .compendium.races").click((e) => this._onBrowsePF1Compendium(e, "races"));
+                html.find(".compendium-footer .compendium.buffs").click((e) => this._onBrowsePF1Compendium(e, "buffs"));
+            }
+            if (game.system.id === 'D35E'){
+                html.find(".compendium-footer .compendium.spells").click(e => this._onBrowseD35ECompendium(e, "spells"));
+                html.find(".compendium-footer .compendium.items").click(e => this._onBrowseD35ECompendium(e, "items"));
+                html.find(".compendium-footer .compendium.bestiary").click(e => this._onBrowseD35ECompendium(e, "bestiary"));
+                html.find(".compendium-footer .compendium.feats").click(e => this._onBrowseD35ECompendium(e, "feats"));
+                html.find(".compendium-footer .compendium.enhancements").click(e => this._onBrowseD35ECompendium(e, "enhancements"));
+                html.find(".compendium-footer .compendium.buffs").click(e => this._onBrowseD35ECompendium(e, "buffs"))
             }
             // Options below are GM only
             if ( !game.user.isGM ) return;
@@ -787,13 +796,17 @@ function defineClasses(){
             html.find('.create-compendium').click(this._onCreateDocument.bind(this));
             html.find('.create-entity-c').click(this._onCreateDocument.bind(this));
         }
-        _onBrowseCompendium(event, type) {
+        _onBrowsePF1Compendium(event, type) {
             event.preventDefault();
         
             if (game.pf1.isMigrating) return ui.notifications.warn(game.i18n.localize("PF1.Migration.Ongoing"));
         
             game.pf1.compendiums[type]._render(true);
-        }    
+        } 
+        _onBrowseD35ECompendium(event,type){
+            event.preventDefault();
+            game.D35E.CompendiumDirectoryPF.browser.compendiums[type]._render(true);
+        }   
 
         /** @override */
         _getEntryContextOptions(){
@@ -1248,7 +1261,8 @@ async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
     let tempEntityData = tempEntity.data.flags.cf
     if (tempEntityData.folderPath != null && tempEntityData.folderPath.length>0){
         parentFolderId = tempEntityData.folderPath[tempEntityData.folderPath.length-1];
-        parentEntity = contents.find(e => e.name === TEMP_ENTITY_NAME && e.data.flags.cf.id === parentFolderId);
+        parentEntity = contents.find(e => e.name === TEMP_ENTITY_NAME && 
+            e.data.flags.cf.id === parentFolderId);
         parentPath = parentEntity.data.flags.cf.path;
     }
     
@@ -2608,6 +2622,49 @@ async function resetCache(){
     console.log(modName+' | Cleared cached folder structure');
 }
 
+function updateEntityParentIfInvalid(entity,contents){
+    if (entity.data?.flags?.cf?.path){
+        let path = entity.data.flags.cf.path
+        let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
+        if (entity.data.flags.cf.id != parentEntity.data.flags.cf.id){
+            console.debug(modName+' | Need to update parent folder ID for '+entity.name);
+            return {
+                id:entity.id,
+                flags:{
+                    cf:{
+                        id:parentEntity.data.flags.cf.id
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+function updateFolderPathIfInvalid(folder,contents){
+    let folderPath = folder.data.flags.cf.folderPath;
+    let newFolderPath = folderPath;
+    let path = folder.data.flags.cf.path;
+    for (let folderId of folderPath){
+        if (!contents.some(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === folderId)){
+            console.debug(modName+' | Need to update folderPath for folder '+folder.data.flags.cf.id);
+            let correctFolder = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
+            if (correctFolder){
+                newFolderPath[folderPath.indexOf(folderId)] = correctFolder.data.flags.cf.id;
+            }
+        }
+    }
+    if (folderPath != newFolderPath){
+        return {
+            id:folder.id,
+            flags:{
+                cf:{
+                    folderPath:newFolderPath
+                }
+            }
+        }
+    }
+    return null;
+}
 function updateFolderPathForTempEntity(entity,content){
     // This constructs the folder path for temp entities
     // for each entity in contents with sub-path in entity path, add id
