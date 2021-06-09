@@ -943,7 +943,7 @@ function defineClasses(){
                     name: "CF.showToPlayers",
                     icon: '<i class="far fa-eye"></i>',
                     condition: header => { 
-                        return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
+                        return game.user.isGM
                     },
                     callback: async (header) => {
                         const li = header.parent();
@@ -968,7 +968,7 @@ function defineClasses(){
                     name: "CF.hideFromPlayers",
                     icon: '<i class="far fa-eye-slash"></i>',
                     condition: header => { 
-                        return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
+                        return game.user.isGM
                     },
                     callback: async (header) => {
                         const li = header.parent();
@@ -993,7 +993,7 @@ function defineClasses(){
                     name: "CF.lockAll",
                     icon: '<i class="fas fa-lock"></i>',
                     condition: header => { 
-                        return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
+                        return game.user.isGM
                     },
                     callback: async (header) => {
                         const li = header.parent();
@@ -1018,7 +1018,7 @@ function defineClasses(){
                     name: "CF.unlockAll",
                     icon: '<i class="fas fa-unlock"></i>',
                     condition: header => { 
-                        return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault
+                        return game.user.isGM
                     },
                     callback: async (header) => {
                         const li = header.parent();
