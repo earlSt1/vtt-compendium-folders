@@ -731,7 +731,8 @@ function defineClasses(){
                 user: game.user,
                 tree: this.tree,
                 isPF1: game.system.id === "pf1",
-                isD35E: game.system.id === 'D35E'
+                isD35E: game.system.id === 'D35E',
+                isPF2e: game.system.id === 'pf2e'
             };
         }
         _onCreateFolder(event) {
@@ -788,6 +789,9 @@ function defineClasses(){
                 html.find(".compendium-footer .compendium.feats").click(e => this._onBrowseD35ECompendium(e, "feats"));
                 html.find(".compendium-footer .compendium.enhancements").click(e => this._onBrowseD35ECompendium(e, "enhancements"));
                 html.find(".compendium-footer .compendium.buffs").click(e => this._onBrowseD35ECompendium(e, "buffs"))
+            }
+            if (game.system.id === 'pf2e'){
+                html.find(".compendium-footer > .compendium-browser-btn").on("click",(()=>{game.pf2e.compendiumBrowser.render(true)}));
             }
             // Options below are GM only
             if ( !game.user.isGM ) return;
