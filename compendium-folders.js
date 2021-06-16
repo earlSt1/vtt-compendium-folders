@@ -833,7 +833,7 @@ function defineClasses(){
                     content: html,
                     yes: async (html) => {
                         const label = html.querySelector('input[name="label"]').value;
-                        let newPack = await pack.duplicate({label})
+                        let newPack = await pack.duplicateCompendium({label})
                         await folder.addCompendium(newPack.collection);
                         return newPack;
                     },
@@ -2368,7 +2368,7 @@ function createNewFolderButtonWithinCompendium(window,packCode){
 async function importFolderData(e){
     if (e.compendium) return;
     let isMacro = e.documentName === 'Macro'
-    if (e.data.flags.cf != null && !e.folder){
+    if (e.data.flags.cf != null  && e.data.flags.cf.path != null && !e.folder){
         let path = e.data.flags.cf.path;
         let color = e.data.flags.cf.color;
         //a.data.folder -> id;
