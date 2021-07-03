@@ -758,7 +758,7 @@ function defineClasses(){
             html.find('.compendium-pack').click(ev => {
                 let li = $(ev.currentTarget),
                 pack = game.packs.get(li.data("pack"));
-            if ( li.attr("data-open") === "1" ) pack.close();
+            if ( li.attr("data-open") === "1" ) pack.apps[0].close();
             else {
                 li.attr("data-open", "1");
                 
@@ -2617,7 +2617,13 @@ async function updateFolderInCache(packCode,folderObj){
     cache.groupedFolders[folderMetadata.depth][index].icon = folderObj.icon
     cache.groupedFolders[folderMetadata.depth][index].fontColor = folderObj.fontColor
     cache.groupedFolders[folderMetadata.depth] = alphaSortFolders(cache.groupedFolders[folderMetadata.depth],'name')
-    cache.groupedFolderMetadata[folderObj.id].index = cache.groupedFolders[folderMetadata.depth].findIndex(f => f.id === folderObj.id)
+    // Updating index for ALL folders in cache (important if folders swap order after renaming)
+    cache.groupedFolders[folderMetadata.depth].map((x,i) => foundry.utils.mergeObject(x,{index:i}))
+    let i = 0;
+    for (let f of cache.groupedFolders[folderMetadata.depth]){
+        cache.groupedFolderMetadata[f.id].index = i++
+    }
+    //cache.groupedFolderMetadata[folderObj.id].index = cache.groupedFolders[folderMetadata.depth].findIndex(f => f.id === folderObj.id)
     console.debug(modName+' | Updating folder in cache')
    
     await game.settings.set(mod,'cached-folder',cache);
