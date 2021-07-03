@@ -1385,6 +1385,9 @@ async function createNewFolderWithinCompendium(folderObj,packCode,parentTempEnti
         children:[],
         icon:folderObj.icon
     }
+    //Clearing folders already rendered to prevent duplication
+    pack.apps[0].element.find('.cfolders-container').remove();
+
     let e = await pack.documentClass.create(tempData,{pack:pack.collection});
     console.log(`${modName} | Created temp entity for folder in ${pack.collection}`);
     return newPath
@@ -2625,7 +2628,9 @@ async function resetCache(){
     await game.settings.set(mod,'cached-folder',{});
     console.log(modName+' | Cleared cached folder structure');
 }
-
+//----------------------------------
+// Validation checks on compendiums
+//----------------------------------
 function updateEntityParentIfInvalid(entity,contents){
     if (entity.data?.flags?.cf?.path){
         let path = entity.data.flags.cf.path
