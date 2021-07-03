@@ -3199,48 +3199,62 @@ Hooks.once('setup',async function(){
         // folder data from the entity
         // and create folders based on them
         Hooks.on('createActor',async function(a){
-            await importFolderData(a);
+            if (a.isOwner)
+                await importFolderData(a);
         })
         Hooks.on('createItem',async function(i){
-            await importFolderData(i);
+            if (i.isOwner)
+                await importFolderData(i);
         })
         Hooks.on('createJournalEntry',async function(j){
-            await importFolderData(j);
+            if (j.isOwner)
+                await importFolderData(j);
         })
         Hooks.on('createMacro',async function(m){
-            await importFolderData(m);
+            if (m.isOwner)
+                await importFolderData(m);
         })
         Hooks.on('createPlaylist',async function(p){
-            await importFolderData(p);
+            if (p.isOwner)
+                await importFolderData(p);
         })
         Hooks.on('createRollTable',async function(r){
-            await importFolderData(r);
+            if (r.isOwner)
+                await importFolderData(r);
         })
         Hooks.on('createScene',async function(s){
-            await importFolderData(s);
+            if (s.isOwner)
+                await importFolderData(s);
         })
         
 
         Hooks.on('updateActor',async function(a){
-            await importFolderData(a);
+            if (a.isOwner)
+                await importFolderData(a);
         })
         Hooks.on('updateItem',async function(i){
-            await importFolderData(i);
+            if (i.isOwner)
+                await importFolderData(i);
         })
         Hooks.on('updateJournalEntry',async function(j){
-            await importFolderData(j);
+            if (j.isOwner)
+                await importFolderData(j);
         })
         Hooks.on('updateMacro',async function(m){
-            await importFolderData(m);
+            if (m.isOwner)
+                await importFolderData(m);
         })
         Hooks.on('updatePlaylist',async function(p){
-            await importFolderData(p);
+            if (p.isOwner)
+                await importFolderData(p);
         })
         Hooks.on('updateRollTable',async function(r){
-            await importFolderData(r);
+            if (r.isOwner)
+                await importFolderData(r);
         })
         Hooks.on('updateScene',async function(s){
-            await importFolderData(s);
+            if (s.isOwner)
+                await importFolderData(s);
         })
 
         // Adding the export button to all folders
@@ -3248,37 +3262,37 @@ Hooks.once('setup',async function(){
         
         Hooks.on('renderActorDirectory',async function(a){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.actors.contents.some(a => a.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.actors.contents.some(a => a.name === TEMP_ENTITY_NAME) && game.user.isGM){
                 await removeTempEntities('Actor')
             }
         })
         Hooks.on('renderItemDirectory',async function(e){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.items.contents.some(i => i.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.items.contents.some(i => i.name === TEMP_ENTITY_NAME && game.user.isGM)){
                 await removeTempEntities('Item')
             }
         })
         Hooks.on('renderJournalDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.journal.contents.some(j => j.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.journal.contents.some(j => j.name === TEMP_ENTITY_NAME && game.user.isGM)){
                 await removeTempEntities('JournalEntry')
             }
         })
         Hooks.on('renderPlaylistDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.playlists.contents.some(p => p.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.playlists.contents.some(p => p.name === TEMP_ENTITY_NAME && game.user.isGM)){
                 await removeTempEntities('Playlist')
             }
         })
         Hooks.on('renderRollTableDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.tables.contents.some(r => r.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.tables.contents.some(r => r.name === TEMP_ENTITY_NAME && game.user.isGM)){
                 await removeTempEntities('RollTable')
             }
         })
         Hooks.on('renderSceneDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.scenes.contents.some(s => s.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.scenes.contents.some(s => s.name === TEMP_ENTITY_NAME && game.user.isGM)){
                 await removeTempEntities('Scene')
             }
         })
@@ -3288,7 +3302,7 @@ Hooks.once('setup',async function(){
         })
         Hooks.on('renderMacroDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
-            if (!importing && game.macros.contents.some(m => m.name === TEMP_ENTITY_NAME)){
+            if (!importing && game.macros.contents.some(m => m.name === TEMP_ENTITY_NAME && game.user.isGM)){
                 await removeTempEntities('Macro')
             }
         })
