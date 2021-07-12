@@ -3229,31 +3229,31 @@ Hooks.once('setup',async function(){
         
 
         Hooks.on('updateActor',async function(a){
-            if (a.isOwner)
+            if (a.isOwner && game.items.contents.some(x => x.name === a.name))
                 await importFolderData(a);
         })
         Hooks.on('updateItem',async function(i){
-            if (i.isOwner)
+            if (i.isOwner && game.items.contents.some(x => x.name === i.name))
                 await importFolderData(i);
         })
         Hooks.on('updateJournalEntry',async function(j){
-            if (j.isOwner)
+            if (j.isOwner && game.items.contents.some(x => x.name === j.name))
                 await importFolderData(j);
         })
         Hooks.on('updateMacro',async function(m){
-            if (m.isOwner)
+            if (m.isOwner && game.items.contents.some(x => x.name === m.name))
                 await importFolderData(m);
         })
         Hooks.on('updatePlaylist',async function(p){
-            if (p.isOwner)
+            if (p.isOwner && game.items.contents.some(x => x.name === p.name))
                 await importFolderData(p);
         })
         Hooks.on('updateRollTable',async function(r){
-            if (r.isOwner)
+            if (r.isOwner && game.items.contents.some(x => x.name === r.name))
                 await importFolderData(r);
         })
         Hooks.on('updateScene',async function(s){
-            if (s.isOwner)
+            if (s.isOwner && game.items.contents.some(x => x.name === s.name))
                 await importFolderData(s);
         })
 
