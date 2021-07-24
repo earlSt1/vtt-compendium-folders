@@ -2656,19 +2656,19 @@ class FixCompendiumConfig extends FormApplication{
             let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
             if (Object.keys(changes).length > 0){
                 updateData[nonFolder.id] = changes;
-                messages.push([`Need to update parent folder for entity ${nonFolder.name}`])
+                messages.push([`Need to update parent folder for entity "${nonFolder.name}" [${nonFolder.id}]`])
             }
             changes = this.updatePathIfInvalid(nonFolder,documents);
             if (Object.keys(changes).length > 0){
                 updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
-                messages.push(`Need to update path for entity ${nonFolder.name}`);
+                messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
             }
         }
         for (let folder of allFolders){
             let changes = this.updateFolderPathIfInvalid(folder,documents);
             if (Object.keys(changes).length > 0){
                 updateData[folder.id] = (changes);
-                messages.push([`Need to update folderPath for folder ${folder.data.flags.cf.name}`])
+                messages.push([`Need to update folderPath for folder "${folder.data.flags.cf.name}" [${folder.id}]`])
             }
         }
         if (messages.length>0){
