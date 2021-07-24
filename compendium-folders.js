@@ -2709,7 +2709,7 @@ class FixCompendiumConfig extends FormApplication{
                 });
             }
         }catch(exception){
-            let allDocumentData = documents.map(x => foundry.utils.mergeObject({name:x.name,id:x.id},x.data?.flags?.cf))
+            let allDocumentData = documents.map(x => JSON.stringify(foundry.utils.mergeObject({name:x.name,id:x.id},x.data?.flags?.cf)))
             Dialog.prompt({
                 title:"Validation Error",
                 content:`<h2> Error while Validating</h2><div class="form-group"><textarea name='validationErrorData' readonly>${exception}\nMessages:\n${allDocumentData.join('\n')}</textarea></div>`,
