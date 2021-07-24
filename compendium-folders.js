@@ -2692,12 +2692,7 @@ class FixCompendiumConfig extends FormApplication{
                                 }catch(err){
                                     Dialog.prompt({
                                         title:"Repair Error",
-                                        content:```
-                                            <h2> Error while repairing</h2>
-                                                <div class="form-group">
-                                                    <textarea name='errorData' readonly>${err}\nMessages:\n${messages.join('\n')}</textarea>"
-                                                </div>
-                                        ```,
+                                        content:`<h2> Error while repairing</h2><div class="form-group"><textarea name='errorData' readonly>${err}\nMessages:\n${messages.join('\n')}</textarea></div>`,
                                         callback: () => {}
                                     })
                                 }
@@ -2717,12 +2712,7 @@ class FixCompendiumConfig extends FormApplication{
             let allDocumentData = documents.map(x => foundry.utils.mergeObject({name:x.name,id:x.id},x.data?.flags?.cf))
             Dialog.prompt({
                 title:"Validation Error",
-                content:```
-                    <h2> Error while Validating</h2>
-                        <div class="form-group">
-                            <textarea name='validationErrorData' readonly>${exception}\nMessages:\n${allDocumentData.join('\n')}</textarea>"
-                        </div>
-                ```,
+                content:`<h2> Error while Validating</h2><div class="form-group"><textarea name='validationErrorData' readonly>${exception}\nMessages:\n${allDocumentData.join('\n')}</textarea></div>`,
                 callback: () => {}
             })
         }
