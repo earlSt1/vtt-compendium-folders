@@ -2652,18 +2652,18 @@ class FixCompendiumConfig extends FormApplication{
         let allNonFolders = documents.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
         let updateData = [];
         let messages = [];
-        // for (let nonFolder of allNonFolders){
-        //     let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
-        //     if (Object.keys(changes).length > 0){
-        //         updateData[nonFolder.id] = changes;
-        //         messages.push([`Need to update parent folder for entity "${nonFolder.name}" [${nonFolder.id}]`])
-        //     }
-        //     changes = this.updatePathIfInvalid(nonFolder,documents);
-        //     if (Object.keys(changes).length > 0){
-        //         updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
-        //         messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
-        //     }
-        // }
+        for (let nonFolder of allNonFolders){
+            let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
+            if (Object.keys(changes).length > 0){
+                updateData[nonFolder.id] = changes;
+                messages.push([`Need to update parent folder id for entity "${nonFolder.name}" [${nonFolder.id}]`])
+            }
+            changes = this.updatePathIfInvalid(nonFolder,documents);
+            if (Object.keys(changes).length > 0){
+                updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
+                messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
+            }
+        }
         for (let folder of allFolders){
             let changes = this.updateFolderPathIfInvalid(folder,documents);
             if (Object.keys(changes).length > 0){
@@ -2730,7 +2730,8 @@ class FixCompendiumConfig extends FormApplication{
                     id:entity.id,
                     flags:{
                         cf:{
-                            path:""
+                            path:"",
+                            id:null
                         }
                     }
                 }
@@ -2780,7 +2781,7 @@ class FixCompendiumConfig extends FormApplication{
         if (!path && folderId){
             let folder = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === folderId);
             if (folder){
-                if (folder.data.flags.cf.path){
+                if (folder.data.flags.cf.path && path != folder.data.flags.cf.path){
                     console.debug(`${modName} | Need to update path for ${entity.name} to ${folder.data.flags.cf.path}`)
                     return{
                         id:entity.id,
