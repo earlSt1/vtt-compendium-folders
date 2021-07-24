@@ -2652,65 +2652,79 @@ class FixCompendiumConfig extends FormApplication{
         let allNonFolders = documents.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
         let updateData = [];
         let messages = [];
-        for (let nonFolder of allNonFolders){
-            let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
-            if (Object.keys(changes).length > 0){
-                updateData[nonFolder.id] = changes;
-                messages.push([`Need to update parent folder id for entity "${nonFolder.name}" [${nonFolder.id}]`])
+        try{
+            for (let nonFolder of allNonFolders){
+                let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
+                if (Object.keys(changes).length > 0){
+                    updateData[nonFolder.id] = changes;
+                    messages.push([`Need to update parent folder id for entity "${nonFolder.name}" [${nonFolder.id}]`])
+                }
+                changes = this.updatePathIfInvalid(nonFolder,documents);
+                if (Object.keys(changes).length > 0){
+                    updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
+                    messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
+                }
             }
-            changes = this.updatePathIfInvalid(nonFolder,documents);
-            if (Object.keys(changes).length > 0){
-                updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
-                messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
+            for (let folder of allFolders){
+                let changes = this.updateFolderPathIfInvalid(folder,documents);
+                if (Object.keys(changes).length > 0){
+                    updateData[folder.id] = (changes);
+                    messages.push([`Need to update folderPath for folder "${folder.data.flags.cf.name}" [${folder.id}]`])
+                }
             }
-        }
-        for (let folder of allFolders){
-            let changes = this.updateFolderPathIfInvalid(folder,documents);
-            if (Object.keys(changes).length > 0){
-                updateData[folder.id] = (changes);
-                messages.push([`Need to update folderPath for folder "${folder.data.flags.cf.name}" [${folder.id}]`])
-            }
-        }
-        if (messages.length>0){
-            let html =  await renderTemplate('modules/compendium-folders/templates/fix-compendium.html', {messages});
-            new Dialog({
-                title: "Repair Compendium",
-                content:html,
-                buttons: {
-                    cancel: {
-                        icon: '<i class="fas fa-times"></i>',
-                        label: "Cancel",
-                        callback: () => {}
-                    },
-                    fix:{
-                        icon: '<i class="fas fa-check"></i>',
-                        label: "Attempt to fix",
-                        callback: ()=> {
-                            try{
-                                this.attemptToFix(pack,updateData)
-                            }catch(err){
-                                Dialog.prompt({
-                                    title:"Repair Error",
-                                    content:```
-                                        <h2> Error while repairing</h2>
-                                            <div class="form-group">
-                                                <textarea name='errorData' readonly>${err}\nMessages:\n${messages.join('\n')}</textarea>"
-                                            </div>
-                                    ```,
-                                    callback: () => {}
-                                })
-                            }
+            if (messages.length>0){
+                let html =  await renderTemplate('modules/compendium-folders/templates/fix-compendium.html', {messages});
+                new Dialog({
+                    title: "Repair Compendium",
+                    content:html,
+                    buttons: {
+                        cancel: {
+                            icon: '<i class="fas fa-times"></i>',
+                            label: "Cancel",
+                            callback: () => {}
+                        },
+                        fix:{
+                            icon: '<i class="fas fa-check"></i>',
+                            label: "Attempt to fix",
+                            callback: ()=> {
+                                try{
+                                    this.attemptToFix(pack,updateData)
+                                }catch(err){
+                                    Dialog.prompt({
+                                        title:"Repair Error",
+                                        content:```
+                                            <h2> Error while repairing</h2>
+                                                <div class="form-group">
+                                                    <textarea name='errorData' readonly>${err}\nMessages:\n${messages.join('\n')}</textarea>"
+                                                </div>
+                                        ```,
+                                        callback: () => {}
+                                    })
+                                }
 
+                            }
                         }
                     }
-                }
-            }).render(true);
-        }else{
+                }).render(true);
+            }else{
+                Dialog.prompt({
+                    title:"Validate Compendium",
+                    content:"<p>No issues found in your compendium!</p>",
+                    callback: () => {}
+                });
+            }
+        }catch(exception){
+            let allDocumentData = documents.map(x => foundry.utils.mergeObject({name:x.name,id:x.id},x.data?.flags?.cf))
             Dialog.prompt({
-                title:"Validate Compendium",
-                content:"<p>No issues found in your compendium!</p>",
+                title:"Validation Error",
+                content:```
+                    <h2> Error while Validating</h2>
+                        <div class="form-group">
+                            <textarea name='validationErrorData' readonly>${err}\nMessages:\n${allDocumentData.join('\n')}</textarea>"
+                        </div>
+                ```,
                 callback: () => {}
-            });
+            })
         }
     }
     async attemptToFix(pack,updateData){
