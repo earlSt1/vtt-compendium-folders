@@ -2720,7 +2720,7 @@ class FixCompendiumConfig extends FormApplication{
                 content:```
                     <h2> Error while Validating</h2>
                         <div class="form-group">
-                            <textarea name='validationErrorData' readonly>${err}\nMessages:\n${allDocumentData.join('\n')}</textarea>"
+                            <textarea name='validationErrorData' readonly>${exception}\nMessages:\n${allDocumentData.join('\n')}</textarea>"
                         </div>
                 ```,
                 callback: () => {}
