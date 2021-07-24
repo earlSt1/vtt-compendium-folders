@@ -2652,18 +2652,18 @@ class FixCompendiumConfig extends FormApplication{
         let allNonFolders = documents.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
         let updateData = [];
         let messages = [];
-        for (let nonFolder of allNonFolders){
-            let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
-            if (Object.keys(changes).length > 0){
-                updateData[nonFolder.id] = changes;
-                messages.push([`Need to update parent folder for entity "${nonFolder.name}" [${nonFolder.id}]`])
-            }
-            changes = this.updatePathIfInvalid(nonFolder,documents);
-            if (Object.keys(changes).length > 0){
-                updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
-                messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
-            }
-        }
+        // for (let nonFolder of allNonFolders){
+        //     let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
+        //     if (Object.keys(changes).length > 0){
+        //         updateData[nonFolder.id] = changes;
+        //         messages.push([`Need to update parent folder for entity "${nonFolder.name}" [${nonFolder.id}]`])
+        //     }
+        //     changes = this.updatePathIfInvalid(nonFolder,documents);
+        //     if (Object.keys(changes).length > 0){
+        //         updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
+        //         messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
+        //     }
+        // }
         for (let folder of allFolders){
             let changes = this.updateFolderPathIfInvalid(folder,documents);
             if (Object.keys(changes).length > 0){
@@ -2724,7 +2724,18 @@ class FixCompendiumConfig extends FormApplication{
         if (entity.data?.flags?.cf?.path){
             let path = entity.data.flags.cf.path
             let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
-            if (entity.data.flags.cf.id != parentEntity.data.flags.cf.id){
+            if (parentEntity === null){
+                console.debug(modName+' | No parent found for entity '+entity.name+', overriding path...')
+                return {
+                    id:entity.id,
+                    flags:{
+                        cf:{
+                            path:""
+                        }
+                    }
+                }
+            }
+            else if (entity.data.flags.cf.id != parentEntity.data.flags.cf.id){
                 console.debug(modName+' | Need to update parent folder ID for '+entity.name);
                 return {
                     id:entity.id,
