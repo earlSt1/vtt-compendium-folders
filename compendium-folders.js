@@ -2621,48 +2621,169 @@ async function resetCache(){
 //----------------------------------
 // Validation checks on compendiums
 //----------------------------------
-function updateEntityParentIfInvalid(entity,contents){
-    if (entity.data?.flags?.cf?.path){
-        let path = entity.data.flags.cf.path
-        let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
-        if (entity.data.flags.cf.id != parentEntity.data.flags.cf.id){
-            console.debug(modName+' | Need to update parent folder ID for '+entity.name);
-            return {
-                id:entity.id,
-                flags:{
-                    cf:{
-                        id:parentEntity.data.flags.cf.id
+class FixCompendiumConfig extends FormApplication{
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "select-compendium";
+        options.template = "modules/compendium-folders/templates/select-compendium.html";
+        return options;
+    }
+  
+    get title() {
+        return "Validate Compendium";
+    }
+    async getData(options) { 
+        return {
+            packs : game.packs.contents.filter(x => !x.locked && x.index.some(e => e.name === game.CF.TEMP_ENTITY_NAME))
+        }
+    }
+    
+    /** @override */
+    async _updateObject(event,formData){
+        let pack = formData.pack;
+        if (pack != null){
+            this.validateCompendium(pack);
+        }
+    }
+    async validateCompendium(packName){
+        let pack = game.packs.get(packName);
+        let documents = await pack.getDocuments();
+        let allFolders = documents.filter(x => x.name === game.CF.TEMP_ENTITY_NAME);
+        let allNonFolders = documents.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
+        let updateData = [];
+        let messages = [];
+        for (let nonFolder of allNonFolders){
+            let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
+            if (Object.keys(changes).length > 0){
+                updateData[nonFolder.id] = changes;
+                messages.push([`Need to update parent folder for entity ${nonFolder.name}`])
+            }
+            changes = this.updatePathIfInvalid(nonFolder,documents);
+            if (Object.keys(changes).length > 0){
+                updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
+                messages.push(`Need to update path for entity ${nonFolder.name}`);
+            }
+        }
+        for (let folder of allFolders){
+            let changes = this.updateFolderPathIfInvalid(folder,documents);
+            if (Object.keys(changes).length > 0){
+                updateData[folder.id] = (changes);
+                messages.push([`Need to update folderPath for folder ${folder.data.flags.cf.name}`])
+            }
+        }
+        if (messages.length>0){
+            let html =  await renderTemplate('modules/compendium-folders/templates/fix-compendium.html', {messages});
+            new Dialog({
+                title: "Repair Compendium",
+                content:html,
+                buttons: {
+                    cancel: {
+                        icon: '<i class="fas fa-times"></i>',
+                        label: "Cancel",
+                        callback: () => {}
+                    },
+                    fix:{
+                        icon: '<i class="fas fa-check"></i>',
+                        label: "Attempt to fix",
+                        callback: ()=> {
+                            try{
+                                this.attemptToFix(pack,updateData)
+                            }catch(err){
+                                Dialog.prompt({
+                                    title:"Repair Error",
+                                    content:```
+                                        <h2> Error while repairing</h2>
+                                            <div class="form-group">
+                                                <textarea name='errorData' readonly>${err}\nMessages:\n${messages.join('\n')}</textarea>"
+                                            </div>
+                                    ```,
+                                    callback: () => {}
+                                })
+                            }
+
+                        }
+                    }
+                }
+            }).render(true);
+        }else{
+            Dialog.prompt({
+                title:"Validate Compendium",
+                content:"<p>No issues found in your compendium!</p>",
+                callback: () => {}
+            });
+        }
+    }
+    async attemptToFix(pack,updateData){
+        for (let update of Object.values(updateData)){
+            const document = await pack.getDocument(update.id);
+            await document.update(update, {pack:pack.collection});
+        }
+        ui.notifications.notify("Repairs complete!");
+    }
+    updateEntityParentIfInvalid(entity,contents){
+        if (entity.data?.flags?.cf?.path){
+            let path = entity.data.flags.cf.path
+            let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
+            if (entity.data.flags.cf.id != parentEntity.data.flags.cf.id){
+                console.debug(modName+' | Need to update parent folder ID for '+entity.name);
+                return {
+                    id:entity.id,
+                    flags:{
+                        cf:{
+                            id:parentEntity.data.flags.cf.id
+                        }
                     }
                 }
             }
         }
+        return {};
     }
-    return true;
-}
-function updateFolderPathIfInvalid(folder,contents){
-    let folderPath = folder.data.flags.cf.folderPath;
-    let newFolderPath = folderPath;
-    let path = folder.data.flags.cf.path;
-    for (let folderId of folderPath){
-        if (!contents.some(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === folderId)){
-            console.debug(modName+' | Need to update folderPath for folder '+folder.data.flags.cf.id);
-            let correctFolder = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
-            if (correctFolder){
-                newFolderPath[folderPath.indexOf(folderId)] = correctFolder.data.flags.cf.id;
-            }
-        }
-    }
-    if (folderPath != newFolderPath){
-        return {
-            id:folder.id,
-            flags:{
-                cf:{
-                    folderPath:newFolderPath
+    updateFolderPathIfInvalid(folder,contents){
+        let folderPath = folder.data.flags.cf.folderPath;
+        let newFolderPath = folderPath;
+        let path = folder.data.flags.cf.path;
+        for (let folderId of folderPath){
+            if (!contents.some(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === folderId)){
+                console.debug(modName+' | Need to update folderPath for folder '+folder.data.flags.cf.id);
+                let correctFolder = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
+                if (correctFolder){
+                    newFolderPath[folderPath.indexOf(folderId)] = correctFolder.data.flags.cf.id;
                 }
             }
         }
+        if (folderPath != newFolderPath){
+            return {
+                id:folder.id,
+                flags:{
+                    cf:{
+                        folderPath:newFolderPath
+                    }
+                }
+            }
+        }
+        return {};
     }
-    return null;
+    updatePathIfInvalid(entity,contents){
+        let path = entity.data.flags.cf.path;
+        let folderId = entity.data.flags.cf.id;
+        if (!path && folderId){
+            let folder = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === folderId);
+            if (folder){
+                if (folder.data.flags.cf.path){
+                    console.debug(`${modName} | Need to update path for ${entity.name} to ${folder.data.flags.cf.path}`)
+                    return{
+                        id:entity.id,
+                        flags:{
+                            cf:{
+                                path:folder.data.flags.cf.path
+                            }
+                        } 
+                    }
+                }
+            }
+        }
+        return {}
+    }
 }
 function updateFolderPathForTempEntity(entity,content){
     // This constructs the folder path for temp entities
@@ -2795,6 +2916,15 @@ export class Settings{
             config:true,
             type:Boolean,
             default:false
+        });
+        game.settings.registerMenu(mod,'fix-compendium',{
+            name:'Validate and Fix',
+            label: 'Fix Compendium',
+            icon: 'fas fa-wrench',
+            scope:'world',
+            config:true,
+            type:FixCompendiumConfig,
+            restricted:true
         });
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;
