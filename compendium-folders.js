@@ -3203,7 +3203,7 @@ Hooks.once('setup',async function(){
                 await importFolderData(a);
         })
         Hooks.on('createItem',async function(i){
-            if (i.isOwner)
+            if (i.isOwner && !i.isEmbedded)
                 await importFolderData(i);
         })
         Hooks.on('createJournalEntry',async function(j){
