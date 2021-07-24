@@ -845,29 +845,13 @@ function defineClasses(){
                     }
                 });
             }
-            let i = x.findIndex(c => c.name === 'COMPENDIUM.Delete')
-            // x[i].callback = async (li) => {
-            //     let pack = game.packs.get(li.data("pack"));
-            //     return Dialog.confirm({
-            //         title: `${game.i18n.localize("COMPENDIUM.Delete")}: ${pack.metadata.label}`,
-            //         content: game.i18n.localize("COMPENDIUM.DeleteHint"),
-            //         yes: async () => {
-            //             pack._assertUserCanModify();
-            //             await SocketInterface.dispatch("manageCompendium", {
-            //                 action: "delete",
-            //                 data: pack.metadata.name
-            //             });
-
-            //             // Remove the pack from the game World
-            //             game.data.packs.findSplice(p => (p.package === "world") && (p.name === pack.metadata.name) );
-            //             await game.customFolders.compendium.folders.find(x => x.compendiumList.includes(pack.collection)).removeCompendiumByCode(pack.collection,true,true);
-            //             game.initializePacks().then(() => ui.compendium.render());
-            //         },
-            //         defaultYes: false
-            //     })
-            // }
-            i = x.findIndex(c => c.name === 'COMPENDIUM.ImportAll')
+            let i = x.findIndex(c => c.name === 'COMPENDIUM.ImportAll')
             let oldCallback = x[i].callback;
+            // Limit importAll to only work for compendiums with no folders in them
+            x[i].condition = (li) => {
+                let pack = game.packs.get(li.data("pack"));
+                return !pack.index.contents.some(x => x.name === game.CF.TEMP_ENTITY_NAME)
+            }
             x[i].callback = async (li) => {
                 await game.settings.set(mod,'importing',true);
                 await oldCallback.bind(this)(li);
