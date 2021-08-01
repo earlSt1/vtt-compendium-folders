@@ -744,7 +744,7 @@ function defineClasses(){
             const data = new game.CF.CompendiumFolder();
             if (parent){
                 data.path = parent.path.concat(parent.id)
-                data.parent = parent._id;
+                data.parent = parent.id;
             }
             const options = {top: button.offsetTop, left: window.innerWidth - 310 - FolderConfig.defaultOptions.width};
             new CompendiumFolderEditConfig(data, options).showDialog(false);
@@ -1625,7 +1625,7 @@ class CompendiumFolderEditConfig extends FormApplication {
       let allPacks = this.getGroupedPacks();
       return {
         folder: this.object,
-        defaultFolder:this.object._id==='default',
+        defaultFolder:this.object.id==='default',
         fpacks: game.packs,
         apacks: alphaSortCompendiums(Object.values(allPacks[0])),
         upacks: alphaSortCompendiums(Object.values(allPacks[1])),
@@ -1657,7 +1657,7 @@ class CompendiumFolderEditConfig extends FormApplication {
         }else{
             this.object.folderIcon = null;
         }
-        if (this.object._id != 'default'){
+        if (this.object.id != 'default'){
             let packsToAdd = []
             let packsToRemove = []
             for (let entry of game.packs.contents){
@@ -1678,7 +1678,7 @@ class CompendiumFolderEditConfig extends FormApplication {
             }
         
             //If folder needs to be moved to parent (for some reason)
-            if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent)?.children?.some(x => x._id === this.object._id)){
+            if (this.object.data.parent && !game.customFolders.compendium.folders.get(this.object.data.parent)?.children?.some(x => x.id === this.object.id)){
                 await this.object.moveFolder(this.object.data.parent);
             }
         }
