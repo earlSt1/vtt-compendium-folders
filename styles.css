@@ -218,3 +218,14 @@ button.dialog-button.deleteAll  {
 .d35ecustom #sidebar li.folder h3 i{
 	display:inline	
 }
+#fix-compendium table{
+  border-left: 1px solid #7a7971;
+  border-right: 1px solid #7a7971;
+}
+#fix-compendium table th{
+  border-bottom:1px solid #7a7971;
+}
+button[data-key='compendium-folders.cleanupCompendiums']{
+  background-color: #aa0000;
+    color: #f0f0e0;
+}

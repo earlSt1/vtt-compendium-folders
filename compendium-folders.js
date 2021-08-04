@@ -1236,7 +1236,8 @@ function defineClasses(){
         CompendiumEntryCollection:CompendiumEntryCollection,
         CompendiumFolderCollection:CompendiumFolderCollection,
         CompendiumFolderDirectory:CompendiumFolderDirectory,
-        TEMP_ENTITY_NAME:TEMP_ENTITY_NAME
+        TEMP_ENTITY_NAME:TEMP_ENTITY_NAME,
+        FOLDER_SEPARATOR:FOLDER_SEPARATOR
     }
 }
 async function deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
@@ -2693,16 +2694,20 @@ class FixCompendiumConfig extends FormApplication{
                             label: "Attempt to fix",
                             callback: ()=> {
                                 try{
-                                    Dialog.prompt({
-                                        title:"Error",
-                                        content:`<h2> Error while repairing</h2><div class="form-group"><textarea name='errorData' readonly>Messages:\n${messages.join('\n')}</textarea></div>`,
-                                        callback: () => {}
-                                    })
-                                    //this.attemptToFix(pack,updateData)
+                                    this.attemptToFix(pack,updateData)
                                 }catch(err){
+                                    let allDocumentData = documents.map(x => JSON.stringify(foundry.utils.mergeObject({name:x.name,entityId:x.id},x.data?.flags?.cf)))
                                     Dialog.prompt({
                                         title:"Repair Error",
-                                        content:`<h2> Error while repairing</h2><div class="form-group"><textarea name='errorData' readonly>${err}\nMessages:\n${messages.join('\n')}</textarea></div>`,
+                                        content:`
+                                            <h2> Error while repairing</h2>
+                                            <i>Please save the contents below and add the file to a new 
+                                                <a href="https://github.com/earlSt1/vtt-compendium-folders/issues/new?assignees=&labels=&template=fix-my-compendium.md&title=Fix+my+Compendium+issue">GitHub issue</a> so I can investigate
+                                            </i>
+                                            <div class="form-group"><textarea name='fixCompendiumErrorData' readonly>===MESSAGES===\n
+                                                ${messages.join('\n')}\n===FOLDER_DATA===\n
+                                                ${allDocumentData.join('\n')}
+                                            </textarea></div>`,
                                         callback: () => {}
                                     })
                                 }
@@ -2722,8 +2727,16 @@ class FixCompendiumConfig extends FormApplication{
             let allDocumentData = documents.map(x => JSON.stringify(foundry.utils.mergeObject({name:x.name,entityId:x.id},x.data?.flags?.cf)))
             Dialog.prompt({
                 title:"Validation Error",
-                content:`<h2> Error while Validating</h2><div class="form-group"><textarea name='validationErrorData' readonly>${exception}\nMessages:\n${allDocumentData.join('\n')}</textarea></div>`,
-                callback: () => {}
+                content:`
+                    <h2> Error while validating</h2>
+                    <i>Please save the contents below and add the file to a new 
+                        <a href="https://github.com/earlSt1/vtt-compendium-folders/issues/new?assignees=&labels=&template=fix-my-compendium.md&title=Fix+my+Compendium+issue">GitHub issue</a> so I can investigate
+                    </i>
+                    <div class="form-group"><textarea name='fixCompendiumErrorData' readonly>===MESSAGES===\n
+                        ${messages.join('\n')}\n===FOLDER_DATA===\n
+                        ${allDocumentData.join('\n')}
+                    </textarea></div>
+                `,callback: () => {}
             })
         }
     }
@@ -2808,7 +2821,7 @@ class FixCompendiumConfig extends FormApplication{
                 else{
                     console.debug(`${modName} | Need to manually construct path for ${entity.name}`)
                     let folderPath = folder.data.flags.cf.folderPath;
-                    let pathNames = folderPath.map(x => contents.find(y => y.name = game.CF.TEMP_ENTITY_NAME && y.data.flags.cf.id === x).name)
+                    let pathNames = folderPath.map(x => contents.find(y => y.name === game.CF.TEMP_ENTITY_NAME && y.data.flags.cf.id === x).data.flags.cf.name)
                     let newPath = pathNames.join(game.CF.FOLDER_SEPARATOR)
                     return{
                         id:entity.id,
@@ -2894,7 +2907,7 @@ export class Settings{
         game.settings.registerMenu(mod,'settingsMenu',{
             name: game.i18n.localize('CF.configuration'),
             label: game.i18n.localize('CF.importExportLabel'),
-            icon: 'fas fa-wrench',
+            icon: 'fas fa-cog',
             type: ImportExportConfig,
             restricted: true
         });
@@ -2902,7 +2915,6 @@ export class Settings{
             scope: 'world',
             config: false,
             type: Object,
-
             default:{}
         });
         game.settings.register(mod,'open-folders',{
@@ -2911,6 +2923,15 @@ export class Settings{
             type: Object,
             default:[]
         });     
+        game.settings.registerMenu(mod,'fix-compendium',{
+            name:'Validate and Fix',
+            label: 'Fix Compendium',
+            icon: 'fas fa-wrench',
+            scope:'world',
+            config:true,
+            type:FixCompendiumConfig,
+            restricted:true
+        });
         game.settings.registerMenu(mod,'cleanupCompendiums',{
             name:game.i18n.localize('CF.cleanup'),
             icon:'fas fa-atlas',
@@ -2955,15 +2976,6 @@ export class Settings{
             config:true,
             type:Boolean,
             default:false
-        });
-        game.settings.registerMenu(mod,'fix-compendium',{
-            name:'Validate and Fix',
-            label: 'Fix Compendium',
-            icon: 'fas fa-wrench',
-            scope:'world',
-            config:true,
-            type:FixCompendiumConfig,
-            restricted:true
         });
         game.settings.register(mod,'auto-create-folders',{
             name:'Auto Create folders on Import',
