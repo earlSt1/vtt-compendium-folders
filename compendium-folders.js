@@ -10,6 +10,11 @@ const FOLDER_SEPARATOR = '#/CF_SEP/'
 // ==========================
 // Utility functions
 // ==========================
+function shouldCreateFolders(){
+    let importing = game.settings.get(mod,'importing');
+    let autoCreate = game.settings.get(mod,'auto-create-folders');
+    return (importing || autoCreate)
+}
 async function packUpdateEntity(pack,data){
     const document = await pack.getDocument(data.id);
     const options = {pack:pack.collection};
@@ -2688,7 +2693,12 @@ class FixCompendiumConfig extends FormApplication{
                             label: "Attempt to fix",
                             callback: ()=> {
                                 try{
-                                    this.attemptToFix(pack,updateData)
+                                    Dialog.prompt({
+                                        title:"Error",
+                                        content:`<h2> Error while repairing</h2><div class="form-group"><textarea name='errorData' readonly>Messages:\n${messages.join('\n')}</textarea></div>`,
+                                        callback: () => {}
+                                    })
+                                    //this.attemptToFix(pack,updateData)
                                 }catch(err){
                                     Dialog.prompt({
                                         title:"Repair Error",
@@ -2726,15 +2736,14 @@ class FixCompendiumConfig extends FormApplication{
     }
     updateEntityParentIfInvalid(entity,contents){
         if (entity.data?.flags?.cf?.path){
-            let path = entity.data.flags.cf.path
-            let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.path === path);
-            if (parentEntity === null){
-                console.debug(modName+' | No parent found for entity '+entity.name+', overriding path...')
+            let fId = entity.data.flags.cf.id
+            let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === fId);
+            if (!parentEntity){
+                console.debug(modName+' | No parent found for entity '+entity.name+', overriding folder id...')
                 return {
                     id:entity.id,
                     flags:{
                         cf:{
-                            path:"",
                             id:null
                         }
                     }
@@ -2746,7 +2755,7 @@ class FixCompendiumConfig extends FormApplication{
                     id:entity.id,
                     flags:{
                         cf:{
-                            id:parentEntity.data.flags.cf.id
+                            id:parentEntity.data.flags.cf.id,
                         }
                     }
                 }
@@ -2792,6 +2801,20 @@ class FixCompendiumConfig extends FormApplication{
                         flags:{
                             cf:{
                                 path:folder.data.flags.cf.path
+                            }
+                        } 
+                    }
+                }
+                else{
+                    console.debug(`${modName} | Need to manually construct path for ${entity.name}`)
+                    let folderPath = folder.data.flags.cf.folderPath;
+                    let pathNames = folderPath.map(x => contents.find(y => y.name = game.CF.TEMP_ENTITY_NAME && y.data.flags.cf.id === x).name)
+                    let newPath = pathNames.join(game.CF.FOLDER_SEPARATOR)
+                    return{
+                        id:entity.id,
+                        flags:{
+                            cf:{
+                                path:newPath
                             }
                         } 
                     }
@@ -2941,6 +2964,14 @@ export class Settings{
             config:true,
             type:FixCompendiumConfig,
             restricted:true
+        });
+        game.settings.register(mod,'auto-create-folders',{
+            name:'Auto Create folders on Import',
+            hint: 'If enabled, dragging an entity from a compendium into your world will not create folder structures automatically',
+            scope:'world',
+            config:true,
+            type:Boolean,
+            default:false
         });
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;
@@ -3329,61 +3360,61 @@ Hooks.once('setup',async function(){
         // folder data from the entity
         // and create folders based on them
         Hooks.on('createActor',async function(a){
-            if (a.isOwner)
+            if (a.isOwner && shouldCreateFolders())
                 await importFolderData(a);
         })
         Hooks.on('createItem',async function(i){
-            if (i.isOwner && !i.isEmbedded)
+            if (i.isOwner && !i.isEmbedded && shouldCreateFolders())
                 await importFolderData(i);
         })
         Hooks.on('createJournalEntry',async function(j){
-            if (j.isOwner)
+            if (j.isOwner && shouldCreateFolders())
                 await importFolderData(j);
         })
         Hooks.on('createMacro',async function(m){
-            if (m.isOwner)
+            if (m.isOwner && shouldCreateFolders())
                 await importFolderData(m);
         })
         Hooks.on('createPlaylist',async function(p){
-            if (p.isOwner)
+            if (p.isOwner && shouldCreateFolders())
                 await importFolderData(p);
         })
         Hooks.on('createRollTable',async function(r){
-            if (r.isOwner)
+            if (r.isOwner && shouldCreateFolders())
                 await importFolderData(r);
         })
         Hooks.on('createScene',async function(s){
-            if (s.isOwner)
+            if (s.isOwner && shouldCreateFolders())
                 await importFolderData(s);
         })
         
 
         Hooks.on('updateActor',async function(a){
-            if (a.isOwner && game.items.contents.some(x => x.name === a.name))
+            if (a.isOwner && game.actors.contents.some(x => x.name === a.name) && shouldCreateFolders())
                 await importFolderData(a);
         })
         Hooks.on('updateItem',async function(i){
-            if (i.isOwner && game.items.contents.some(x => x.name === i.name))
+            if (i.isOwner && game.items.contents.some(x => x.name === i.name) && shouldCreateFolders())
                 await importFolderData(i);
         })
         Hooks.on('updateJournalEntry',async function(j){
-            if (j.isOwner && game.items.contents.some(x => x.name === j.name))
+            if (j.isOwner && game.journal.contents.some(x => x.name === j.name) && shouldCreateFolders())
                 await importFolderData(j);
         })
         Hooks.on('updateMacro',async function(m){
-            if (m.isOwner && game.items.contents.some(x => x.name === m.name))
+            if (m.isOwner && game.macros.contents.some(x => x.name === m.name) && shouldCreateFolders())
                 await importFolderData(m);
         })
         Hooks.on('updatePlaylist',async function(p){
-            if (p.isOwner && game.items.contents.some(x => x.name === p.name))
+            if (p.isOwner && game.playlists.contents.some(x => x.name === p.name) && shouldCreateFolders())
                 await importFolderData(p);
         })
         Hooks.on('updateRollTable',async function(r){
-            if (r.isOwner && game.items.contents.some(x => x.name === r.name))
+            if (r.isOwner && game.tables.contents.some(x => x.name === r.name) && shouldCreateFolders())
                 await importFolderData(r);
         })
         Hooks.on('updateScene',async function(s){
-            if (s.isOwner && game.items.contents.some(x => x.name === s.name))
+            if (s.isOwner && game.scenes.contents.some(x => x.name === s.name) && shouldCreateFolders())
                 await importFolderData(s);
         })
 
