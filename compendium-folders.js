@@ -2967,7 +2967,7 @@ export class Settings{
         });
         game.settings.register(mod,'auto-create-folders',{
             name:'Auto Create folders on Import',
-            hint: 'If enabled, dragging an entity from a compendium into your world will not create folder structures automatically',
+            hint: 'If enabled, dragging an entity from a compendium into your world will create folder structures automatically',
             scope:'world',
             config:true,
             type:Boolean,
