@@ -143,54 +143,84 @@ export class FICUtils{
 export class FICFolder{
     constructor(data={}){
         this.data = mergeObject({
-            titleText:'New Folder',
-            colorText:'#000000',
-            fontColorText:'#FFFFFF',
-            _id:FICUtils.generateRandomFolderName('temp_'),
-            entity:'FICFolder',
-            parent:null,
-            pathToFolder:[],
-            entryList:[],
-            contents:[],
-            folderIcon:null,
-            expanded:false,
-            visible:true,
+            id:FICUtils.generateRandomFolderName('temp_'),
+            folderPath:[],
+            color:'#000000',
+            fontColor:'#FFFFFF',
+            name:'New Folder',
             children:[],
+            icon:null
         },data);
+        this.documentId = data.documentId
     }
     toJSON(){
         return this.data;
     }
-    /** @override */
-    static create(pack,data={}){
-        //TODO
-        /*
-        let newFolder = new CompendiumFolder(data);
-        if (!game.customFolders){
-            game.customFolders = new Map();
-        }
-        if (!game.customFolders.fic){
-            game.customFolders.fic = {
-                folders:new game.CF.FICFolderCollection([]),
-                manager: new FICManager(pack)
-            }
-        }
-        game.customFolders.compendium.folders.set(newFolder.id,newFolder);
-
-        return newFolder;*/
+    getSaveData(){
+        let saveData = this.data;
+        delete saveData.documentId;
+        delete saveData.contents;
+        delete saveData.parent;
+        return {
+            id:this.documentId,
+            flags:{
+                cf:saveData
+            }            
+        };
     }
-    static import(pack,data={}){
-        if (data?.pathToFolder?.length > 0){
-            data.parent = data.pathToFolder[data.pathToFolder.length-1];
-        }
-        if (compendiums){
-            data.compendiums = compendiums;
-        }else{
-            data.compendiums = []
-        }
+    async save(render=false){
+        this.pack.apps[0].close().then(async () => {
+            await FICUtils.packUpdateEntity(this.pack,this.getSaveData())
+            await FICCache.resetCache();
+            if(render)
+                this.pack.apps[0].render(true)
+        })
         
-        return FICFolder.create(data);
     }
+    /** @override */
+    static create(data={},documentId,packCode){
+        //TODO
+        //- Folder path is using folderIds
+        //- Swap this in the import function to make things quicker
+        let newFolder = new FICFolder(data);
+        if (game.customFolders?.fic?.folders){
+            game.customFolders.fic.folders.set(newFolder.id,newFolder);
+        }
+        newFolder.documentId = documentId;
+        newFolder.packCode = packCode;
+        return newFolder
+    }
+    static import(packCode,allDocuments,document={}){
+        let data = document.data.flags.cf;
+
+        if (!data.newFolderPath){
+            // set new folder path using document ID instead of folder ID
+            //TODO later
+        }
+        if (data?.folderPath?.length > 0){
+            data.parent = data.folderPath[data.folderPath.length]-1;
+        }
+        if (data.children){
+            data.children = [... new Set(data.children.concat(allDocuments.filter(x => x.data.flags.cf.id === data.id)).map(y => y.id))]
+            data.contents = data.children.map(x => allDocuments.find(y => y.id === x));
+        }
+        return FICFolder.create(data,document.id,packCode);
+    }
+
+    // GETTERS AND SETTERS
+    get parent(){
+        return game.customFolders.fic.folders.contents.find(x => x.folderId === this.data.parent)
+    }
+    get id(){return this.documentId}
+    get _id(){return this.documentId}
+    get folderId(){return this.data.id}
+    get contents(){return this.data.contents}
+    get name(){return this.data.name}
+    get color(){return this.data.color}
+    get fontColor(){return this.data.fontColor}
+    get icon(){return this.data.icon}
+    get folderPath(){return this.data.folderPath}
+    get pack(){return game.packs.get(this.packCode)}
 }
 export class FICFolderCollection extends WorldCollection{
     constructor(...args) {
@@ -201,7 +231,7 @@ export class FICFolderCollection extends WorldCollection{
         return "FICFolder";
     }
     get documentClass(){
-        return game.CF.FICFolder;
+        return FICFolder;
     }
 }
 class FICFolderCreateDialog extends FormApplication{
@@ -589,7 +619,7 @@ export class FICManager{
                             for (let d of updateData){
                                 await FICUtils.packUpdateEntity(e.collection,d);
                             }
-                            resetCache()
+                            FICCache.resetCache()
                             ui.notifications.notify('Updating complete!')
                             e.render(true);
                         }else{
@@ -1709,6 +1739,40 @@ export class FICManager{
 }
 export class FICFolderAPI{
     //used for external operations, exposed to public
+    /*
+    * - getFolders(pack)
+    * - createFolderAtRoot()
+    * - createFolderUnderFolder(folderObj)
+    * - addDocumentToFolder(folderObj)
+    * - removeDocumentFromFolder(folderObj)
+    * - 
+    * 
+    * 
+    * 
+    */
+   
+   
+    /*
+    * Loads folders in a compendium into WorldCollection: 
+    *   game.customFolders.fic.folders
+    * Returns a list of the folders
+    */
+    static async getFolders(packCode){
+        // Clear the temporary storage of folders
+        game.customFolders.fic = {
+            folders:new FICFolderCollection([])
+        }
+
+        let folderObjects = [];
+        let allDocuments = await game.packs.get(packCode).getDocuments();
+        let folders = allDocuments.filter(x => x.name === game.CF.TEMP_ENTITY_NAME)
+        let entries = allDocuments.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
+
+        for (let folder of folders){
+            folderObjects.push(FICFolder.import(packCode,entries,folder));
+        }
+        return folderObjects;
+   }
 }
 
 

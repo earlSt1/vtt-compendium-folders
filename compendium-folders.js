@@ -1,6 +1,6 @@
 'use strict';
 import {libWrapper} from './shim.js';
-import { FICManager,FICUtils } from './fic-folders.js';
+import { FICManager,FICUtils,FICFolderAPI } from './fic-folders.js';
 export const modName = 'Compendium Folders';
 const mod = 'compendium-folders';
 const FOLDER_LIMIT = 8
@@ -10,7 +10,6 @@ const FOLDER_SEPARATOR = '#/CF_SEP/'
 // ==========================
 // Utility functions
 // ==========================
-
 Handlebars.registerHelper('ifIn', function(elem, compendiums, options) {
     let packName = elem.package+'.'+elem.name;
     if(compendiums.indexOf(packName) > -1) {
@@ -1007,6 +1006,7 @@ function defineClasses(){
         TEMP_ENTITY_NAME:TEMP_ENTITY_NAME,
         FOLDER_SEPARATOR:FOLDER_SEPARATOR,
         FICManager:FICManager,
+        FICFolderAPI:FICFolderAPI
     }
 }
 async function closeFolder(parent,save){
