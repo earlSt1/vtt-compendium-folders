@@ -1758,8 +1758,8 @@ export class FICFolderAPI{
     * - getFolders(pack)
     * - createFolderAtRoot()
     * - createFolderUnderFolder(folderObj)
-    * - addDocumentToFolder(folderObj)
-    * - removeDocumentFromFolder(folderObj)
+    * - moveDocumentToFolder(folderObj)
+    * - 
     * - 
     * 
     * 
@@ -1810,18 +1810,18 @@ export class FICFolderAPI{
         });
     }
     /*
-    * Creates folder underneath the given FICFolder object
+    * Creates folder with the given FICFolder object as parent
     * returns a FICFolder object representing the folder that was created
     */
-    static async createFolderUnderFolder(folderObj,name='New Folder',color='#000000',fontColor='#FFFFFF'){
-        let pack = folderObj.pack;
+    static async createFolderWithParent(parent,name='New Folder',color='#000000',fontColor='#FFFFFF'){
+        let pack = parent.pack;
         pack.apps[0].close().then(async () => {
             let newFolder = {
                 id:FICUtils.generateRandomFolderName('temp_'),
                 name:name,
                 color:color,
                 fontColor:fontColor,
-                folderPath:folderObj.folderPath.concat([folderObj.id]),
+                folderPath:parent.folderPath.concat([parent.id]),
                 children:[],
                 icon:null
             }
@@ -1829,10 +1829,10 @@ export class FICFolderAPI{
         
             let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
             await FICCache.resetCache();
-            return FICFolder.import(folderObj.packCode,[],result);
+            return FICFolder.import(parent.packCode,[],result);
         })
     }
-    static async addDocumentToFolder(packCode,document,folder){
+    static async moveDocumentToFolder(packCode,document,folder){
         let pack = game.packs.get(packCode);
         pack.apps[0].close().then(async () => {
             // Disassociate old folder id
