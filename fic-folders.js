@@ -1850,6 +1850,7 @@ export class FICFolderAPI{
                 id:document.id
             }
             FICUtils.packUpdateEntity(pack,updateData);
+            await FICCache.resetCache();
         });
     }
 }
