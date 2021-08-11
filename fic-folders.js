@@ -183,11 +183,12 @@ export class FICFolder{
         //- Folder path is using folderIds
         //- Swap this in the import function to make things quicker
         let newFolder = new FICFolder(data);
+        newFolder.documentId = documentId;
+        newFolder.packCode = packCode;
         if (game.customFolders?.fic?.folders){
             game.customFolders.fic.folders.set(newFolder.id,newFolder);
         }
-        newFolder.documentId = documentId;
-        newFolder.packCode = packCode;
+
         return newFolder
     }
     static import(packCode,allDocuments,document={}){
@@ -198,10 +199,13 @@ export class FICFolder{
             //TODO later
         }
         if (data?.folderPath?.length > 0){
-            data.parent = data.folderPath[data.folderPath.length]-1;
+            data.parent = data.folderPath[data.folderPath.length-1];
         }
         if (data.children){
-            data.children = [... new Set(data.children.concat(allDocuments.filter(x => x.data.flags.cf.id === data.id)).map(y => y.id))]
+            //hacky solution for collating children for a folder
+            data.children = [... new Set(
+                data.children.filter(x => x != null).concat(allDocuments.filter(x => x.data.flags.cf.id === data.id)).map(y => y.id)
+            )]
             data.contents = data.children.map(x => allDocuments.find(y => y.id === x));
         }
         return FICFolder.create(data,document.id,packCode);
@@ -812,7 +816,7 @@ export class FICManager{
         let parents = content.filter(e => e.data.flags != null 
             && e.data.flags.cf != null 
             && entity.data.flags.cf.path.startsWith(e.data.flags.cf.path,0) 
-            && e.name === TEMP_ENTITY_NAME);
+            && e.name === game.CF.TEMP_ENTITY_NAME);
         console.debug(entity.data.flags.cf.path+" is entity");
         let updateData = {
             flags:{
@@ -851,7 +855,7 @@ export class FICManager{
         return updateData;
     }
     static removeOrUpdateFolderIdForEntity(entity,content){
-        let parent = content.find(e => e.name === TEMP_ENTITY_NAME 
+        let parent = content.find(e => e.name === game.CF.TEMP_ENTITY_NAME 
             && e.data.flags.cf.path != null 
             && e.data.flags.cf.path === entity.data.flags.cf.path);
         let folderId = null
@@ -1608,7 +1612,7 @@ export class FICManager{
         let tempEntityData = tempEntity.data.flags.cf
         if (tempEntityData.folderPath != null && tempEntityData.folderPath.length>0){
             parentFolderId = tempEntityData.folderPath[tempEntityData.folderPath.length-1];
-            parentEntity = contents.find(e => e.name === TEMP_ENTITY_NAME && 
+            parentEntity = contents.find(e => e.name === game.CF.TEMP_ENTITY_NAME && 
                 e.data.flags.cf.id === parentFolderId);
             parentPath = parentEntity.data.flags.cf.path;
         }
@@ -1652,7 +1656,7 @@ export class FICManager{
                         if (parentPath)
                             allData[entity.id].flags.cf.path = parentPath;
                     }else{
-                        if (entity.name === TEMP_ENTITY_NAME 
+                        if (entity.name === game.CF.TEMP_ENTITY_NAME 
                             && entity.data.flags.cf.folderPath.includes(tempEntityFolderId)){
                             // Another temp entity representing folder which is a child of parent
                             let newPath = entity.data.flags.cf.folderPath
@@ -1755,24 +1759,68 @@ export class FICFolderAPI{
     /*
     * Loads folders in a compendium into WorldCollection: 
     *   game.customFolders.fic.folders
-    * Returns a list of the folders
+    * Returns the collection too
     */
-    static async getFolders(packCode){
+    static async loadFolders(packCode){
         // Clear the temporary storage of folders
         game.customFolders.fic = {
             folders:new FICFolderCollection([])
         }
 
-        let folderObjects = [];
         let allDocuments = await game.packs.get(packCode).getDocuments();
         let folders = allDocuments.filter(x => x.name === game.CF.TEMP_ENTITY_NAME)
         let entries = allDocuments.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
 
         for (let folder of folders){
-            folderObjects.push(FICFolder.import(packCode,entries,folder));
+            FICFolder.import(packCode,entries,folder);
         }
-        return folderObjects;
-   }
+        return game.customFolders.fic.folders;
+    }
+    /*
+    * Creates folder at the root
+    * returns a FICFolder object representing the folder that was created
+    */
+    static async createFolderAtRoot(packCode,name='New Folder',color='#000000',fontColor='#FFFFFF'){
+        let pack = game.packs.get(packCode);
+        pack.apps[0].close().then(async () => {
+            let folder = {
+                id:FICUtils.generateRandomFolderName('temp_'),
+                name:name,
+                color:color,
+                fontColor:fontColor,
+                folderPath:[],
+                children:[],
+                icon:null
+            }
+            let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,folder)
+            let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+            await FICCache.resetCache();
+            return FICFolder.import(packCode,[],result);
+        });
+    }
+    /*
+    * Creates folder underneath the given FICFolder object
+    * returns a FICFolder object representing the folder that was created
+    */
+    static async createFolderUnderFolder(folderObj,name='New Folder',color='#000000',fontColor='#FFFFFF'){
+        let pack = folderObj.pack;
+        pack.apps[0].close().then(async () => {
+            let newFolder = {
+                id:FICUtils.generateRandomFolderName('temp_'),
+                name:name,
+                color:color,
+                fontColor:fontColor,
+                folderPath:folderObj.folderPath.concat([folderObj.folderId]),
+                children:[],
+                icon:null
+            }
+            let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolder)
+        
+            let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+            await FICCache.resetCache();
+            return FICFolder.import(folderObj.packCode,[],result);
+        })
+    }
 }
 
 
