@@ -89,7 +89,7 @@ export class FICUtils{
                 return {name:game.CF.TEMP_ENTITY_NAME,flags:{cf:folder}};      
         }
     }
-    async removeTempEntities(entityType){
+    static async removeTempEntities(entityType){
         let collection = null
         switch (entityType){
             case 'Actor': collection = game.actors;
@@ -203,21 +203,32 @@ export class FICFolder{
         }
         if (data.children){
             //hacky solution for collating children for a folder
-            data.children = [... new Set(
-                data.children.filter(x => x != null).concat(allDocuments.filter(x => x.data.flags.cf.id === data.id)).map(y => y.id)
-            )]
+            data.children = allDocuments.filter(x => x.data.flags.cf.id === data.id).map(y => y.id)
             data.contents = data.children.map(x => allDocuments.find(y => y.id === x));
         }
         return FICFolder.create(data,document.id,packCode);
     }
+    // async removeDocument(documentId,save=true){
+    //     var index = this.data.children.indexOf(documentId);
+    //     if (index !== -1) {
+    //         this.data.children.splice(index, 1);
+    //         if (this.save)
+    //             await this.save(false);
+    //     }
+    // }
+    // async addDocument(documentId,save=true){
+    //     this.data.children.push(documentId);
+    //     if (this.save)
+    //         await this.save(false);
+    // }
 
     // GETTERS AND SETTERS
     get parent(){
-        return game.customFolders.fic.folders.contents.find(x => x.folderId === this.data.parent)
+        return game.customFolders.fic.folders.contents.find(x => x.id === this.data.parent)
     }
-    get id(){return this.documentId}
-    get _id(){return this.documentId}
-    get folderId(){return this.data.id}
+    get id(){return this.data.id}
+    get _id(){return this.data.id}
+    //get documentId(){return this.documentId}
     get contents(){return this.data.contents}
     get name(){return this.data.name}
     get color(){return this.data.color}
@@ -1078,7 +1089,7 @@ export class FICManager{
         await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge)
     }
     static async exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge){
-        let path = getFullPath(folderObj)
+        let path = FICManager.getFullPath(folderObj)
         let content = await pack.getDocuments();
         let existingFolder = content.find(e => e.name === game.CF.TEMP_ENTITY_NAME 
             && e.data?.flags?.cf?.id === folderId)
@@ -1517,7 +1528,7 @@ export class FICManager{
             }
         }
     }
-    async createFolderPath(path,pColor,entityType,e){
+    static async createFolderPath(path,pColor,entityType,e){
         let segments = path.split(game.CF.FOLDER_SEPARATOR);
         let index = 0;
         for (let seg of segments){
@@ -1555,7 +1566,7 @@ export class FICManager{
         }
     }
     ///TODO fix
-    async createMacroFolderPath(path,pColor,e){
+    static async createMacroFolderPath(path,pColor,e){
         let allMacroFolders = game.settings.get('macro-folders','mfolders')
         game.settings.set('macro-folders','updating',true)  
         let lastId = null;
@@ -1567,7 +1578,7 @@ export class FICManager{
                 folderPath = seg
             }
             let results = game.customFolders.macro.folders.filter(f => f.data.pathToFolder != null 
-                && getFullPath(f) === folderPath)
+                && FICManager.getFullPath(f) === folderPath)
             if (results.length==0 ){
                 //create folder
                 let newFolder = await game.MF.MacroFolder.create({
@@ -1810,7 +1821,7 @@ export class FICFolderAPI{
                 name:name,
                 color:color,
                 fontColor:fontColor,
-                folderPath:folderObj.folderPath.concat([folderObj.folderId]),
+                folderPath:folderObj.folderPath.concat([folderObj.id]),
                 children:[],
                 icon:null
             }
@@ -1820,6 +1831,26 @@ export class FICFolderAPI{
             await FICCache.resetCache();
             return FICFolder.import(folderObj.packCode,[],result);
         })
+    }
+    static async addDocumentToFolder(packCode,document,folder){
+        let pack = game.packs.get(packCode);
+        pack.apps[0].close().then(async () => {
+            // Disassociate old folder id
+            let oldParentId = document.data?.flags?.cf?.id;
+            if (oldParentId){
+                await game.customFolders.fic.folders.get(oldParentId).removeDocument(document.id);
+            }
+            // Set document folderId to provided folder
+            let updateData = {
+                flags:{
+                    cf:{
+                        id:folder.id
+                    }
+                },
+                id:document.id
+            }
+            FICUtils.packUpdateEntity(pack,updateData);
+        });
     }
 }
 
