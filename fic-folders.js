@@ -151,7 +151,7 @@ export class FICFolder{
             children:[],
             icon:null
         },data);
-        this.documentId = data.documentId
+        this.documentId = data.id
     }
     toJSON(){
         return this.data;
@@ -191,8 +191,8 @@ export class FICFolder{
 
         return newFolder
     }
-    static import(packCode,allDocuments,document={}){
-        let data = document.data.flags.cf;
+    static import(packCode,allDocuments,folder={}){
+        let data = folder.data.flags.cf;
 
         if (!data.newFolderPath){
             // set new folder path using document ID instead of folder ID
@@ -203,10 +203,10 @@ export class FICFolder{
         }
         if (data.children){
             //hacky solution for collating children for a folder
-            data.children = allDocuments.filter(x => x.data.flags.cf.id === data.id).map(y => y.id)
-            data.contents = data.children.map(x => allDocuments.find(y => y.id === x));
+            data.children = allDocuments.filter(x => x.data?.flags?.cf?.id === data.id).map(y => y._id)
+            data.contents = data.children.map(x => allDocuments.find(y => y._id === x));
         }
-        return FICFolder.create(data,document.id,packCode);
+        return FICFolder.create(data,folder._id,packCode);
     }
     // async removeDocument(documentId,save=true){
     //     var index = this.data.children.indexOf(documentId);
@@ -557,87 +557,97 @@ export class FICManager{
         })
         Hooks.on('renderCompendium',async function(e){
             let packCode = e.metadata.package+'.'+e.metadata.name;
-            let window = e._element[0]
+            let window = e._element[0];
             if (!e.collection.locked && game.user.isGM)
                 FICManager.createNewFolderButtonWithinCompendium(window,packCode);
             if (!e.collection.index.contents.some(x => x.name === game.CF.TEMP_ENTITY_NAME)) return;
         
             FICUtils.removeStaleOpenFolderSettings(packCode);
             let cachedFolderStructure = await FICCache.loadCachedFolderStructure(packCode);
-            let allFolderData={};
-            let groupedFoldersSorted = {}
-            let groupedFolders = {}
+            let allFolderData = {};
+            let groupedFoldersSorted = {};
+            let groupedFolders = {};
             
             if (cachedFolderStructure != null){
                 groupedFoldersSorted = cachedFolderStructure;
-            }else{
-                let folderChildren = {}
-                let checkedPaths = []
-                let contents = await e.collection.getDocuments();
-                let allFolderIds = contents.filter(x => x.data?.flags?.cf?.id != null 
-                    && x.name === game.CF.TEMP_ENTITY_NAME).map(y => y.data.flags.cf.id)
+            } else {
+                let folderChildren = {};
+
+                const indexFields = [
+                    "name",
+                    "flags.cf",
+                ];
+    
+                const index = await e.collection.getIndex({ fields: indexFields });
+                
+                const folderIds = index
+                    .filter(x =>
+                        x.flags?.cf?.id != null &&
+                        x.name === game.CF.TEMP_ENTITY_NAME)
+                    .map((i) => i._id);
+                const contents = await e.collection.getDocuments({_id: {$in: folderIds}});
+                const allFolderIds = contents.map(x => x.data.flags.cf.id);
+                const entries = index.filter(x => x.flags?.cf?.id);
+
+                contents.forEach(x => {
+                    let temp = { name: x.name, _id: x.id, flags: { cf: x.data.flags?.cf } };
+                    entries.push(temp);
+                });
+
                 let updateData = [];
                 //First parse folder data
-                for (let entry of contents){
-                    if (entry != null 
-                        && entry.data.flags.cf != null){
-                        let folderId = entry.data.flags.cf.id;
-                        let entryId = entry.id
-                        if (folderId != null){
-                            if (entry.name === game.CF.TEMP_ENTITY_NAME){
-                                if (entry.data.flags.cf.folderPath == null){
-                                    let result = FICManager.updateFolderPathForTempEntity(entry,contents);
-                                    updateData.push(result); 
-                                }else{
-                                    let name = entry.data.flags.cf.name
-                                    let color = entry.data.flags.cf.color;
-                                    let folderPath = entry.data.flags.cf.folderPath;
-                                    let folderIcon = entry.data.flags.cf.icon
-                                    let fontColor = entry.data.flags.cf.fontColor;
-                                    let data = {
-                                        id:folderId,
-                                        color:color, 
-                                        children:[],
-                                        name:name,
-                                        folderPath:folderPath,
-                                        tempEntityId:entryId,
-                                        icon:folderIcon,
-                                        fontColor:fontColor
-                                    }
-                                    if (allFolderData[folderId])
-                                        allFolderData[folderId] = foundry.utils.mergeObject(data,allFolderData[folderId]);
-                                    else   
-                                        allFolderData[folderId] = data;
-                                }
+                entries.forEach(entry => {
+                    let folderId = entry.flags.cf.id;
+                    let entryId = entry._id;
+                    if (entry.name === game.CF.TEMP_ENTITY_NAME){
+                        if (entry.flags.cf.folderPath == null){
+                            let result = FICManager.updateFolderPathForTempEntity(entry,contents);
+                            updateData.push(result); 
+                        } else {
+                            let name = entry.flags.cf.name;
+                            let color = entry.flags.cf.color;
+                            let folderPath = entry.flags.cf.folderPath;
+                            let folderIcon = entry.flags.cf.icon
+                            let fontColor = entry.flags.cf.fontColor;
+                            let data = {
+                                id:folderId,
+                                color:color, 
+                                children:[],
+                                name:name,
+                                folderPath:folderPath,
+                                tempEntityId:entryId,
+                                icon:folderIcon,
+                                fontColor:fontColor,
                             }
-                            else if (entry.data.flags.cf.id != null
-                                && entry.name != game.CF.TEMP_ENTITY_NAME
-                                && !allFolderIds.includes(entry.data.flags.cf.id)){
-                                updateData.push(FICManager.removeOrUpdateFolderIdForEntity(entry,contents));
-                            }
-                            if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
-                                allFolderData[folderId].children.push(entryId);
-                            }else{
-                                allFolderData[folderId] = {children:[entryId]}
-                            }
+                            if (allFolderData[folderId])
+                                allFolderData[folderId] = foundry.utils.mergeObject(data,allFolderData[folderId]);
+                            else
+                                allFolderData[folderId] = data;
                         }
+                    } else if (entry.name != game.CF.TEMP_ENTITY_NAME && !allFolderIds.includes(entry.flags.cf.id)) {
+                        updateData.push(FICManager.removeOrUpdateFolderIdForEntity(entry,contents));
                     }
-                }
+                    if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
+                        allFolderData[folderId].children.push(entryId);
+                    } else {
+                        allFolderData[folderId] = {children:[entryId]};
+                    }
+                });
                 for (let key of Object.keys(folderChildren)){
-                    allFolderData[key].children = folderChildren[key].children
-                }          
-        
-                if (updateData.length>0){
-                    ui.notifications.notify('Updating folder structure. Please wait...')
+                    allFolderData[key].children = folderChildren[key].children;
+                }
+
+                if (updateData.length>0) {
+                    ui.notifications.notify('Updating folder structure. Please wait...');
                     e.close().then(async () => {
-                        if (game.user.isGM){
-                            for (let d of updateData){
+                        if (game.user.isGM) {
+                            for (let d of updateData) {
                                 await FICUtils.packUpdateEntity(e.collection,d);
                             }
-                            FICCache.resetCache()
-                            ui.notifications.notify('Updating complete!')
+                            FICCache.resetCache();
+                            ui.notifications.notify('Updating complete!');
                             e.render(true);
-                        }else{
+                        } else {
                             ui.notifications.warn('Please log in as a GM to convert this compendium to the new format')
                         }
                     });
@@ -650,77 +660,79 @@ export class FICManager{
                     let depth = 0;
                     if (allFolderData[key].folderPath == null || allFolderData[key].folderPath.length===0){
                         depth = 0;
-                    }else{
-                        depth = allFolderData[key].folderPath.length
+                    } else {
+                        depth = allFolderData[key].folderPath.length;
                         // Add all parent folders to list
                         // Need to make sure to render them
                     }
                     if (groupedFolders[depth] == null){
                         groupedFolders[depth] = [allFolderData[key]];
-                    }else{
+                    } else {
                         groupedFolders[depth].push(allFolderData[key]);
                     }
-                    groupedFolderMetadata[key] = {depth:depth, index:groupedFolders[depth].length-1}
+                    groupedFolderMetadata[key] = {depth:depth, index:groupedFolders[depth].length-1};
                 });
                 Object.keys(groupedFolders).sort(function(o1,o2){
                     if (parseInt(o1)<parseInt(o2)){
                         return -1;
-                    }else if (parseInt(o1>parseInt(o2))){
+                    } else if (parseInt(o1>parseInt(o2))) {
                         return 1;
-                    }return 0;
+                    }
+                    return 0;
                 }).forEach((key) => {
-                    groupedFoldersSorted[key] = groupedFolders[key]
+                    groupedFoldersSorted[key] = groupedFolders[key];
                 })
+
                 await FICCache.cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
             }
-            console.log(modName+' | Creating folder structure inside compendium.');
+            console.log(modName+' | Creating folder strucfture inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await FICManager.createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
             for (let entity of window.querySelectorAll('.directory-item')){
                 if (entity.querySelector('h4').innerText.includes(game.CF.TEMP_ENTITY_NAME)){
                     entity.style.display = 'none';
-                    entity.classList.add('hidden')
+                    entity.classList.add('hidden');
                 }
             }
             if (game.user.isGM && !e.locked){
                 // Moving between folders
                 let hiddenMoveField = document.createElement('input');
-                hiddenMoveField.type='hidden'
+                hiddenMoveField.type='hidden';
                 hiddenMoveField.style.display='none';
                 hiddenMoveField.classList.add('folder-to-move');
                 window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
                 
-                for (let entity of window.querySelectorAll('.directory-item')){
+                for (let entity of window.querySelectorAll('.directory-item')) {
                     entity.addEventListener('dragstart',async function(){
                         let currentId = this.getAttribute('data-document-id');
-                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId
+                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId;
                     })
                 }
-                for (let folder of window.querySelectorAll('.compendium-folder')){
+                for (let folder of window.querySelectorAll('.compendium-folder')) {
                     folder.addEventListener('drop',async function(event){
                         let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                        if (movingItemId.length>0){
-                            console.log(modName+' | Moving document '+movingItemId+' to new folder.')
+                        if (movingItemId.length>0) {
+                            console.log(modName+' | Moving document '+movingItemId+' to new folder.');
                             this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
                             //let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
         
                             let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
-                            let p = game.packs.get(packCode);                          
-                            let targetFolder = await  p.getDocument(folder.getAttribute('data-temp-entity-id'))
+                            let p = game.packs.get(packCode);
+                            let targetFolder = await p.getDocument(folder.getAttribute('data-temp-entity-id'));
                             let data = {
                                 id:movingItemId,
                                 flags:{
                                     cf:{
                                         id:folder.getAttribute('data-folder-id'),
                                         path:targetFolder.data.flags.cf.path,
-                                        color:targetFolder.data.flags.cf.color   
+                                        color:targetFolder.data.flags.cf.color,
                                     }
                                 }
-                            }
-                            await FICCache.moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'))
+                            };
+                            await FICCache.moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'));
                             if (data){ 
                                 const document = await p.getDocument(data.id);
-                                await document.update(data,{pack:p.collection})
+                                await document.update(data,{pack:p.collection});
                             }   
                         }
                     })
@@ -824,11 +836,10 @@ export class FICManager{
     static updateFolderPathForTempEntity(entity,content){
         // This constructs the folder path for temp entities
         // for each entity in contents with sub-path in entity path, add id
-        let parents = content.filter(e => e.data.flags != null 
-            && e.data.flags.cf != null 
-            && entity.data.flags.cf.path.startsWith(e.data.flags.cf.path,0) 
+        let parents = content.filter(e =>
+            entity.data?.flags?.cf?.path?.startsWith(e.data.flags.cf.path,0) 
             && e.name === game.CF.TEMP_ENTITY_NAME);
-        console.debug(entity.data.flags.cf.path+" is entity");
+        console.debug(entity.data?.flags?.cf?.path+" is entity");
         let updateData = {
             flags:{
                 cf:{
@@ -1016,22 +1027,41 @@ export class FICManager{
     static async getExistingFolderId(folder,pack){
         let folderPath = FICUtils.getFolderPath(folder);
         //Also check for old folder paths (not using separator)
-        let folderPathOld = folderPath.replace(game.CF.FOLDER_SEPARATOR,'/')
-        let content = await pack.getDocuments();
-        let existingFolder = content.find(e => e.name === game.CF.TEMP_ENTITY_NAME 
-            && (e.data.flags.cf.path === folderPath 
-                || e.data.flags.cf.path === folderPathOld) 
-            && e.data.flags.cf.name === folder.name)
+        let folderPathOld = folderPath.replace(game.CF.FOLDER_SEPARATOR,'/');
+
+        const indexFields = [
+            "name",
+            "flags.cf",
+        ];
+
+        const index = await pack.getIndex({ fields: indexFields });
+
+        let existingFolder = index.find(e => e.name === game.CF.TEMP_ENTITY_NAME
+            && e.flags?.cf
+            && (e.flags.cf.path === folderPath 
+                || e.flags.cf.path === folderPathOld) 
+            && e.flags.cf.name === folder.name)
         if (existingFolder){
-            return existingFolder.data.flags.cf.id;
+            return existingFolder.flags.cf.id;
         }
         return null;
     }
     static async createParentFoldersWithinCompendium(folder,pack){
         let parents = []
         let currentFolder = folder;
-        let content = await pack.getDocuments();
-        let tempEntities = content.filter(e => e.name === game.CF.TEMP_ENTITY_NAME);
+
+        const indexFields = [
+            "name",
+            "flags.cf",
+        ];
+
+        const index = await pack.getIndex({ fields: indexFields });
+        const folderIds = index
+            .filter(x => x.name === game.CF.TEMP_ENTITY_NAME)
+            .map((i) => i._id);
+
+        const tempEntities = await pack.getDocuments({_id: {$in: folderIds}});
+
     
         while (currentFolder.parentFolder != null){
             parents.push(currentFolder.parentFolder);
@@ -1090,9 +1120,15 @@ export class FICManager{
     }
     static async exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge){
         let path = FICManager.getFullPath(folderObj)
-        let content = await pack.getDocuments();
-        let existingFolder = content.find(e => e.name === game.CF.TEMP_ENTITY_NAME 
-            && e.data?.flags?.cf?.id === folderId)
+        const indexFields = [
+            "name",
+            "flags.cf",
+        ];
+
+        const packIndex = await pack.getIndex({ fields: indexFields });
+        const existingFolder = packIndex
+            .find(x => x.name === game.CF.TEMP_ENTITY_NAME && x.flags?.cf?.id === folderId);
+
         if (existingFolder){
             // Use existing
             folderId = existingFolder.data.flags.cf.id
@@ -1120,10 +1156,10 @@ export class FICManager{
             if ( existing ) data.id = existing._id;
             if ( data.id ){
                 // Remove child from old parent
-                let oldParent = content.find(n => n.name === game.CF.TEMP_ENTITY_NAME && n.data?.flags?.cf?.children?.includes(data.id) && n.data.flags.cf.id != folderId)
+                let oldParent = packIndex.find(n => n.name === game.CF.TEMP_ENTITY_NAME && n.data?.flags?.cf?.children?.includes(data.id) && n.data.flags.cf.id != folderId)
                 if (oldParent){
                     let nData = {
-                        id: oldParent.id,
+                        id: oldParent._id,
                         flags:{
                             cf:{
                                 children:oldParent.data.flags.cf.children.filter(m => m != data.id)
@@ -1778,9 +1814,16 @@ export class FICFolderAPI{
             folders:new FICFolderCollection([])
         }
 
-        let allDocuments = await game.packs.get(packCode).getDocuments();
-        let folders = allDocuments.filter(x => x.name === game.CF.TEMP_ENTITY_NAME)
-        let entries = allDocuments.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
+        const indexFields = [
+            "name",
+            "flags.cf",
+          ];
+
+        const pack = await game.packs.get(packCode);
+        const index = await pack.getIndex({ fields: indexFields });
+        const folderIds = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME).map((i) => i._id);
+        const folders = await pack.getDocuments({_id: {$in: folderIds}});
+        const entries = index.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
 
         for (let folder of folders){
             FICFolder.import(packCode,entries,folder);
