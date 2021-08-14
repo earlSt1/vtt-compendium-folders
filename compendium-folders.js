@@ -1835,8 +1835,8 @@ async function initFolders(refresh=false){
 }
 Hooks.once('setup',async function(){
     defineClasses();
-    Settings.registerSettings()
-    game.CF.FICManager.setup()
+    Settings.registerSettings();
+    game.CF.FICManager.setup();
     Hooks.once('ready',async function(){
         // Ensure compatibility with other modules that rely on the old directory.
         Hooks.on('renderCompendiumFolderDirectory',(html,e) => {
@@ -1855,7 +1855,7 @@ Hooks.once('setup',async function(){
    
     
         Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html,options) => {
-            Hooks.call("getCompendiumDirectoryEntryContext",html,options)
+            Hooks.call("getCompendiumDirectoryEntryContext",html,options);
         })
     
 });
