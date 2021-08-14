@@ -1337,7 +1337,7 @@ async function cleanupCompendium(pack){
     let allData = await p.getDocuments();
     for (let entry of allData){
         if (entry.name === TEMP_ENTITY_NAME){
-            await packDeleteEntity(p,entry.id)
+            await FICUtils.packDeleteEntity(p,entry.id)
         }else{
             let matchingIndex = index.find(i => i._id === entry.id);
             let data = await entry.toCompendium();
@@ -1347,7 +1347,7 @@ async function cleanupCompendium(pack){
             if (matchingIndex){
                 data.id = matchingIndex._id;
             }
-            await packUpdateEntity(p,data)
+            await FICUtils.packUpdateEntity(p,data)
         }
     }
     ui.notifications.notify(game.i18n.localize("CF.cleanupNotificationFinish"))
