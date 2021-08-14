@@ -206,7 +206,7 @@ export class FICFolder{
             data.children = allDocuments.filter(x => x.data?.flags?.cf?.id === data.id).map(y => y._id)
             data.contents = data.children.map(x => allDocuments.find(y => y._id === x));
         }
-        return FICFolder.create(data,folder._id,packCode);
+        return FICFolder.create(data,folder.id,packCode);
     }
     // async removeDocument(documentId,save=true){
     //     var index = this.data.children.indexOf(documentId);
@@ -330,7 +330,9 @@ export class FICCache{
         }
         await game.settings.set(mod,'cached-folder',cache);
         console.log(modName+' | Cached folder structure');
-        // Now store folder structures in game.customFolders.fic.folders + game.customFolders.fic.entries
+        // Now store folder structures in game.customFolders.fic.folders
+        FICFolderAPI.loadFolders(packCode);
+
     }
     static async loadCachedFolderStructure(packCode){
         let cache = game.settings.get(mod,'cached-folder');
