@@ -998,16 +998,17 @@ function defineClasses(){
     CONFIG.CompendiumFolderDirectory = {documentClass : CompendiumFolderDirectory};
    
     game.CF = {
-        CompendiumEntry:CompendiumEntry,
-        CompendiumFolder:CompendiumFolder,
-        CompendiumEntryCollection:CompendiumEntryCollection,
-        CompendiumFolderCollection:CompendiumFolderCollection,
-        CompendiumFolderDirectory:CompendiumFolderDirectory,
-        TEMP_ENTITY_NAME:TEMP_ENTITY_NAME,
-        FOLDER_SEPARATOR:FOLDER_SEPARATOR,
-        FICManager:FICManager,
-        FICFolderAPI:FICFolderAPI
-    }
+        CompendiumEntry,
+        CompendiumFolder,
+        CompendiumEntryCollection,
+        CompendiumFolderCollection,
+        CompendiumFolderDirectory,
+        TEMP_ENTITY_NAME,
+        FOLDER_SEPARATOR,
+        FICManager,
+        FICFolderAPI,
+        cleanupCompendium,
+    };
 }
 async function closeFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
