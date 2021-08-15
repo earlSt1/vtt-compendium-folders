@@ -998,16 +998,17 @@ function defineClasses(){
     CONFIG.CompendiumFolderDirectory = {documentClass : CompendiumFolderDirectory};
    
     game.CF = {
-        CompendiumEntry:CompendiumEntry,
-        CompendiumFolder:CompendiumFolder,
-        CompendiumEntryCollection:CompendiumEntryCollection,
-        CompendiumFolderCollection:CompendiumFolderCollection,
-        CompendiumFolderDirectory:CompendiumFolderDirectory,
-        TEMP_ENTITY_NAME:TEMP_ENTITY_NAME,
-        FOLDER_SEPARATOR:FOLDER_SEPARATOR,
-        FICManager:FICManager,
-        FICFolderAPI:FICFolderAPI
-    }
+        CompendiumEntry,
+        CompendiumFolder,
+        CompendiumEntryCollection,
+        CompendiumFolderCollection,
+        CompendiumFolderDirectory,
+        TEMP_ENTITY_NAME,
+        FOLDER_SEPARATOR,
+        FICManager,
+        FICFolderAPI,
+        cleanupCompendium,
+    };
 }
 async function closeFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
@@ -1337,7 +1338,7 @@ async function cleanupCompendium(pack){
     let allData = await p.getDocuments();
     for (let entry of allData){
         if (entry.name === TEMP_ENTITY_NAME){
-            await packDeleteEntity(p,entry.id)
+            await FICUtils.packDeleteEntity(p,entry.id)
         }else{
             let matchingIndex = index.find(i => i._id === entry.id);
             let data = await entry.toCompendium();
@@ -1347,7 +1348,7 @@ async function cleanupCompendium(pack){
             if (matchingIndex){
                 data.id = matchingIndex._id;
             }
-            await packUpdateEntity(p,data)
+            await FICUtils.packUpdateEntity(p,data)
         }
     }
     ui.notifications.notify(game.i18n.localize("CF.cleanupNotificationFinish"))
