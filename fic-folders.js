@@ -1074,7 +1074,7 @@ export class FICManager{
         for (let i=parents.length-1 ;i>=0;i--){
             let tempEntity = tempEntities.find(e => e.data.flags.cf.name === parents[i].name 
                 && (e.data.flags.cf.path === FICUtils.getFolderPath(parents[i]) 
-                    ||FICUtils.arraysEqual(e.data.flags.cf.folderPath,previousPath)))
+                    || FICUtils.arraysEqual(e.data.flags.cf.folderPath,previousPath)))
             if (tempEntity != null){
                 // if folder with parent name exists, and path matches, use that tempEntity id
                 previousParent = tempEntity.data.flags.cf.id;
@@ -1133,8 +1133,8 @@ export class FICManager{
 
         if (existingFolder){
             // Use existing
-            folderId = existingFolder.data.flags.cf.id
-            path = existingFolder.data.flags.cf.path
+            folderId = existingFolder.flags.cf.id
+            path = existingFolder.flags.cf.path
         }
         let color = '#000000'
         if (folderObj.data.color != null && folderObj.data.color.length>0){
@@ -1164,13 +1164,13 @@ export class FICManager{
                         id: oldParent._id,
                         flags:{
                             cf:{
-                                children:oldParent.data.flags.cf.children.filter(m => m != data.id)
+                                children:oldParent.flags.cf.children.filter(m => m != data.id)
                             }
                         }
                     }
                     await FICUtils.packUpdateEntity(pack,nData);
                      //Update saved content for future reference
-                    oldParent.data.flags.cf.children = oldParent.data.flags.cf.children.filter(m => m != data.id);
+                    oldParent.flags.cf.children = oldParent.flags.cf.children.filter(m => m != data.id);
                 }
                
                 packEntities.push(existing._id)
@@ -1203,7 +1203,7 @@ export class FICManager{
                 id:existingFolder.id,
                 flags:{
                     cf:{
-                        children:[...new Set(existingFolder.data.flags.cf.children.concat(packEntities))]
+                        children:[...new Set(existingFolder.flags.cf.children.concat(packEntities))]
                     }
                 }
             }
@@ -1401,7 +1401,8 @@ export class FICManager{
                     }).render(true)
                 });
             }
-            if (game.packs.get(packCode).documentClass.documentName != 'Playlist'){ // Temporarily disabling the Import Folder structure for Macros (needs to be fixed later)
+            if (game.packs.get(packCode).documentClass.documentName != 'Playlist'
+                || game.packs.get(packCode).documentClass.documentName != 'Macro'){ // Temporarily disabling the Import Folder structure for Macros (needs to be fixed later)
                 let importButton = document.createElement('a');
                 importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
                 importButton.classList.add('import-folder');
@@ -1844,7 +1845,7 @@ export class FICFolderAPI{
                 color:color,
                 fontColor:fontColor,
                 folderPath:[],
-                path:[],
+                path:name,
                 children:[],
                 icon:null
             }
@@ -1867,7 +1868,7 @@ export class FICFolderAPI{
                 color:color,
                 fontColor:fontColor,
                 folderPath:parent.folderPath.concat([parent.id]),
-                path:parent.path + game.CF.FOLDER_SEPARATOR + parent.name,
+                path:parent.path + game.CF.FOLDER_SEPARATOR + parent.name + game.CF.FOLDER_SEPARATOR + name,
                 children:[],
                 icon:null
             }
