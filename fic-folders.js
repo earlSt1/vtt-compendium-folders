@@ -1785,6 +1785,23 @@ export class FICManager{
         pack.apps[0].element.find('.cfolders-container').remove();
     
         let e = await pack.documentClass.create(tempData,{pack:pack.collection});
+        if (!e.data.flags.cf){
+            // For DSA, actor flags are not saved
+            await e.update({
+                id:e.id,
+                flags:{
+                    cf:{
+                        id:folderObj.id,
+                        folderPath:newPath,
+                        color:folderObj.color,
+                        fontColor:folderObj.fontColor,
+                        name:folderObj.name,
+                        children:[],
+                        icon:folderObj.icon
+                    }
+                }
+            })
+        }
         console.log(`${modName} | Created temp entity for folder in ${pack.collection}`);
         return newPath
     }
