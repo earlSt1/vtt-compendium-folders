@@ -1855,22 +1855,20 @@ export class FICFolderAPI{
     */
     static async createFolderAtRoot(packCode,name='New Folder',color='#000000',fontColor='#FFFFFF'){
         let pack = game.packs.get(packCode);
-        pack.apps[0].close().then(async () => {
-            let folder = {
-                id:FICUtils.generateRandomFolderName('temp_'),
-                name:name,
-                color:color,
-                fontColor:fontColor,
-                folderPath:[],
-                path:name,
-                children:[],
-                icon:null
-            }
-            let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,folder)
-            let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
-            await FICCache.resetCache();
-            return FICFolder.import(packCode,[],result);
-        });
+        let folder = {
+            id:FICUtils.generateRandomFolderName('temp_'),
+            name:name,
+            color:color,
+            fontColor:fontColor,
+            folderPath:[],
+            path:name,
+            children:[],
+            icon:null
+        }
+        let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,folder)
+        let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+        await FICCache.resetCache();
+        return FICFolder.import(packCode,[],result);
     }
     /*
     * Creates folder with the given FICFolder object as parent
@@ -1878,45 +1876,41 @@ export class FICFolderAPI{
     */
     static async createFolderWithParent(parent,name='New Folder',color='#000000',fontColor='#FFFFFF'){
         let pack = parent.pack;
-        pack.apps[0].close().then(async () => {
-            let newFolder = {
-                id:FICUtils.generateRandomFolderName('temp_'),
-                name:name,
-                color:color,
-                fontColor:fontColor,
-                folderPath:parent.folderPath.concat([parent.id]),
-                path:parent.path + game.CF.FOLDER_SEPARATOR + parent.name + game.CF.FOLDER_SEPARATOR + name,
-                children:[],
-                icon:null
-            }
-            let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolder)
-        
-            let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
-            await FICCache.resetCache();
-            return FICFolder.import(parent.packCode,[],result);
-        })
+        let newFolder = {
+            id:FICUtils.generateRandomFolderName('temp_'),
+            name:name,
+            color:color,
+            fontColor:fontColor,
+            folderPath:parent.folderPath.concat([parent.id]),
+            path:parent.path + game.CF.FOLDER_SEPARATOR + parent.name + game.CF.FOLDER_SEPARATOR + name,
+            children:[],
+            icon:null
+        }
+        let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolder)
+    
+        let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+        await FICCache.resetCache();
+        return FICFolder.import(parent.packCode,[],result);
     }
     static async moveDocumentToFolder(packCode,document,folder){
         let pack = game.packs.get(packCode);
-        pack.apps[0].close().then(async () => {
-            // Disassociate old folder id
-            let oldParentId = document.data?.flags?.cf?.id;
-            if (oldParentId){
-                await game.customFolders.fic.folders.get(oldParentId).removeDocument(document.id);
-            }
-            // Set document folderId to provided folder
-            let updateData = {
-                flags:{
-                    cf:{
-                        id:folder.id,
-                        path:folder.path
-                    }
-                },
-                id:document.id
-            }
-            FICUtils.packUpdateEntity(pack,updateData);
-            await FICCache.resetCache();
-        });
+        // Disassociate old folder id
+        let oldParentId = document.data?.flags?.cf?.id;
+        if (oldParentId){
+            await game.customFolders.fic.folders.get(oldParentId).removeDocument(document.id);
+        }
+        // Set document folderId to provided folder
+        let updateData = {
+            flags:{
+                cf:{
+                    id:folder.id,
+                    path:folder.path
+                }
+            },
+            id:document.id
+        }
+        FICUtils.packUpdateEntity(pack,updateData);
+        await FICCache.resetCache();
     }
 }
 
