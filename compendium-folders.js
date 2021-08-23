@@ -629,7 +629,7 @@ function defineClasses(){
                 await oldCallback.bind(this)(li);
                 await game.settings.set(mod,'importing',false);
                 let pack = game.packs.get(li.data('pack'));
-                removeTempEntities(pack.documentClass.documentName);
+                FICUtils.removeTempEntities(pack.documentClass.documentName);
             }
             // New context menu button - Adds compendium to hidden folder
             return x.concat([
