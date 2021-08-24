@@ -1200,7 +1200,7 @@ export class FICManager{
             await pack.documentClass.create(tempData,{pack:pack.collection});
         }else{
             let folderData = {
-                id:existingFolder.id,
+                id:existingFolder._id,
                 flags:{
                     cf:{
                         children:[...new Set(existingFolder.flags.cf.children.concat(packEntities))]
