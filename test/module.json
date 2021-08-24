@@ -11,6 +11,6 @@
       ],
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
-    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/fic-api/test/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/fic-api.zip"
+    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/082-update/test/module.json",
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/082-update.zip"
   }
