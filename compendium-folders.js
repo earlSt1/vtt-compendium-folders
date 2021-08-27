@@ -1460,7 +1460,8 @@ class FixCompendiumConfig extends FormApplication{
                                             <i>Please save the contents below and add the file to a new 
                                                 <a href="https://github.com/earlSt1/vtt-compendium-folders/issues/new?assignees=&labels=&template=fix-my-compendium.md&title=Fix+my+Compendium+issue">GitHub issue</a> so I can investigate
                                             </i>
-                                            <div class="form-group"><textarea name='fixCompendiumErrorData' readonly>===MESSAGES===\n
+                                            <div class="form-group"><textarea name='fixCompendiumErrorData' readonly>
+                                                ${err}\n===MESSAGES===\n
                                                 ${messages.join('\n')}\n===FOLDER_DATA===\n
                                                 ${allDocumentData.join('\n')}
                                             </textarea></div>`,
@@ -1488,7 +1489,8 @@ class FixCompendiumConfig extends FormApplication{
                     <i>Please save the contents below and add the file to a new 
                         <a href="https://github.com/earlSt1/vtt-compendium-folders/issues/new?assignees=&labels=&template=fix-my-compendium.md&title=Fix+my+Compendium+issue">GitHub issue</a> so I can investigate
                     </i>
-                    <div class="form-group"><textarea name='fixCompendiumErrorData' readonly>===MESSAGES===\n
+                    <div class="form-group"><textarea name='fixCompendiumErrorData' readonly>
+                        ${exception}\n===MESSAGES===\n
                         ${messages.join('\n')}\n===FOLDER_DATA===\n
                         ${allDocumentData.join('\n')}
                     </textarea></div>
