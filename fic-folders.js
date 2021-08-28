@@ -873,7 +873,7 @@ export class FICManager{
                 updateData.flags.cf.folderPath.push(parent.data.flags.cf.id);
             }
         }
-        updateData.id = entity.id
+        updateData.id = entity._id
         console.debug(updateData);
         
         return updateData;
@@ -892,7 +892,7 @@ export class FICManager{
                     id:folderId
                 }
             },
-            id:entity.id
+            id:entity._id
         }
         return updateData
     }
