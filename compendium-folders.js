@@ -1427,13 +1427,13 @@ class FixCompendiumConfig extends FormApplication{
                     messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
                 }
             }
-            for (let folder of allFolders){
-                let changes = this.updateFolderPathIfInvalid(folder,documents);
-                if (Object.keys(changes).length > 0){
-                    updateData[folder.id] = (changes);
-                    messages.push([`Need to update folderPath for folder "${folder.data.flags.cf.name}" [${folder.id}]`])
-                }
-            }
+            // for (let folder of allFolders){
+            //     let changes = this.updateFolderPathIfInvalid(folder,documents);
+            //     if (Object.keys(changes).length > 0){
+            //         updateData[folder.id] = (changes);
+            //         messages.push([`Need to update folderPath for folder "${folder.data.flags.cf.name}" [${folder.id}]`])
+            //     }
+            // }
             if (messages.length>0){
                 let html =  await renderTemplate('modules/compendium-folders/templates/fix-compendium.html', {messages});
                 new Dialog({
@@ -1560,12 +1560,12 @@ class FixCompendiumConfig extends FormApplication{
         return {};
     }
     updatePathIfInvalid(entity,contents){
-        let path = entity.data.flags.cf.path;
-        let folderId = entity.data.flags.cf.id;
+        let path = entity.data?.flags?.cf?.path;
+        let folderId = entity?.data?.flags?.cf?.id;
         if (!path && folderId){
             let folder = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === folderId);
             if (folder){
-                if (folder.data.flags.cf.path && path != folder.data.flags.cf.path){
+                if (folder.data?.flags?.cf?.path && path != folder.data.flags.cf.path){
                     console.debug(`${modName} | Need to update path for ${entity.name} to ${folder.data.flags.cf.path}`)
                     return{
                         id:entity.id,
