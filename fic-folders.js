@@ -40,6 +40,15 @@ export class FICUtils{
         }
         return path;
     }
+    static getFolderPathImproved(folder,index){
+        /**
+         * Functionn should use World folder to create an ordered list of Folder IDs that exist
+         * If the folder does not exist, replace with null value
+         * Then in creation process, existing folder is used unless null value encountered, then new folder is created.
+         * 
+         **/
+        let currentFolderPath = [];
+    }
     static getRenderedFolderPath(folder){
         let path = folder.querySelector('h3').innerText;
         let currentFolder = folder;
@@ -149,7 +158,7 @@ export class FICFolder{
             fontColor:'#FFFFFF',
             name:'New Folder',
             children:[],
-            icon:null
+            icon:null,
         },data);
         this.documentId = data.id
     }
@@ -191,7 +200,7 @@ export class FICFolder{
 
         return newFolder
     }
-    static import(packCode,allDocuments,folder={}){
+    static import(packCode,contents,folder={}){
         let data = folder.data.flags.cf;
 
         if (!data.newFolderPath){
@@ -201,11 +210,7 @@ export class FICFolder{
         if (data?.folderPath?.length > 0){
             data.parent = data.folderPath[data.folderPath.length-1];
         }
-        if (data.children){
-            //hacky solution for collating children for a folder
-            data.children = allDocuments.filter(x => x.data?.flags?.cf?.id === data.id).map(y => y._id)
-            data.contents = data.children.map(x => allDocuments.find(y => y._id === x));
-        }
+        data.contents = contents;
         return FICFolder.create(data,folder.id,packCode);
     }
     // async removeDocument(documentId,save=true){
@@ -229,6 +234,9 @@ export class FICFolder{
     get id(){return this.data.id}
     get _id(){return this.data.id}
     //get documentId(){return this.documentId}
+    get children(){
+        return game.customFolders.fic.folders.contents.filter(f => f.data.parent === this.id);
+    }
     get contents(){return this.data.contents}
     get name(){return this.data.name}
     get color(){return this.data.color}
@@ -236,6 +244,13 @@ export class FICFolder{
     get icon(){return this.data.icon}
     get folderPath(){return this.data.folderPath}
     get pack(){return game.packs.get(this.packCode)}
+    get path(){return this.data.folderPath.map(p => game.customFolders.fic.folders.get(p).name).join(game.CF.FOLDER_SEPARATOR)}
+
+    set name(n){this.data.name = n}
+    set color(c){this.data.color = c}
+    set fontColor(fc){this.data.fontColor = fc}
+    set icon(i){this.data.icon = i}
+    set path(p){this.data.path=p}
 }
 export class FICFolderCollection extends WorldCollection{
     constructor(...args) {
@@ -1845,7 +1860,8 @@ export class FICFolderAPI{
         const entries = index.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
 
         for (let folder of folders){
-            FICFolder.import(packCode,entries,folder);
+            let contents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
+            FICFolder.import(packCode,contents,folder);
         }
         return game.customFolders.fic.folders;
     }
@@ -1912,9 +1928,27 @@ export class FICFolderAPI{
         FICUtils.packUpdateEntity(pack,updateData);
         await FICCache.resetCache();
     }
+    static async renameFolder(folder,newName){
+        const oldName = folder.name;
+        folder.name = newName;
+        this.recursivelyUpdatePath(folder,oldName,newName);
+        await folder.save();
+    }
+    static async recursivelyUpdatePath(root,oldName,newName){
+        for (let child of root.children){
+            this.recursivelyUpdatePath(child);
+        }
+        for (let documentId of root.contents){
+            let document = await game.packs.get(root.packCode).getDocument(documentId);
+            let updateData = {
+                flags:{
+                    cf:{
+                        path:document.data.flags.cf.path.replace(oldName,newName)
+                    }
+                },
+                id:document.id
+            }
+            await FICUtils.packUpdateEntity(game.packs.get(root.packCode),updateData)
+        }
+    }
 }
-
-
-
-
-    

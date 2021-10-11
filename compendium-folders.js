@@ -450,6 +450,8 @@ function defineClasses(){
             let tree = this.constructor.setupFolders(this.folders, this.documents);
             
             this.tree = this._sortTreeAlphabetically(tree)
+        }
+        checkCache(){
             //Check cache
             let cache = game.settings.get(mod,'cached-folder');
             if (game.user.isGM && cache.pack && !this.documents.some(x => cache.pack === x.code)){
@@ -1009,6 +1011,8 @@ function defineClasses(){
         FICFolderAPI,
         cleanupCompendium,
     };
+
+    CONFIG.ui.compendium = CompendiumFolderDirectory;
 }
 async function closeFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
@@ -1836,29 +1840,21 @@ async function initFolders(refresh=false){
         await ui.compendium.render(true);
     }
 }
-Hooks.once('setup',async function(){
+Hooks.once('init',async function(){
     defineClasses();
     Settings.registerSettings();
     game.CF.FICManager.setup();
     Hooks.once('ready',async function(){
+        ui.compendium.checkCache();
         // Ensure compatibility with other modules that rely on the old directory.
         Hooks.on('renderCompendiumFolderDirectory',(html,e) => {
             Hooks.call('renderCompendiumDirectory',html,e);
         });
-        
-        while (!ui.compendium.rendered){
-            // wait for old compendium directory to render
-            // else we get a race condition
-            await new Promise(res => setTimeout(res,500));
-        }
-        ui.compendium = new game.CF.CompendiumFolderDirectory();
-
         await initFolders(true);
     })
-   
-    
-        Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html,options) => {
-            Hooks.call("getCompendiumDirectoryEntryContext",html,options);
-        })
+       
+    Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html,options) => {
+        Hooks.call("getCompendiumDirectoryEntryContext",html,options);
+    })
     
 });
