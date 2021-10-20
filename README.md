@@ -31,6 +31,12 @@ Export             | Import
 - As of v2.0.8 you can now create folders in compendiums that have folders already in them. Next to the search bar there is a button to Create Folder at Root, and next to each rendered folder there is a similar Create Subfolder button to what you will see in the core application.
 - If you dont have any folders in the current compendium, you wont be able to make use of this functionality. To fix this you can export an empty folder into the compendium, then the folder create buttons will appear.
 
+#### Frequently Asked Questions
+**"My compendiums are showing a lot of `#[CF_tempEntity]` things and no folders. What gives?"** - This can be caused by multiple things:
+- Make sure you are on the latest version of Compendium Folders (even if you freshly installed it)
+- Make sure Compendium Folders is enabled
+- If youre still experiencing issues, try using the new "Validate/Fix my Compendium" feature in the module settings.
+
 #### Future
 - ~~Fix search bar not repopulating when you view a compendium entry~~ Now in 2.0.2!
 - ~~Merge-by-name tickbox on Import process~~ Now in 2.0.7!
@@ -59,6 +65,11 @@ There is also an extra context option for compendiums - Hide from GM. This will 
 You can also import and export your folder configuration, to share with others or to backup your folder structure. In the Settings tab under Compendium Folders you can find an Import/Export dialog. Pasting someone elses Import string into the import box will seamlessly import their folder structure, ignoring any missing compendiums.
 
 I would recommend once you are happy with your layout, to save your folder configuration. This will also be useful if you are going to submit an issue or bug on GitHub.
+
+#### Frequently Asked Questions
+**"I've used the 'Hide from GM' option on a compendium, how do I get it back?"** - Hiding a compendium from GM marks the compendium as "Unassigned". You can edit an existing folder and find the hidden compendium in the bottom section (Unassigned)
+
+**"Can I copy my folder structure from one world to another?"** - Yes, in Module Settings open the Import/Export dialog. Click the Copy to Clipboard button and paste it in the same dialog on a different world. 
 
 #### Future
 
