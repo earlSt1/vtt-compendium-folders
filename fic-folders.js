@@ -1169,6 +1169,10 @@ export class FICManager{
                 path:path,
                 color:color,
             }
+            if (e.documentName === 'Scene' && typeof e.createThumbnail === 'function') {
+                const t = await e.createThumbnail({img: data.img});
+                data.thumb = t.thumb;
+            }
             let existing = merge ? index.find(i => i.name === data.name) : index.find(i => i._id === e.id);
             if ( existing ) data.id = existing._id;
             if ( data.id ){
