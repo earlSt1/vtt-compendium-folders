@@ -190,6 +190,10 @@ export class FICFolder{
         })
         
     }
+    async saveNoRefresh(){
+        await FICUtils.packUpdateEntity(this.pack,this.getSaveData())
+        await FICCache.resetCache();
+    }
     /** @override */
     static create(data={},documentId,packCode){
         //TODO
@@ -258,7 +262,7 @@ export class FICFolder{
     set color(c){this.data.color = c}
     set fontColor(fc){this.data.fontColor = fc}
     set icon(i){this.data.icon = i}
-    set path(p){this.data.path=p}
+    set folderPath(fp){this.data.folderPath = fp}
 }
 export class FICFolderCollection extends WorldCollection{
     constructor(...args) {
@@ -649,8 +653,6 @@ export class FICManager{
                             else
                                 allFolderData[folderId] = data;
                         }
-                    } else if (entry.name != game.CF.TEMP_ENTITY_NAME && !allFolderIds.includes(entry.flags.cf.id)) {
-                        updateData.push(FICManager.removeOrUpdateFolderIdForEntity(entry,contents));
                     }
                     if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
                         allFolderData[folderId].children.push(entryId);
@@ -900,24 +902,6 @@ export class FICManager{
         console.debug(updateData);
         
         return updateData;
-    }
-    static removeOrUpdateFolderIdForEntity(entity,content){
-        let parent = content.find(e => e.name === game.CF.TEMP_ENTITY_NAME 
-            && e.data.flags.cf.path != null 
-            && e.data.flags.cf.path === entity.data.flags.cf.path);
-        let folderId = null
-        if (parent != null){
-            folderId = parent.data.flags.cf.id
-        }
-        let updateData = {
-            flags:{
-                cf:{
-                    id:folderId
-                }
-            },
-            id:entity._id
-        }
-        return updateData
     }
 
 
@@ -1611,82 +1595,41 @@ export class FICManager{
         }
     }
     static async createFolderPath(folder,pColor,entityType,e){
-        if (folder.parent){
-            let folderList = [folder]
 
-            let currentParent = folder.parent;
-            while (currentParent){
-                folderList.push(currentParent)
-                currentParent = currentParent.parent;
-            }
-            for (let parentFolder of folderList.reverse()){
-                let result = game.folders.find(f => f.type === entityType && FICUtils.getFolderPath(f) === parentFolder.path)
-                if (!result){
-                    //Create the folder if it does not exist
-                    let parentId = null
+        let folderList = [folder]
 
-                    if (parentFolder.parent){
-                        parentId = game.folders.find(f => f.type===entityType 
-                            && f.name===parentFolder.parent.name 
-                            && FICUtils.getFolderPath(f) === parentFolder.parent.path
-                        )?.id
-                    }
-                    let data = {
-                        name:parentFolder.name,
-                        sorting:'a',
-                        parent:parentId,
-                        type:entityType,
-                        content:[],
-                        color:parentFolder.color
-                    }
-                    let f = await Folder.create(data);
-                    if (parentFolder.id === folder.id){
-                        await e.update({folder:f.id,flags:{cf:null}});
-                    }
+        let currentParent = folder.parent;
+        while (currentParent){
+            folderList.push(currentParent)
+            currentParent = currentParent.parent;
+        }
+        for (let parentFolder of folderList.reverse()){
+            let result = game.folders.find(f => f.type === entityType && FICUtils.getFolderPath(f) === parentFolder.path)
+            if (!result){
+                //Create the folder if it does not exist
+                let parentId = null
+
+                if (parentFolder.parent){
+                    parentId = game.folders.find(f => f.type===entityType 
+                        && f.name===parentFolder.parent.name 
+                        && FICUtils.getFolderPath(f) === parentFolder.parent.path
+                    )?.id
+                }
+                let data = {
+                    name:parentFolder.name,
+                    sorting:'a',
+                    parent:parentId,
+                    type:entityType,
+                    content:[],
+                    color:parentFolder.color
+                }
+                let f = await Folder.create(data);
+                if (parentFolder.id === folder.id){
+                    await e.update({folder:f.id,flags:{cf:null}});
                 }
             }
-            
         }
-        // let parent = folder
-        // while (!parent.parentElement.parentElement.classList.contains('directory-list')){
-        //     parent = parent.parentElement.parentElement.parentElement
-        //     parentList.push(parent);            
-        // }
-        // let segments = path.split(game.CF.FOLDER_SEPARATOR);
-        // let index = 0;
-        // for (let seg of segments){
-        //     let folderPath = segments.slice(0,index).join(game.CF.FOLDER_SEPARATOR)+game.CF.FOLDER_SEPARATOR+seg
-        //     if (index==0){
-        //         folderPath = seg
-        //     }
-        //     let results = game.folders.filter(f => f.type === entityType && FICUtils.getFolderPath(f) === folderPath)
-        //     if (results.length==0 ){
-        //         //Create the folder if it does not exist
-        //         let parentId = null
-        //         let tContent = [];
-        //         if (index>0){
-        //             parentId = game.folders.filter(f => f.type===entityType 
-        //                 && f.name===segments[index-1] 
-        //                 && FICUtils.getFolderPath(f) === segments.slice(0,index).join(game.CF.FOLDER_SEPARATOR))[0].id
-        //         }
-        //         let data = {
-        //             name:seg,
-        //             sorting:'a',
-        //             parent:parentId,
-        //             type:entityType,
-        //             content:tContent
-        //         }
-        //         if (index == segments.length-1){
-        //             data.color=pColor;
-                    
-        //         }
-        //         let f = await Folder.create(data);
-        //         if (index == segments.length-1){
-        //             await e.update({folder:f.id,flags:{cf:null}});
-        //         }
-        //     }
-        //     index++;
-        // }
+            
     }
     ///TODO fix
     static async createMacroFolderPath(path,pColor,e){
@@ -2001,26 +1944,44 @@ export class FICFolderAPI{
     static async renameFolder(folder,newName){
         const oldName = folder.name;
         folder.name = newName;
-        this.recursivelyUpdatePath(folder,oldName,newName);
         await folder.save();
         ui.notifications.notify("Successfully renamed folder '"+oldName+"' to '"+newName+"'")
     }
-    static async recursivelyUpdatePath(root,oldName,newName){
-        for (let child of root.children){
-            this.recursivelyUpdatePath(child);
-        }
-        for (let documentId of root.contents){
-            let document = await game.packs.get(root.packCode).getDocument(documentId);
-            let newPath = document.data.flags.cf.path ? document.data.flags.cf.path.replace(oldName,newName) : root.path
-            let updateData = {
-                flags:{
-                    cf:{
-                        path:newPath
-                    }
-                },
-                id:document.id
+    static async refreshPack(folder){
+        folder.pack.apps[0].element.find('.cfolders-container').remove();
+        folder.pack.apps[0].render(true)
+    }
+    static async canMoveToDestFolder(folderToMove,destFolder){
+        let currentParent = destFolder.parent;
+        while (currentParent){
+            if (currentParent.id === folderToMove.id){
+                //Cant move folder to a child folder of itself
+                console.error(modName+" | Can't move folder to a child of itself")
+                return false;
             }
-            await FICUtils.packUpdateEntity(game.packs.get(root.packCode),updateData)
+            currentParent = currentParent.parent;
+        }
+        return true
+    }
+    static async moveFolder(folderToMove,destFolder){
+        // Sanity check to see if you arent moving a folder to a child of itself
+        if (this.canMoveToDestFolder(folderToMove,destFolder)){
+            // Go through folderToMove and all child folders
+            // Set path to newPath (cut folderPath at folderToMove, set to destFolder.folderPath + remaining path)
+            let newPath = destFolder.folderPath;
+            newPath.push(destFolder.id);
+            await this.recursivelyUpdateFolderPath(folderToMove,newPath);
+            this.refreshPack(folderToMove);
         }
     }
+    static async recursivelyUpdateFolderPath(currentFolder,folderPath){
+        for (let childFolder of currentFolder.children){
+            let childPath = Array.from(folderPath);
+            childPath.push(currentFolder.id);
+            this.recursivelyUpdateFolderPath(childFolder,childPath);
+        }
+        currentFolder.folderPath = folderPath;
+        await currentFolder.saveNoRefresh();
+    }
+
 }
