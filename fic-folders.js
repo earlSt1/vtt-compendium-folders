@@ -1293,7 +1293,7 @@ export class FICManager{
         }
         //Import the actual folder document
         await FICManager.importFromCollectionWithMerge(coll,pack.collection,folder.documentId,folderPath, {}, {renderSheet:false},merge)
-
+        await new Promise(res => setTimeout(res,100));
         //Then import immediate child documents
         for (let documentId of folder.contents){
             await FICManager.importFromCollectionWithMerge(coll,pack.collection,documentId,folderPath, {}, {renderSheet:false},merge)
