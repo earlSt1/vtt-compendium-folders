@@ -1932,8 +1932,7 @@ export class FICFolderAPI{
         let updateData = {
             flags:{
                 cf:{
-                    id:folder.id,
-                    path:folder.path
+                    id:folder.id
                 }
             },
             id:document.id
