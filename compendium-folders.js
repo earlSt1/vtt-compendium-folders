@@ -1851,6 +1851,14 @@ Hooks.once('init',async function(){
         Hooks.on('renderCompendiumFolderDirectory',(html,e) => {
             Hooks.call('renderCompendiumDirectory',html,e);
         });
+                
+        while (!ui.compendium.rendered){
+            // wait for old compendium directory to render
+            // else we get a race condition
+            await new Promise(res => setTimeout(res,500));
+        }
+        ui.compendium = new game.CF.CompendiumFolderDirectory();
+
         await initFolders(true);
     })
        
