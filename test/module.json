@@ -3,9 +3,9 @@
     "title": "Compendium Folders",
     "description": "TEST - Collapsable folders for compendiums",
     "author": "Erceron",
-    "version": "2.3.5",
+    "version": "2.3.61",
     "minimumCoreVersion": "0.8.2",
-    "compatibleCoreVersion":"0.8.8",
+    "compatibleCoreVersion":"0.8.9",
     "esmodules": [
         "./compendium-folders.js"
       ],
