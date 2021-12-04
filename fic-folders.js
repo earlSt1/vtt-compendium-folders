@@ -211,10 +211,6 @@ export class FICFolder{
     static import(packCode,contents,folder={}){
         let data = folder.data.flags.cf;
 
-        if (!data.newFolderPath){
-            // set new folder path using document ID instead of folder ID
-            //TODO later
-        }
         if (data?.folderPath?.length > 0){
             data.parent = data.folderPath[data.folderPath.length-1];
         }
