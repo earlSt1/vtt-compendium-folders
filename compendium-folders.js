@@ -1013,7 +1013,6 @@ function defineClasses(){
         cleanupCompendium,
     };
 
-    CONFIG.ui.compendium = CompendiumFolderDirectory;
 }
 async function closeFolder(parent,save){
     let folderIcon = parent.firstChild.querySelector('h3 > .fa-folder, .fa-folder-open')
@@ -1846,7 +1845,6 @@ Hooks.once('init',async function(){
     Settings.registerSettings();
     game.CF.FICManager.setup();
     Hooks.once('ready',async function(){
-        ui.compendium.checkCache();
         // Ensure compatibility with other modules that rely on the old directory.
         Hooks.on('renderCompendiumFolderDirectory',(html,e) => {
             Hooks.call('renderCompendiumDirectory',html,e);
