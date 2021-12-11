@@ -1503,6 +1503,8 @@ export class FICManager{
     
     static createNewFolderButtonWithinCompendium(window,packCode){
         let directoryHeader = window.querySelector('header.directory-header');
+        if (game.system.id === "CoC7" && window.querySelector('div.compendiumfilter') != null)
+            directoryHeader = window.querySelector('div.compendiumfilter');
         let button = document.createElement('button');
         button.classList.add('fic-create')
         button.type='submit';
