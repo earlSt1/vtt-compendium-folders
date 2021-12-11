@@ -1,3 +1,5 @@
+# 2.3.64 (2021-12-11)
+- Fixed an issue where folders would not render in item compendiums for the CoC7 system.
 # 2.3.63 (2021-12-04)
 - Fixed an issue where extra translated compendiums were appearing in the world
 # 2.3.62 (2021-12-04)
