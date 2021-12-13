@@ -544,7 +544,7 @@ export class FICManager{
             name: "CF.exportFolderHint",
             icon: '<i class="fas fa-upload"></i>',
             condition: header => {
-                return game.user?.isGM && header.parent().find('.entity').length > 0
+                return game.user?.isGM && header.parent().find('.document').length > 0
             },
             callback: header => {
                 const li = header.parent()[0];
@@ -1240,9 +1240,6 @@ export class FICManager{
     static async importFromCollectionWithMerge(clsColl,collection, entryId, folderPath, updateData={}, options={},merge=false) {
         const pack = game.packs.get(collection);
         const cls = pack.documentClass;
-        if (pack.metadata.entity !== cls.documentName) {
-          throw new Error(`The ${pack.documentName} Document type provided by Compendium ${pack.collection} is incorrect for this Collection`);
-        }
     
         // Prepare the source data from which to create the Entity
         const document = await pack.getDocument(entryId);

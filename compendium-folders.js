@@ -401,7 +401,9 @@ function defineClasses(){
         }
 
         static documentName = 'CompendiumEntry';
-
+        _toggleOpenState(pack) {
+            CompendiumDirectory.prototype._toggleOpenState(pack);
+        }
         async checkDeleted(){
             let goneCompendiums = game.customFolders.compendium.entries.filter(x => !x.pack);
             for (let c of goneCompendiums){
@@ -506,7 +508,9 @@ function defineClasses(){
                 tree: this.tree,
                 isPF1: game.system.id === "pf1",
                 isD35E: game.system.id === 'D35E',
-                isPF2e: game.system.id === 'pf2e'
+                isPF2e: game.system.id === 'pf2e',
+                documentPartial: this.constructor.documentPartial,
+                folderPartial: this.constructor.folderPartial
             };
         }
         _onCreateFolder(event) {
