@@ -3,9 +3,9 @@
     "title": "Compendium Folders",
     "description": "Collapsable folders for compendiums",
     "author": "Erceron",
-    "version": "2.4.0",
-    "minimumCoreVersion": "9.235",
-    "compatibleCoreVersion":"9.235",
+    "version": "2.4.1",
+    "minimumCoreVersion": "9",
+    "compatibleCoreVersion":"9",
     "esmodules": [
         "./compendium-folders.js"
       ],
@@ -55,5 +55,5 @@
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
     "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/09x-update/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/releases/download/2.4.0/2.4.0.zip"
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/releases/download/2.4.1/2.4.1.zip"
   }

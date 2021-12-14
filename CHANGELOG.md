@@ -1,3 +1,8 @@
+# 2.4.1 (2021-12-14)
+- Compatible with FVTT v9
+- Fixed issues with searching in compendiums
+- Now supports Card compendiums
+- Now supports new Macro Folder functionality in Core.
 # 2.3.63 (2021-12-04)
 - Fixed an issue where extra translated compendiums were appearing in the world
 # 2.3.62 (2021-12-04)
