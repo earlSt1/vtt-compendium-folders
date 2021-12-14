@@ -193,7 +193,7 @@ function defineClasses(){
         // Save object state to game.customFolders and settings
         async save(refresh=true){
             if (!this.collection.get(this.id)){
-                this.collection.insert(this);
+                this.collection.set(this.id,this);
             }
             if (game.user.isGM){
                 let allFolders = game.settings.get(mod,'cfolders')
@@ -529,6 +529,7 @@ function defineClasses(){
         }
         /** @override */
         activateListeners(html){
+            CompendiumDirectory.prototype._contextMenu(html);
             super.activateListeners(html);
 
             // Taken from CopmendiumDirectory.activateListeners(html)
@@ -824,9 +825,9 @@ function defineClasses(){
         async _onDrop(event){
             event.stopPropagation();
             let li = event.currentTarget.closest("li.folder");
+            if (li) li.classList.remove("droptarget");
             if (li.dataset.folderId === 'default' || !game.user.isGM)
                 return;
-            if (li) li.classList.remove("droptarget");
             let data;
             try{
                 data = JSON.parse(event.dataTransfer.getData('text/plain'));
@@ -837,7 +838,7 @@ function defineClasses(){
             let folderId = li.dataset.folderId;
 
             if (folderId){
-                if (data.type === this.constructor.entity){
+                if (data.type === this.constructor.documentName){
                     if (game.customFolders.compendium.entries.get(data.id).folder != folderId)
                         await game.customFolders.compendium.folders.get(folderId).addCompendium(data.id)
                 }else if (data.type === 'Folder'){
