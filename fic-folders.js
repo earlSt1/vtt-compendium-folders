@@ -4,9 +4,9 @@ const mod = 'compendium-folders';
 const modName = "Compendium Folders";
 
 export class FICUtils{
-    static async packUpdateEntity(pack,data){
+    static async packUpdateEntity(pack,data,o={}){
         const document = await pack.getDocument(data.id);
-        const options = {pack:pack.collection};
+        const options = foundry.utils.mergeObject({pack:pack.collection},o);
         return await document.update(data, options);
     }
     static async packDeleteEntity(pack,id){
@@ -80,6 +80,8 @@ export class FICUtils{
         let collection = null
         switch (entityType){
             case 'Actor': collection = game.actors;
+                break;
+            case 'Cards': collection = game.cards;
                 break;
             case 'Item': collection = game.items;
                 break;
@@ -479,6 +481,12 @@ export class FICManager{
                 await FICUtils.removeTempEntities('Actor')
             }
         })
+        Hooks.on('renderCardsDirectory',async function(c){
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.cards.contents.some(c => c.name === game.CF.TEMP_ENTITY_NAME) && game.user.isGM){
+                await FICUtils.removeTempEntities('Cards')
+            }
+        })
         Hooks.on('renderItemDirectory',async function(e){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.items.contents.some(i => i.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM)){
@@ -531,7 +539,9 @@ export class FICManager{
         libWrapper.register(mod, 'ActorDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
-        //ActorDirectory.prototype._getFolderContextOptions = () => oldActorFolderCtxOptions().concat(newContextOption);
+        libWrapper.register(mod, 'CardsDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+            return wrapped(...args).concat(newContextOption);
+        }, 'WRAPPER');
         libWrapper.register(mod, 'ItemDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
@@ -952,7 +962,8 @@ export class FICManager{
                 return obj;
             }, {}),
             pack: null,
-            merge: game.settings.get(mod,'default-mbn')
+            merge: game.settings.get(mod,'default-mbn'),
+            keepId: game.settings.get(mod,'default-keep-id')
         });
     
         // Display it as a dialog prompt
@@ -975,9 +986,9 @@ export class FICManager{
                 // First check if there is an existing folder in compendium for current world folder
                 let existingFolderId = await FICManager.getExistingFolderId(folder,pack)
                 if (existingFolderId != null){
-                    await FICManager.recursivelyExportFolders(index,pack,folder,existingFolderId,folderPath,form.merge.checked)
+                    await FICManager.recursivelyExportFolders(index,pack,folder,existingFolderId,folderPath,form.merge.checked,form.keepId.checked)
                 }else{
-                    await FICManager.recursivelyExportFolders(index,pack,folder,FICUtils.generateRandomFolderName('temp_'),folderPath,form.merge.checked)
+                    await FICManager.recursivelyExportFolders(index,pack,folder,FICUtils.generateRandomFolderName('temp_'),folderPath,form.merge.checked,form.keepId.checked)
                 }
                 FICCache.resetCache()
                 ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
@@ -993,23 +1004,7 @@ export class FICManager{
         let folders = game.customFolders.fic.folders;
         let existingFolder = folders.find(x => x.name === folder.name
             && x.path === folderPath);
-        //Also check for old folder paths (not using separator)
-        //let folderPathOld = folderPath.replace(game.CF.FOLDER_SEPARATOR,'/');
-
-        //const indexFields = [
-        //    "name",
-        //    "flags.cf",
-        //];
-
-        //const index = await pack.getIndex({ fields: indexFields });
-
-        // let existingFolder = index.find(e => e.name === game.CF.TEMP_ENTITY_NAME
-        //     && e.flags?.cf
-        //     && (e.flags.cf.path === folderPath 
-        //         || e.flags.cf.path === folderPathOld) 
-        //     && e.flags.cf.name === folder.name)
         if (existingFolder){
-            //return existingFolder.flags.cf.id;
             return existingFolder.id;
         }
         return null;
@@ -1018,18 +1013,6 @@ export class FICManager{
         let parents = []
         let currentFolder = folder;
         const folders = game.customFolders.fic.folders;
-        // const indexFields = [
-        //     "name",
-        //     "flags.cf",
-        // ];
-        // const index = await pack.getIndex({ fields: indexFields });
-        
-        // const folderIds = index
-        //     .filter(x => x.name === game.CF.TEMP_ENTITY_NAME)
-        //     .map((i) => i._id);
-
-        // const tempEntities = await pack.getDocuments({_id: {$in: folderIds}});
-
     
         while (currentFolder.parentFolder != null){
             parents.push(currentFolder.parentFolder);
@@ -1038,9 +1021,6 @@ export class FICManager{
         let previousParent = null;
         let previousPath = []
         for (let i=parents.length-1 ;i>=0;i--){
-            //let tempEntity = tempEntities.find(e => e.data.flags.cf.name === parents[i].name 
-            //    && (e.data.flags.cf.path === FICUtils.getFolderPath(parents[i]) 
-            //        || FICUtils.arraysEqual(e.data.flags.cf.folderPath,previousPath)))
             let tempEntity = folders.find(f => f.name === parents[i].name
                 && f.path === FICUtils.getFolderPath(parents[i]))
             if (tempEntity != null){
@@ -1066,10 +1046,10 @@ export class FICManager{
 
         return previousPath;
     }
-    static async recursivelyExportFolders(index,pack,folderObj,folderId,folderPath,merge){
+    static async recursivelyExportFolders(index,pack,folderObj,folderId,folderPath,merge,keepId){
         if (folderObj.children.length==0){
             let entities = folderObj.content;
-            let updatedFolder = await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge)
+            let updatedFolder = await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
             if (updatedFolder != null){
                 return [updatedFolder];
             }
@@ -1083,30 +1063,19 @@ export class FICManager{
             let existingFolderId = await FICManager.getExistingFolderId(child,pack)
             if (existingFolderId === null)
                 existingFolderId = FICUtils.generateRandomFolderName('temp_')
-            await FICManager.recursivelyExportFolders(index,pack,child,existingFolderId,newPath,merge)
+            await FICManager.recursivelyExportFolders(index,pack,child,existingFolderId,newPath,merge,keepId)
         }
         let entities = folderObj.content;
         
-        await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge)
+        await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
     }
-    static async exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge){
+    static async exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId){
         let path = FICManager.getFullPath(folderObj)
-        const indexFields = [
-            "name",
-            "flags.cf",
-        ];
         const folders = game.customFolders.fic.folders;
         const existingFolder = folders.get(folderId);
-        // const packIndex = await pack.getIndex({ fields: indexFields });
-        // const existingFolder = packIndex
-        //     .find(x => x.name === game.CF.TEMP_ENTITY_NAME && x.flags?.cf?.id === folderId);
 
         if (existingFolder){
-            // Use existing
-            //folderId = existingFolder.flags.cf.id
-            //path = existingFolder.flags.cf.path
             folderId = existingFolder.id
-            //path = existingFolder.flags.cf.path
         }
         let color = '#000000'
         if (folderObj.data.color != null && folderObj.data.color.length>0){
@@ -1130,6 +1099,9 @@ export class FICManager{
             }
             let existing = merge ? index.find(i => i.name === data.name) : index.find(i => i._id === e.id);
             if ( existing ) data.id = existing._id;
+            
+            if (keepId) data._id = e.id;
+            
             if ( data.id ){
                 // Remove child from old parent
                 let oldParent = folders.find(n => n.children?.includes(data.id) && n.id != folderId)
@@ -1142,7 +1114,7 @@ export class FICManager{
                             }
                         }
                     }
-                    await FICUtils.packUpdateEntity(pack,nData);
+                    await FICUtils.packUpdateEntity(pack,nData,{keepId:keepId});
                      //Update saved content for future reference
                     oldParent.children = oldParent.children.filter(m => m != data.id);
                 }
@@ -1150,9 +1122,8 @@ export class FICManager{
                 packEntities.push(existing._id)
                 
                 await FICUtils.packUpdateEntity(pack,data);           
-            }
-            else {
-                result = await pack.documentClass.create(data,{pack:pack.collection});
+            } else {
+                result = await pack.documentClass.createDocuments([data],{pack:pack.collection,keepId:keepId});
                 packEntities.push(result.id);
                 if (result.id != e.id && folderObj.contents != null && folderObj.contents.length>0){
                     folderObj.contents.splice(folderObj.contents.findIndex((x => x.id==e.id)),1,result.id);
@@ -1191,10 +1162,10 @@ export class FICManager{
     // ==========================
     // Importing folders from compendiums
     // ==========================
-    static async importFromCollectionWithMerge(clsColl,collection, entryId, folderPath, updateData={}, options={},merge=false) {
+    static async importFromCollectionWithMerge(clsColl,collection, entryId, folderPath, updateData={}, options={},merge=false,keepId=false) {
         const pack = game.packs.get(collection);
         const cls = pack.documentClass;
-    
+        options = {keepId:keepId}
         // Prepare the source data from which to create the Entity
         const document = await pack.getDocument(entryId);
         const destination = game.collections.get(pack.documentName);
@@ -1208,6 +1179,8 @@ export class FICManager{
         if (merge){
             switch (cls.documentName){
                 case 'Actor':search = game.actors.contents.filter(a => a.name === sourceData.name && FICUtils.getFolderPath(a.folder)===folderPath)
+                            break;
+                case 'Cards':search = game.cards.contents.filter(c => c.name === sourceData.name && FICUtils.getFolderPath(c.folder)===folderPath)
                             break;
                 case 'Item':search = game.items.contents.filter(i => i.name === sourceData.name && FICUtils.getFolderPath(i.folder)===folderPath)
                             break;
@@ -1232,18 +1205,18 @@ export class FICManager{
         return await pack.documentClass.updateDocuments([createData],options);
       }
 
-    static async recursivelyImportFolders(pack,coll,folder,merge){
+    static async recursivelyImportFolders(pack,coll,folder,merge,keepId){
         let folderPath = folder.path
         // First loop through individual folders
         for (let childFolder of folder.children){
-            await FICManager.recursivelyImportFolders(pack,coll,childFolder,merge);
+            await FICManager.recursivelyImportFolders(pack,coll,childFolder,merge,keepId);
         }
         //Import the actual folder document
-        await FICManager.importFromCollectionWithMerge(coll,pack.collection,folder.documentId,folderPath, {}, {renderSheet:false},merge)
+        await FICManager.importFromCollectionWithMerge(coll,pack.collection,folder.documentId,folderPath, {}, {renderSheet:false},merge,keepId)
         await new Promise(res => setTimeout(res,100));
         //Then import immediate child documents
         for (let documentId of folder.contents){
-            await FICManager.importFromCollectionWithMerge(coll,pack.collection,documentId,folderPath, {}, {renderSheet:false},merge)
+            await FICManager.importFromCollectionWithMerge(coll,pack.collection,documentId,folderPath, {}, {renderSheet:false},merge,keepId)
         }
     }
     static async importAllParentFolders(pack,coll,folder,merge){
@@ -1279,10 +1252,15 @@ export class FICManager{
             title:'Import Folder: '+folderName,
             content: `<form id='importFolder'><p>${l1}</p>
                 <ul><li>${l3}</li><li>${l4}</li></ul>
-                <div class='form-group'><label for='merge'>Merge by name</label><input type='checkbox' name='merge' ${game.settings.get(mod,'default-mbn')?'checked':''}/></div></form>`,
+                <div class='form-group'><label for='merge'>Merge by name</label>
+                <input type='checkbox' name='merge' ${game.settings.get(mod,'default-mbn')?'checked':''}/>
+                </div><div class='form-group'><label for='keepId'>Keep ID</label>
+                <input type='checkbox' name='keepId' ${game.settings.get(mod,'default-keep-id')?'checked':''}/>
+                </div></form>`,
             yes: async (h) => {
                 await game.settings.set(mod,'importing',true);
                 let merge = h[0].querySelector('input[name=\'merge\']').checked
+                let keepId = h[0].querySelector('input[name=\'keepId\']').checked
                 ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"))
                 let packCode = folder.closest('.directory.compendium').getAttribute('data-pack');
                 let pack = await game.packs.get(packCode);
@@ -1295,7 +1273,7 @@ export class FICManager{
                 let ficFolder = game.customFolders.fic.folders.get(folderId);
 
                 await FICManager.importAllParentFolders(pack,coll,ficFolder,merge); 
-                await FICManager.recursivelyImportFolders(pack,coll,ficFolder,merge);
+                await FICManager.recursivelyImportFolders(pack,coll,ficFolder,merge,keepId);
                 ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
                 await FICUtils.removeTempEntities(packEntity);
                 await game.settings.set(mod,'importing',false);
@@ -1687,7 +1665,6 @@ export class FICManager{
     
         let e = await pack.documentClass.create(tempData,{pack:pack.collection});
         if (!e.data.flags.cf){
-            // For DSA, actor flags are not saved
             await e.update({
                 id:e.id,
                 flags:{

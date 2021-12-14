@@ -1681,6 +1681,14 @@ export class Settings{
             type:Boolean,
             default:false
         });
+        game.settings.register(mod,'default-keep-id',{
+            name:'Default Keep ID',
+            hint:'If enabled, the Keep ID option will be enabled by default when importing compendiums',
+            scope:'world',
+            config:true,
+            type:Boolean,
+            default:false
+        });
         game.settings.register(mod,'auto-create-folders',{
             name:'Auto Create folders on Import',
             hint: 'If enabled, dragging an entity from a compendium into your world will create folder structures automatically',
