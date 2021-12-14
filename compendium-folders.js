@@ -227,7 +227,7 @@ function defineClasses(){
             }
 
             if (this.collection.get(this.id)){
-                this.collection.remove(this.id)
+                this.collection.delete(this.id)
             }
             
             let allFolders = game.settings.get(mod,'cfolders')
@@ -392,7 +392,7 @@ function defineClasses(){
                 template: "modules/compendium-folders/templates/compendium-directory.html",
                 title: "Compendium Packs",
                 dragDrop: [{ dragSelector: ".compendium-pack,.compendium-folder", dropSelector: ".compendium-folder"}],
-                filters: [{inputSelector: 'input[name="search"]', contentSelector: ".directory-list"}]
+                filters: [{inputSelector: 'input[name="search"]', contentSelector: ".directory-list"}],           
         });
         }
 
@@ -529,7 +529,7 @@ function defineClasses(){
         }
         /** @override */
         activateListeners(html){
-            CompendiumDirectory.prototype._contextMenu(html);
+            ContextMenu.create(this, html, ".compendium-pack", this._getEntryContextOptions());
             super.activateListeners(html);
 
             // Taken from CopmendiumDirectory.activateListeners(html)
@@ -925,7 +925,7 @@ function defineClasses(){
             for ( let el of html.querySelectorAll(".directory-item,.compendium-pack") ) {
         
             // Entities
-            if (el.classList.contains("entity")) {
+            if (el.classList.contains("directory-item")) {
                 el.style.display = (!isSearch || entityIds.has(el.dataset.pack)) ? "" : "none";
             }
         
@@ -985,6 +985,11 @@ function defineClasses(){
                         folder.setAttribute('collapsed','');
                         folder.querySelector('header > h3 > i')?.classList.add('fa-folder');
                         folder.querySelector('header > h3 > i')?.classList.remove('fa-folder-open');
+                    }
+                }
+                for (let entry of html.querySelectorAll('.compendium-folder')){
+                    if (!entry.classList.contains('hidden')){
+                        entry.style.display=''
                     }
                 }
                 for (let entry of html.querySelectorAll('.directory-item')){
@@ -1427,12 +1432,12 @@ class FixCompendiumConfig extends FormApplication{
                 let changes = this.updateEntityParentIfInvalid(nonFolder,documents);
                 if (Object.keys(changes).length > 0){
                     updateData[nonFolder.id] = changes;
-                    messages.push([`Need to update parent folder id for entity "${nonFolder.name}" [${nonFolder.id}]`])
+                    messages.push([`Need to update parent folder id for document "${nonFolder.name}" [${nonFolder.id}]`])
                 }
                 changes = this.updatePathIfInvalid(nonFolder,documents);
                 if (Object.keys(changes).length > 0){
                     updateData[nonFolder.id] = foundry.utils.mergeObject(changes,updateData[nonFolder.id]);
-                    messages.push(`Need to update path for entity "${nonFolder.name}" [${nonFolder.id}]`);
+                    messages.push(`Need to update path for document "${nonFolder.name}" [${nonFolder.id}]`);
                 }
             }
             // for (let folder of allFolders){
@@ -1518,7 +1523,7 @@ class FixCompendiumConfig extends FormApplication{
             let fId = entity.data.flags.cf.id
             let parentEntity = contents.find(x => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === fId);
             if (!parentEntity){
-                console.debug(modName+' | No parent found for entity '+entity.name+', overriding folder id...')
+                console.debug(modName+' | No parent found for document '+entity.name+', overriding folder id...')
                 return {
                     id:entity.id,
                     flags:{
@@ -1691,7 +1696,7 @@ export class Settings{
         });
         game.settings.register(mod,'auto-create-folders',{
             name:'Auto Create folders on Import',
-            hint: 'If enabled, dragging an entity from a compendium into your world will create folder structures automatically',
+            hint: 'If enabled, dragging a document from a compendium into your world will create folder structures automatically',
             scope:'world',
             config:true,
             type:Boolean,
