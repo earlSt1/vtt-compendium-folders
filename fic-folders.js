@@ -22,27 +22,13 @@ export class FICUtils{
             return '';
         }
         let path = folder.data.name;
-        if (folder.macroList)
-            path = folder.name;
         let currentFolder = folder;
         while (currentFolder.parentFolder != null){
-            if (folder.macroList)
-                path = currentFolder.parent.name+game.CF.FOLDER_SEPARATOR+path;
-            else
-                path = currentFolder.parentFolder.name+game.CF.FOLDER_SEPARATOR+path;
             
+            path = currentFolder.parentFolder.name+game.CF.FOLDER_SEPARATOR+path;
             currentFolder = currentFolder.parentFolder;
         }
         return path;
-    }
-    static getFolderPathImproved(folder,index){
-        /**
-         * Function should use World folder to create an ordered list of Folder IDs that exist
-         * If the folder does not exist, replace with null value
-         * Then in creation process, existing folder is used unless null value encountered, then new folder is created.
-         * 
-         **/
-        let currentFolderPath = [];
     }
     /*
     * Getting FIC path from folder path (using new API changes)
@@ -62,18 +48,6 @@ export class FICUtils{
             currentFolder = currentFolder.parentElement.parentElement.parentElement
         }
         return path;
-    }
-    static getMacroFolderPath(macroId){
-        let allFolders = game.settings.get('macro-folders','mfolders')
-        let folder = Object.values(allFolders).find(f => f.folderPath != null && f.folderPath.includes(macroId))
-        if (folder != null){
-            let folderPath = folder.titleText;
-            if (folder.pathToFolder != null && folder.pathToFolder.length > 0){
-                folderPath = folder.pathToFolder.map(p => allFolders[p].titleText).join(game.CF.FOLDER_SEPARATOR)+game.CF.FOLDER_SEPARATOR+folderPath
-            }
-            return folderPath
-        }
-        return null;
     }
     
     static generateRandomFolderName(prefix){
@@ -113,7 +87,7 @@ export class FICUtils{
                 break;
             case 'Macro': collection = game.macros;
                 break;
-            case 'Macro': collection = game.playlists;
+            case 'Playlist': collection = game.playlists;
                 break;
             case 'RollTable':collection = game.tables;
                 break;
@@ -517,6 +491,12 @@ export class FICManager{
                 await FICUtils.removeTempEntities('JournalEntry')
             }
         })
+        Hooks.on('renderMacroDirectory',async function(){
+            let importing = game.settings.get(mod,'importing');
+            if (!importing && game.macros.contents.some(m => m.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM)){
+                await FICUtils.removeTempEntities('Macro')
+            }
+        })
         Hooks.on('renderPlaylistDirectory',async function(){
             let importing = game.settings.get(mod,'importing');
             if (!importing && game.playlists.contents.some(p => p.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM)){
@@ -534,10 +514,6 @@ export class FICManager{
             if (!importing && game.scenes.contents.some(s => s.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM)){
                 await FICUtils.removeTempEntities('Scene')
             }
-        })
-        // Integration with Macro Folders
-        Hooks.on('addExportButtonsForCF',async function(){
-            FICManager.addMacroFoldersExportButton();
         })
          // Adding export buttons to context menus for folders
         let newContextOption = {
@@ -563,6 +539,10 @@ export class FICManager{
         libWrapper.register(mod, 'JournalDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
+
+        libWrapper.register(mod, 'MacroDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+            return wrapped(...args).concat(newContextOption);
+        }, 'WRAPPER');
         
         libWrapper.register(mod, 'RollTableDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
@@ -574,12 +554,7 @@ export class FICManager{
         
         // Folders In Compendium changes
         Settings.clearSearchTerms()
-        Hooks.on('renderMacroDirectory',async function(){
-            let importing = game.settings.get(mod,'importing');
-            if (!importing && game.macros.contents.some(m => m.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM)){
-                await FICUtils.removeTempEntities('Macro')
-            }
-        })
+
         Hooks.on('renderCompendium',async function(e){
             let packCode = e.metadata.package+'.'+e.metadata.name;
             let window = e._element[0];
@@ -961,25 +936,6 @@ export class FICManager{
     // Exporting Folders to compendiums
     // ==========================
     
-    static addMacroFoldersExportButton(){
-        let newContextOption = {
-            name: "CF.exportFolderHint",
-            icon: '<i class="fas fa-upload"></i>',
-            condition: header => {
-                return game.user?.isGM && header.parent().find('.entity').length > 0
-            },
-            callback: async (header) => {
-                const li = header.parent()[0];
-                let folder = game.customFolders.macro.folders.get(li.getAttribute('data-folder-id'));
-                await FICManager.exportFolderStructureToCompendium(folder);
-            }  
-        }
-        let old = ui.macros.constructor.prototype._getFolderContextOptions();
-        ui.macros.constructor.prototype._getFolderContextOptions = function(){
-            return old.concat(newContextOption)
-        }
-        return;
-    }
     // Mostly taken from foundry.js 
     static async exportFolderStructureToCompendium(folder){
         
@@ -1097,7 +1053,7 @@ export class FICManager{
                 tempEntity = FICUtils.getTempEntityData(pack.documentClass.documentName,{
                     id:previousParent,
                     name:parents[i].name,
-                    color:parents[i].macroList ? parents[i].color : parents[i].data.color,
+                    color:parents[i].data.color,
                     folderPath:previousPath,
                     children:[]
                 });
@@ -1162,8 +1118,6 @@ export class FICManager{
         let packEntities = []
         let result = null;
         for ( let e of entities ) {
-            if (game.modules.get('macro-folders')?.active && e instanceof game.MF?.MacroEntry)
-                e = e.macro
             let data = await e.toCompendium();
             data.flags.cf={
                 id:folderId,
@@ -1259,7 +1213,7 @@ export class FICManager{
                             break;
                 case 'JournalEntry':search = game.journal.contents.filter(j => j.name === sourceData.name && FICUtils.getFolderPath(j.folder)===folderPath)
                             break;
-                case 'Macro':search = game.macros.contents.filter(m => m.name === sourceData.name && FICUtils.generateRandomFolderName(m.id)===folderPath)
+                case 'Macro':search = game.macros.contents.filter(m => m.name === sourceData.name && FICUtils.getFolderPath(m.folder)===folderPath)
                             break;
                 case 'Playlist':search = game.playlists.contents.filter(p => p.name === sourceData.name)
                             break;
@@ -1344,8 +1298,6 @@ export class FICManager{
                 await FICManager.recursivelyImportFolders(pack,coll,ficFolder,merge);
                 ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
                 await FICUtils.removeTempEntities(packEntity);
-                if (packEntity === 'Macro')
-                    ui.macros.refresh();
                 await game.settings.set(mod,'importing',false);
             }
         });
@@ -1418,8 +1370,7 @@ export class FICManager{
                     }).render(true)
                 });
             }
-            if (game.packs.get(packCode).documentClass.documentName != 'Playlist'
-                || game.packs.get(packCode).documentClass.documentName != 'Macro'){ // Temporarily disabling the Import Folder structure for Macros (needs to be fixed later)
+            if (game.packs.get(packCode).documentClass.documentName != 'Playlist'){
                 let importButton = document.createElement('a');
                 importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
                 importButton.classList.add('import-folder');
@@ -1535,7 +1486,6 @@ export class FICManager{
     // ==========================
     static async importFolderData(e){
         if (e.compendium) return;
-        let isMacro = e.documentName === 'Macro'
         if (e.data.flags.cf != null){
             //  && e.data.flags.cf.path != null && !e.folder){
             let ficFolder = game.customFolders.fic.folders.get(e.data.flags.cf.id);
@@ -1544,48 +1494,19 @@ export class FICManager{
             //a.data.folder -> id;
             let foundFolder = null;
             let folderExists=false;
-            if (isMacro){
-                //TODO
-                let allMacroFolders = game.settings.get('macro-folders','mfolders')
-                for (let folder of Object.values(allMacroFolders)){
-                    if (folder.pathToFolder != null){
-                        let folderPath = folder.pathToFolder.map(m => allMacroFolders[m].titleText).join(game.CF.FOLDER_SEPARATOR).concat(folder.titleText)
-                        if (!folderPath.includes(game.CF.FOLDER_SEPARATOR)){
-                            folderPath = folder.titleText;
-                        }
-                        if (folderPath === path){
-                            folderExists=true;
-                            foundFolder=folder
-                        }
-                    }
-                }
-            }else{
-                for (let folder of game.folders.values()){
-                    if (folder.data.type==e.documentName){
-                        if (FICUtils.getFolderPath(folder) === path){
-                            folderExists=true;
-                            foundFolder=folder;
-                        }
+            
+            for (let folder of game.folders.values()){
+                if (folder.data.type==e.documentName){
+                    if (FICUtils.getFolderPath(folder) === path){
+                        folderExists=true;
+                        foundFolder=folder;
                     }
                 }
             }
             if (folderExists){
-                if (isMacro){
-                    let allMacroFolders = game.settings.get('macro-folders','mfolders')   
-                    for (let mfId of Object.keys(allMacroFolders)){
-                        allMacroFolders[mfId].macroList.filter(m => m != e._id)
-                    }
-                    allMacroFolders[folder._id].macroList.push(e._id);
-                    await game.settings.set('macro-folders','mfolders',allMacroFolders);
-                }else{
-                    await e.update({folder : foundFolder.id,flags:{cf:null}})
-                }
+                await e.update({folder : foundFolder.id,flags:{cf:null}})
             }else{
-                if (isMacro){
-                    await FICManager.createMacroFolderPath(path,color,e);
-                }else{
-                    await FICManager.createFolderPath(ficFolder,null,e.documentName,e);
-                }
+                await FICManager.createFolderPath(ficFolder,null,e.documentName,e);
             }
         }
     }
@@ -1625,49 +1546,6 @@ export class FICManager{
             }
         }
             
-    }
-    ///TODO fix
-    static async createMacroFolderPath(path,pColor,e){
-        let allMacroFolders = game.settings.get('macro-folders','mfolders')
-        game.settings.set('macro-folders','updating',true)  
-        let lastId = null;
-        let segments = path.split(game.CF.FOLDER_SEPARATOR);
-        let index = 0;
-        for (let seg of segments){
-            let folderPath = segments.slice(0,index).join(game.CF.FOLDER_SEPARATOR)+game.CF.FOLDER_SEPARATOR+seg
-            if (index==0){
-                folderPath = seg
-            }
-            let results = game.customFolders.macro.folders.filter(f => f.data.pathToFolder != null 
-                && FICUtils.getMacroFolderPath(f.id) === folderPath)
-            if (results.length==0 ){
-                //create folder
-                let newFolder = await game.MF.MacroFolder.create({
-                    titleText:seg,
-                    macroList:[],
-                    pathToFolder:[]
-                });
-                if (index == segments.length-1){
-                    newFolder.color = pColor;
-                    await newFolder.addMacro(e._id)
-                }
-                if (lastId != null){
-                    newFolder.data.pathToFolder = Array.from(allMacroFolders[lastId].pathToFolder)
-                    newFolder.data.pathToFolder.push(lastId);
-                }
-                await newFolder.save(false);
-                lastId = newFolder._id;
-            }else{
-                //Folder exists, add entity to thing
-                lastId = results[0]._id
-                if (index == segments.length-1){
-                    await results[0].addMacro(e._id);
-                }
-            }
-            index++;
-        }
-       
-        game.settings.set('macro-folders','updating',false)  
     }
     static async deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
         //ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))

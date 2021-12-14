@@ -627,10 +627,9 @@ function defineClasses(){
             let i = x.findIndex(c => c.name === 'COMPENDIUM.ImportAll')
             let oldCallback = x[i].callback;
             // Limit importAll to only work for compendiums with no folders in them
-            // OR for new Macro Folders feature
             x[i].condition = (li) => {
                 let pack = game.packs.get(li.data("pack"));
-                return !pack.index.contents.some(x => x.name === game.CF.TEMP_ENTITY_NAME) || pack.documentName === 'Macro'
+                return !pack.index.contents.some(x => x.name === game.CF.TEMP_ENTITY_NAME)
             }
             x[i].callback = async (li) => {
                 await game.settings.set(mod,'importing',true);
