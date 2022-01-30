@@ -731,9 +731,7 @@ export class FICManager{
                                 id:movingItemId,
                                 flags:{
                                     cf:{
-                                        id:folder.getAttribute('data-folder-id'),
-                                        path:targetFolder.data.flags.cf.path,
-                                        color:targetFolder.data.flags.cf.color,
+                                        id:folder.getAttribute('data-folder-id')
                                     }
                                 }
                             };
@@ -1054,6 +1052,9 @@ export class FICManager{
                 return [updatedFolder];
             }
             return []
+        }else{
+            let entities = folderObj.content;
+            await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
         }
         for (let child of folderObj.children){
             let newPath = Array.from(folderPath);
@@ -1065,9 +1066,6 @@ export class FICManager{
                 existingFolderId = FICUtils.generateRandomFolderName('temp_')
             await FICManager.recursivelyExportFolders(index,pack,child,existingFolderId,newPath,merge,keepId)
         }
-        let entities = folderObj.content;
-        
-        await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
     }
     static async exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId){
         let path = FICManager.getFullPath(folderObj)
