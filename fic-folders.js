@@ -571,9 +571,11 @@ export class FICManager{
         }, 'WRAPPER');
 
         // Compatibility with the Sidebar Macros module
-        libWrapper.register(mod, 'MacroSidebarDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
-            return wrapped(...args).concat(newContextOption);
-        }, 'WRAPPER');
+        if (game.modules.get('sidebar-macros')?.active){
+            libWrapper.register(mod, 'MacroSidebarDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+                return wrapped(...args).concat(newContextOption);
+            }, 'WRAPPER');
+        }
 
         // Folders In Compendium changes
         Settings.clearSearchTerms()
