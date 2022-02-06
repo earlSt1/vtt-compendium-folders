@@ -1,3 +1,11 @@
+# 2.4.2 (2022-02-06)
+- Folders in compendiums now support localized keys (as if you were using game.i18n.localize(name))
+- Exporting folder structures will now remember the last compendium exported to
+- Now compatible with Sidebar Macros
+- Updated french localization (thanks @rectulo#4697)
+- Fixed issue where exporting folder structures with folders that have the same name and depth would break the process.
+- Potential fix for exporting large amounts of items into a compendium will break the folder structure
+- Potential fix for issue where dragging items into a folder would not move them.
 # 2.4.1 (2021-12-14)
 - Compatible with FVTT v9
 - Fixed issues with searching in compendiums
