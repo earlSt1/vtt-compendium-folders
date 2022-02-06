@@ -970,7 +970,7 @@ export class FICManager{
                 obj[p.collection] = p.title;
                 return obj;
             }, {}),
-            pack: null,
+            pack: game.settings.get(mod,'last-pack'),
             merge: game.settings.get(mod,'default-mbn'),
             keepId: game.settings.get(mod,'default-keep-id')
         });
@@ -983,6 +983,7 @@ export class FICManager{
             callback: async function(html) {
                 const form = html[0].querySelector("form");
                 const pack = game.packs.get(form.pack.value);
+                await game.settings.set(mod,'last-pack',form.pack.value);
                 ui.notifications.notify(game.i18n.format('CF.exportFolderNotificationStart',{pack:form.pack.value}));
                 let index = await pack.getIndex();
                 await pack.apps[0].close();

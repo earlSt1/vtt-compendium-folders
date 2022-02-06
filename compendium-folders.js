@@ -1702,6 +1702,12 @@ export class Settings{
             type:Boolean,
             default:false
         });
+        game.settings.register(mod,'last-pack',{
+            scope:'client',
+            config:false,
+            type:String,
+            default:''
+        })
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;
         
