@@ -569,7 +569,12 @@ export class FICManager{
         libWrapper.register(mod, 'SceneDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
-        
+
+        // Compatibility with the Sidebar Macros module
+        libWrapper.register(mod, 'MacroSidebarDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+            return wrapped(...args).concat(newContextOption);
+        }, 'WRAPPER');
+
         // Folders In Compendium changes
         Settings.clearSearchTerms()
 
