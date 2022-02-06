@@ -218,7 +218,7 @@ export class FICFolder{
         return game.customFolders.fic.folders.contents.filter(f => f.data.parent === this.id);
     }
     get contents(){return this.data.contents}
-    get name(){return this.data.name}
+    get name(){return game.i18n.has(this.data.name) ? game.i18n.localize(this.data.name) : this.data.name}
     get color(){return this.data.color}
     get fontColor(){return this.data.fontColor}
     get icon(){return this.data.icon}
@@ -383,7 +383,7 @@ export class FICCache{
         let folderMetadata = cache.groupedFolderMetadata[folderObj.id]
         let index = cache.groupedFolders[folderMetadata.depth].findIndex(x => x.id === folderObj.id)
         cache.groupedFolders[folderMetadata.depth][index].color = folderObj.color
-        cache.groupedFolders[folderMetadata.depth][index].name = folderObj.name
+        cache.groupedFolders[folderMetadata.depth][index].name = game.i18n.has(folderObj.name) ? game.i18n.localize(folderObj.name) : folderObj.name
         cache.groupedFolders[folderMetadata.depth][index].icon = folderObj.icon
         cache.groupedFolders[folderMetadata.depth][index].fontColor = folderObj.fontColor
         cache.groupedFolders[folderMetadata.depth] = FICUtils.alphaSortFolders(cache.groupedFolders[folderMetadata.depth],'name')
@@ -417,6 +417,10 @@ export class FICManager{
             if (a.isOwner && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(a);
         })
+        Hooks.on('createCards',async function(c){
+            if (c.isOwner && FICUtils.shouldCreateFolders())
+                await FICManager.importFolderData(c);
+        })
         Hooks.on('createItem',async function(i){
             if (i.isOwner && !i.isEmbedded && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(i);
@@ -446,6 +450,10 @@ export class FICManager{
         Hooks.on('updateActor',async function(a){
             if (a.isOwner && game.actors.contents.some(x => x.name === a.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(a);
+        })
+        Hooks.on('updateCards',async function(c){
+            if (c.isOwner && game.cards.contents.some(x => x.name === c.name) && FICUtils.shouldCreateFolders())
+                await FICManager.importFolderData(c);
         })
         Hooks.on('updateItem',async function(i){
             if (i.isOwner && game.items.contents.some(x => x.name === i.name) && FICUtils.shouldCreateFolders())
@@ -614,7 +622,7 @@ export class FICManager{
                             let result = FICManager.updateFolderPathForTempEntity(entry,contents);
                             updateData.push(result); 
                         } else {
-                            let name = entry.flags.cf.name;
+                            let name = game.i18n.has(entry.flags.cf.name) ? game.i18n.localize(entry.flags.cf.name) : entry.flags.cf.name;
                             let color = entry.flags.cf.color;
                             let folderPath = entry.flags.cf.folderPath;
                             let folderIcon = entry.flags.cf.icon
@@ -634,11 +642,14 @@ export class FICManager{
                             else
                                 allFolderData[folderId] = data;
                         }
-                    }
-                    if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
-                        allFolderData[folderId].children.push(entryId);
-                    } else {
-                        allFolderData[folderId] = {children:[entryId]};
+                    }else{
+                        if (allFolderData[folderId] != null && allFolderData[folderId].children != null){
+                            if (!allFolderData[folderId].children.includes(entryId)){
+                                allFolderData[folderId].children.push(entryId);
+                            }
+                        } else {
+                            allFolderData[folderId] = {children:[entryId]};
+                        }
                     }
                 });
                 for (let key of Object.keys(folderChildren)){
@@ -693,7 +704,7 @@ export class FICManager{
 
                 await FICCache.cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
             }
-            console.log(modName+' | Creating folder strucfture inside compendium.');
+            console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await FICManager.createFoldersWithinCompendium(groupedFoldersSorted,packCode,openFolders);
             for (let entity of window.querySelectorAll('.directory-item')){
@@ -1508,7 +1519,7 @@ export class FICManager{
                     )?.id
                 }
                 let data = {
-                    name:parentFolder.name,
+                    name:game.i18n.has(parentFolder.name) ? game.i18n.localize(parentFolder.name):parentFolder.name,
                     sorting:'a',
                     parent:parentId,
                     type:entityType,
