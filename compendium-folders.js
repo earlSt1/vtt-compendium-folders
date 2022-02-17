@@ -866,7 +866,7 @@ function defineClasses(){
             }
             event.stopPropagation();
             event.preventDefault();
-            const types = CONST.COMPENDIUM_ENTITY_TYPES;
+            const types = CONST.COMPENDIUM_ENTITY_TYPES.filter(t => t != 'Adventure');
             const html = await renderTemplate('templates/sidebar/compendium-create.html', {types});
             return Dialog.prompt({
             title: game.i18n.localize("COMPENDIUM.Create"),

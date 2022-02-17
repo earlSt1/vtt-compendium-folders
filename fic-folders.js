@@ -576,7 +576,22 @@ export class FICManager{
                 return wrapped(...args).concat(newContextOption);
             }, 'WRAPPER');
         }
-
+        // Temporary workaround so that getFlag(scope,key) works
+        let overrideFlag = function(wrapped,...args){
+            let scope = args[0];
+            let key = args[1];
+            if (scope === 'cf' || scope === 'compendium-folders'){
+                return getProperty(this.data.flags.cf,key);
+            }
+            return wrapped(...args);
+        };
+        libWrapper.register(mod,'Actor.prototype.getFlag',overrideFlag,'MIXED');
+        libWrapper.register(mod,'Cards.prototype.getFlag',overrideFlag,'MIXED');
+        libWrapper.register(mod,'Item.prototype.getFlag',overrideFlag,'MIXED');
+        libWrapper.register(mod,'JournalEntry.prototype.getFlag',overrideFlag,'MIXED');
+        libWrapper.register(mod,'Macro.prototype.getFlag',overrideFlag,'MIXED');
+        libWrapper.register(mod,'RollTable.prototype.getFlag',overrideFlag,'MIXED');
+        libWrapper.register(mod,'Scene.prototype.getFlag',overrideFlag,'MIXED');
         // Folders In Compendium changes
         Settings.clearSearchTerms()
 
