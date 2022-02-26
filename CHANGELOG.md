@@ -1,3 +1,7 @@
+# 2.4.3 (2022-02-26)
+- Sorting mode for folders is now saved (thanks @blair)
+- Now supports using getFlags provided by foundry API
+- Some tidying up
 # 2.4.2 (2022-02-06)
 - Folders in compendiums now support localized keys (as if you were using game.i18n.localize(name))
 - Exporting folder structures will now remember the last compendium exported to
