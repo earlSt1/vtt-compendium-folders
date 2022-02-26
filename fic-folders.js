@@ -1115,6 +1115,10 @@ export class FICManager{
                 path:path,
                 color:color,
             }
+            if (e.folder?.data?.sorting === 'm' && e.data?.sort) {
+                // Store the document's manual sorting value
+                data.flags.cf.sort = e.data.sort;
+            }
             if (e.documentName === 'Scene' && typeof e.createThumbnail === 'function') {
                 const t = await e.createThumbnail({img: data.img});
                 data.thumb = t.thumb;
@@ -1164,6 +1168,10 @@ export class FICManager{
                 children:packEntities,
                 folderPath:folderPath
             }
+            if (folderObj.data?.sorting === 'm') {
+                // Set the folder sorting to Manual
+                tempData.flags.cf.sorting = folderObj.data.sorting;
+            }
             await pack.documentClass.create(tempData,{pack:pack.collection});
         }else{
             let folderData = {
@@ -1173,6 +1181,10 @@ export class FICManager{
                         children:[...new Set(existingFolder.children.concat(packEntities))]
                     }
                 }
+            }
+            if (folderObj.data?.sorting === 'm') {
+                // Set the folder sorting to Manual
+                folderData.flags.cf.sorting = folderObj.data.sorting;
             }
             await FICUtils.packUpdateEntity(pack,folderData)
     
@@ -1193,6 +1205,12 @@ export class FICManager{
         const destination = game.collections.get(pack.documentName);
         const sourceData = destination.fromCompendium(document);
         const updateDataWithFolderPath = foundry.utils.mergeObject(updateData,{flags:{cf:{path:folderPath}}});
+        if (document.data?.flags?.cf?.sorting === 'm') {
+            updateDataWithFolderPath.sorting = document.data.flags.cf.sorting;
+        }
+        if (document.data?.flags?.cf?.sort) {
+            updateDataWithFolderPath.sort = document.data.flags.cf.sort;
+        }
         const createData = foundry.utils.mergeObject(sourceData, updateDataWithFolderPath);
         
         // Create the Entity
@@ -1533,7 +1551,7 @@ export class FICManager{
                 }
                 let data = {
                     name:game.i18n.has(parentFolder.name) ? game.i18n.localize(parentFolder.name):parentFolder.name,
-                    sorting:'a',
+                    sorting:parentFolder.data?.sorting || 'a',
                     parent:parentId,
                     type:entityType,
                     content:[],
