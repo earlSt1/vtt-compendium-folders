@@ -562,6 +562,10 @@ export class FICManager{
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
         
+        libWrapper.register(mod, 'PlaylistDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+            return wrapped(...args).concat(newContextOption);
+        }, 'WRAPPER');
+
         libWrapper.register(mod, 'RollTableDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
@@ -1070,14 +1074,14 @@ export class FICManager{
     }
     static async recursivelyExportFolders(index,pack,folderObj,folderId,folderPath,merge,keepId){
         if (folderObj.children.length==0){
-            let entities = folderObj.content;
+            let entities = folderObj.contents;
             let updatedFolder = await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
             if (updatedFolder != null){
                 return [updatedFolder];
             }
             return []
         }else{
-            let entities = folderObj.content;
+            let entities = folderObj.contents;
             await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
         }
         for (let child of folderObj.children){
