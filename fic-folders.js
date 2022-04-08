@@ -110,6 +110,9 @@ export class FICUtils{
     }
     static alphaSortFolders(folders,selector){
         folders.sort(function(first,second){
+            if (typeof first.sort !== 'undefined' && typeof second.sort !== 'undefined'){
+                return first.sort - second.sort;
+            }
             if (first[selector]<second[selector]){
                 return -1;
             }
@@ -191,6 +194,7 @@ export class FICFolder{
             data.parent = data.folderPath[data.folderPath.length-1];
         }
         data.contents = contents;
+        data.sort = folder.data.sort ?? 0;
         return FICFolder.create(data,folder.id,packCode);
     }
     // async removeDocument(documentId,save=true){
@@ -605,6 +609,7 @@ export class FICManager{
 
                 const indexFields = [
                     "name",
+                    "sort",
                     "flags.cf",
                 ];
     
@@ -620,7 +625,7 @@ export class FICManager{
                 const entries = index.filter(x => x.flags?.cf?.id);
 
                 contents.forEach(x => {
-                    let temp = { name: x.name, _id: x.id, flags: { cf: x.data.flags?.cf } };
+                    let temp = { name: x.name, _id: x.id, sort: x.data.sort, flags: { cf: x.data.flags?.cf } };
                     entries.push(temp);
                 });
 
@@ -648,6 +653,7 @@ export class FICManager{
                                 tempEntityId:entryId,
                                 icon:folderIcon,
                                 fontColor:fontColor,
+                                sort:entry.sort,
                             }
                             if (allFolderData[folderId])
                                 allFolderData[folderId] = foundry.utils.mergeObject(data,allFolderData[folderId]);
@@ -711,7 +717,9 @@ export class FICManager{
                     }
                     return 0;
                 }).forEach((key) => {
-                    groupedFoldersSorted[key] = groupedFolders[key];
+                    groupedFoldersSorted[key] = groupedFolders[key].sort(function(o1,o2){
+                        return (o1.sort ?? 0) - (o2.sort ?? 0);
+                    });
                 })
 
                 await FICCache.cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
@@ -1172,6 +1180,9 @@ export class FICManager{
                 // Set the folder sorting to Manual
                 tempData.flags.cf.sorting = folderObj.data.sorting;
             }
+            if (folderObj.data?.sort) {
+                tempData.sort = folderObj.data.sort;
+            }
             await pack.documentClass.create(tempData,{pack:pack.collection});
         }else{
             let folderData = {
@@ -1551,6 +1562,7 @@ export class FICManager{
                 }
                 let data = {
                     name:game.i18n.has(parentFolder.name) ? game.i18n.localize(parentFolder.name):parentFolder.name,
+                    sort:parentFolder.data.sort ?? 0,
                     sorting:parentFolder.data?.sorting || 'a',
                     parent:parentId,
                     type:entityType,
@@ -1753,6 +1765,7 @@ export class FICFolderAPI{
 
         const indexFields = [
             "name",
+            "sort",
             "flags.cf",
           ];
 
