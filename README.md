@@ -91,7 +91,7 @@ Any issues feel free to ping me on Discord (@Erceron#0370)
 Special thanks to the translators who contributed to this project:
 - lozalojo (Spanish)
 - CarnVanBeck (German)
-- rinnocent (Brazilian Portugese)
+- rinnocent, MagelaCE (Brazilian Portugese)
 - Himeroos#4803 and rectulo (French)
 - xdy (Swedish)
 - BrotherSharper (Japanese)
