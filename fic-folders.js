@@ -1503,7 +1503,7 @@ export class FICManager{
     // At this point, game.customFolders.fic.folders is populated (only accessible through import process)
     // ==========================
     static async importFolderData(e){
-        if (e.compendium) return;
+        if (!game.customFolders.fic || e.compendium) return;
         if (e.data.flags.cf != null){
             //  && e.data.flags.cf.path != null && !e.folder){
             let ficFolder = game.customFolders.fic.folders.get(e.data.flags.cf.id);
