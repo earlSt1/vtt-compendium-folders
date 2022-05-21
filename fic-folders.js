@@ -149,7 +149,6 @@ export class FICFolder {
     getSaveData(){
         let saveData = this.data;
         delete saveData.documentId;
-        delete saveData.contents;
         delete saveData.parent;
         return {
             id:this.documentId,
@@ -161,7 +160,6 @@ export class FICFolder {
     async save(render=false){
         this.pack.apps[0].close().then(async () => {
             await FICUtils.packUpdateEntity(this.pack,this.getSaveData())
-            await FICCache.resetCache();
             if(render)
                 this.pack.apps[0].render(true)
         })
@@ -169,7 +167,6 @@ export class FICFolder {
     }
     async saveNoRefresh(){
         await FICUtils.packUpdateEntity(this.pack,this.getSaveData())
-        await FICCache.resetCache();
     }
     /** @override */
     static create(data={},documentId,packCode){
@@ -194,19 +191,19 @@ export class FICFolder {
         data.contents = contents;
         return FICFolder.create(data,folder.id,packCode);
     }
-    // async removeDocument(documentId,save=true){
-    //     var index = this.data.children.indexOf(documentId);
-    //     if (index !== -1) {
-    //         this.data.children.splice(index, 1);
-    //         if (this.save)
-    //             await this.save(false);
-    //     }
-    // }
-    // async addDocument(documentId,save=true){
-    //     this.data.children.push(documentId);
-    //     if (this.save)
-    //         await this.save(false);
-    // }
+    async removeDocument(documentId,save=true){
+        var index = this.data.contents.indexOf(documentId);
+        if (index !== -1) {
+            this.data.contents.splice(index, 1);
+            if (save)
+                await this.save(false);
+        }
+    }
+    async addDocument(documentId,save=true){
+        this.data.contents.push(documentId);
+        if (save)
+            await this.save(false);
+    }
 
     // GETTERS AND SETTERS
     get parent(){
@@ -238,6 +235,7 @@ export class FICFolder {
     set icon(i){this.data.icon = i}
     set folderPath(fp){this.data.folderPath = fp}
     set sorting(s){this.data.sorting = s}
+    set contents(c){this.data.contents = c}
 }
 export class FICFolderCollection extends WorldCollection{
     constructor(...args) {
@@ -280,9 +278,8 @@ class FICFolderCreateDialog extends FormApplication{
             icon:formData.icon,
             sorting:formData.sorting
         }
-        await FICCache.resetCache()
-        FICManager.createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);
-        
+        await FICManager.createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);
+        //pack.apps[0].element.find('.cfolders-container').remove();
          
         //folderObj.path = newPath
         //await createFolderInCache(folderObj.packCode,folderObj);   
@@ -320,8 +317,6 @@ class FICFolderEditDialog extends FormApplication{
             fontColor:formData.fontColor,
             sorting:formData.sorting
         }            
-        // await FICCache.updateFolderInCache(this.object.packCode,folderObj); 
-        await FICCache.resetCache();
         await FICManager.updateFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);      
     }
 }
@@ -588,7 +583,7 @@ export class FICManager{
             let scopes = wrapped(...args);
             scopes.push('cf')
             return scopes;
-        },'WRAPPER')
+        },'WRAPPER');
         // Folders In Compendium changes
         Settings.clearSearchTerms()
 
@@ -603,79 +598,101 @@ export class FICManager{
             if (!e.collection.index.contents.some(x => x.name === game.CF.TEMP_ENTITY_NAME)) return;
         
             FICUtils.removeStaleOpenFolderSettings(packCode);
-            //let cachedFolderStructure = await FICCache.loadCachedFolderStructure(packCode);
-            
-            // if (cachedFolderStructure != null){
-            //     groupedFoldersSorted = cachedFolderStructure;
-            // } else {
-                let allFolderData = await FICFolderAPI.loadFolders(packCode);
-                //await FICCache.cacheFolderStructure(packCode,groupedFoldersSorted,groupedFolderMetadata);
-            // }
+            let allFolderData = await FICFolderAPI.loadFolders(packCode);
             const rootFolders = allFolderData.filter(f => f.folderPath == null || f.folderPath.length === 0)
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
             await FICManager.recursivelyCreateFolders(rootFolders, packCode, openFolders);
-            //await FICManager.createFoldersWithinCompendium(rootFolders,packCode,openFolders);
             for (let entity of window.querySelectorAll('.directory-item')){
                 if (entity.querySelector('h4').innerText.includes(game.CF.TEMP_ENTITY_NAME)){
                     entity.style.display = 'none';
                     entity.classList.add('hidden');
                 }
             }
-            if (game.user.isGM && !e.locked){
-                // Moving between folders
-                let hiddenMoveField = document.createElement('input');
-                hiddenMoveField.type='hidden';
-                hiddenMoveField.style.display='none';
-                hiddenMoveField.classList.add('folder-to-move');
-                window.querySelector('ol.directory-list').appendChild(hiddenMoveField);
-                
+            if (game.user.isGM && !e.locked){                
                 for (let entity of window.querySelectorAll('.directory-item')) {
-                    entity.addEventListener('dragstart',async function(){
-                        let currentId = this.getAttribute('data-document-id');
-                        this.closest('ol.directory-list').querySelector('input.folder-to-move').value = currentId;
+                    entity.addEventListener('dragstart',async function(event){
+                        const li = event.currentTarget;
+                        event.dataTransfer.setData("text/plain", JSON.stringify({
+                          id: li.dataset.documentId
+                        }));
                     })
-                    // entity.addEventListener('drop',async function(ev){
-                    //     const movingDocumentId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                    //     if (movingDocumentId.length>0) {
-                    //         const targetDocumentId = this.getAttribute('data-document-id');
-                    //         //Check if target is in same folder
-                    //         // if it is not, skip and let folder drop listener trigger
-                    //         const isInSameFolder = this.closest('li.compendium-folder').querySelector('li.directory-item[data-document-id=\''+movingDocumentId+'\']') ?? false;
+                    entity.addEventListener('drop',async function(event){
+                        const data = TextEditor.getDragEventData(event);
+                        const movingDocumentId = data.id;
+                        if (data.id) {
+                            const targetDocumentId = this.getAttribute('data-document-id');
+                            //Check if target is in same folder
+                            // if it is not, skip and let folder drop listener trigger
+                            const isInSameFolder = this.parentElement.parentElement.parentElement.querySelector('li.directory-item[data-document-id=\''+movingDocumentId+'\']') ?? false;
                             
-                    //         if (isInSameFolder){
-                    //             ev.stopPropagation();
-                    //             console.log(modName+' | Moving document '+movingDocumentId+' above target document ' + targetDocumentId);
-                    //             // TODO Implement FICManager.swapDocuments(movingItem,targetItem,folderId)
-                    //         }else{
-                    //             console.debug(modName+' | Target document not in same folder, falling back to moving to new folder');
-                    //         }
-                    //     }
-                    // });
+                            if (isInSameFolder){
+                                event.stopPropagation();
+                                console.log(modName+' | Moving document '+movingDocumentId+' above target document ' + targetDocumentId);
+                                // TODO Implement FICManager.swapDocuments(movingItem,targetItem,folderId)
+                                const folderId = this.getAttribute('data-folder-doc-id');
+                                let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
+                                let pack = game.packs.get(packCode);
+                                const folder = await pack.getDocument(folderId);
+                                
+                                //Insert movingDocument before target document
+                                let tempContents = [...folder.data.flags.cf.contents];
+                               
+                                tempContents.splice(tempContents.indexOf(movingDocumentId), 1);
+                                tempContents.splice(tempContents.indexOf(targetDocumentId), 0, movingDocumentId)
+                                const folderData = {
+                                    _id:folderId,
+                                    flags:{
+                                        cf:{
+                                            contents:tempContents
+                                        }
+                                    }
+                                };
+                                await folder.update(folderData,{pack:pack.collection});
+                            }else{
+                                console.debug(modName+' | Target document not in same folder, falling back to moving to new folder');
+                            }
+                        }
+                    });
                 }
                 for (let folder of window.querySelectorAll('.compendium-folder')) {
                     folder.addEventListener('drop',async function(event){
-                        let movingItemId = this.closest('ol.directory-list').querySelector('input.folder-to-move').value;
-                        if (movingItemId.length>0) {
-                            console.log(modName+' | Moving document '+movingItemId+' to new folder.');
-                            this.closest('ol.directory-list').querySelector('input.folder-to-move').value = '';
+                        const data = TextEditor.getDragEventData(event);
+                        const movingDocumentId = data.id;
+                        if (movingDocumentId.length>0) {
+                            console.log(modName+' | Moving document '+movingDocumentId+' to new folder.');
                             //let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
         
                             let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
                             let p = game.packs.get(packCode);
-                            let data = {
-                                id:movingItemId,
+                            const oldFolderId = this.closest('ol.directory-list').querySelector('.directory-item[data-document-id=\''+movingDocumentId+'\']').getAttribute('data-folder-doc-id');
+                            const oldFolder = await p.getDocument(oldFolderId);
+                            let oldFolderContents = oldFolder.data.flags.cf.contents;
+                            oldFolderContents = oldFolderContents.filter(d => d != movingDocumentId);
+                            const oldFolderData = {
+                                _id:oldFolderId,
                                 flags:{
                                     cf:{
-                                        id:folder.getAttribute('data-folder-id')
+                                        contents:oldFolderContents
                                     }
                                 }
                             };
-                            await FICCache.moveEntryInCache(packCode,movingItemId,this.getAttribute('data-folder-id'));
-                            if (data){ 
-                                const document = await p.getDocument(data.id);
-                                await document.update(data,{pack:p.collection});
-                            }   
+                            const newFolderId = folder.getAttribute('data-temp-entity-id');
+                            const newFolder = await p.getDocument(newFolderId);
+                            let newFolderContents = newFolder.data.flags.cf.contents;
+                            if (!newFolderContents.includes(movingDocumentId))
+                                newFolderContents.push(movingDocumentId)
+                            const newFolderData = {
+                                _id:newFolderId,
+                                flags:{
+                                    cf:{
+                                        contents:newFolderContents
+                                    }
+                                }
+                            };
+                            const updates = [oldFolderData,newFolderData,movingDocData]
+                            //await FICCache.moveEntryInCache(packCode,movingDocumentId,this.getAttribute('data-folder-id'));
+                            await newFolder.constructor.updateDocuments(updates,{pack:p.collection});
                         }
                     })
                 }
@@ -740,12 +757,12 @@ export class FICManager{
                     deleteFolder: {
                         icon: '<i class="fas fa-folder"></i>',
                         label: "Delete Folder",
-                        callback: () => {FICManager.deleteFolderWithinCompendium(packCode,folder,false);FICCache.resetCache();}
+                        callback: () => {FICManager.deleteFolderWithinCompendium(packCode,folder,false)}
                     },
                     deleteAll:{
                         icon: '<i class="fas fa-trash"></i>',
                         label: "Delete All",
-                        callback: ( )=> {FICManager.deleteFolderWithinCompendium(packCode,folder,true);FICCache.resetCache();}
+                        callback: ( )=> {FICManager.deleteFolderWithinCompendium(packCode,folder,true)}
                     }
                 }
             }).render(true);
@@ -913,7 +930,6 @@ export class FICManager{
                 let index = await pack.getIndex();
                 await pack.apps[0].close();
                
-                //FICCache.resetCache();
                 await FICFolderAPI.loadFolders(form.pack.value);
                 let folderPath = await FICManager.createParentFoldersWithinCompendium(folder,pack);
                 await FICFolderAPI.loadFolders(form.pack.value);
@@ -925,7 +941,6 @@ export class FICManager{
                 }else{
                     await FICManager.recursivelyExportFolders(index,pack,folder,FICUtils.generateRandomFolderName('temp_'),folderPath,form.merge.checked,form.keepId.checked)
                 }
-                //FICCache.resetCache()
                 ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
                 pack.render(true);
             },
@@ -1347,8 +1362,8 @@ export class FICManager{
         for (let pack of directoryList.querySelectorAll('li.directory-item')){
             pack.addEventListener('click',function(ev){ev.stopPropagation()},false)
         }
-        let childElements = folderData?.contents?.map(c => directoryList.querySelector('li.directory-item[data-document-id=\''+c+'\']'))
-        if (childElements?.length > 0){
+        let childElements = folderData.contents.map(c => directoryList.querySelector('li.directory-item[data-document-id=\''+c+'\']'))
+        if (childElements.length > 0){
             if (folderData.sorting === 'a'){
                 childElements = childElements.filter(c => c != null).sort(function (a,b){
                     if (a.querySelector('h4').innerText < b.querySelector('h4').innerText){
@@ -1362,12 +1377,12 @@ export class FICManager{
             }
             for (let child of childElements){
                 if (child != null){
+                    child.setAttribute('data-folder-doc-id',folderData.documentId);
                     packList.appendChild(child);
                 }
             }
         }
     }
-    //Change sorting to default to root level sort setting TODO
     static async recursivelyCreateFolders(rootFolders,packCode,openFolders,sorting='a'){
         if (sorting === 'a'){
             rootFolders = FICUtils.alphaSortFolders(rootFolders,'name');
@@ -1483,8 +1498,6 @@ export class FICManager{
             
     }
     static async deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
-        //ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationStart'))
-        
         let pack = game.packs.get(packCode);
         await pack.apps[0].close();
         let contents = await pack.getDocuments()
@@ -1571,12 +1584,10 @@ export class FICManager{
             await tempEntity.delete({pack:pack.collection});
         }
         //await FICUtils.packDeleteEntity(pack,tempEntity.id)
-        ui.notifications.notify(game.i18n.localize('CF.deleteFolderNotificationFinish'));
         document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
         pack.apps[0].render(true);
     }
     static async updateFolderWithinCompendium(folderObj,packCode,tempEntityId){
-        //ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationStart'))
         let pack = game.packs.get(packCode);
         let entity = await pack.getDocument(tempEntityId); 
     
@@ -1596,7 +1607,6 @@ export class FICManager{
             const options = {pack:pack.collection};
             await entity.update(data, options);
         }
-        ui.notifications.notify(game.i18n.localize('CF.updateFolderNotificationFinish'));
     }
     static async createNewFolderWithinCompendium(folderObj,packCode,parentTempEntityId){
         // Exporting temp entity to allow for empty folders being editable
@@ -1618,8 +1628,6 @@ export class FICManager{
             icon:folderObj.icon,
             sorting:folderObj.sorting
         }
-        //Clearing folders already rendered to prevent duplication
-        pack.apps[0].element.find('.cfolders-container').remove();
     
         let e = await pack.documentClass.create(tempData,{pack:pack.collection});
         if (!e.data.flags.cf){
@@ -1678,12 +1686,18 @@ export class FICFolderAPI{
         const pack = await game.packs.get(packCode);
         const index = await pack.getIndex({ fields: indexFields });
         const folderIds = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME).map((i) => i._id);
-        const folders = await pack.getDocuments({_id: {$in: folderIds}});
+        const folderDocuments = await pack.getDocuments({_id: {$in: folderIds}});
         const entries = index.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
 
-        for (let folder of folders){
-            let contents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
-            FICFolder.import(packCode,contents,folder);
+        for (let folder of folderDocuments){
+            let contents = folder.data.flags.cf.contents;
+            if (!contents){
+                contents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
+                let folderObj = FICFolder.import(packCode,contents,folder);
+                await folderObj.saveNoRefresh();
+            }else{
+                FICFolder.import(packCode,contents,folder);
+            }
         }
         // for (let folder of folders){
         //     let contentsSaved = true;
@@ -1717,7 +1731,6 @@ export class FICFolderAPI{
         }
         let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,folder)
         let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
-        await FICCache.resetCache();
         return FICFolder.import(packCode,[],result);
     }
     /*
@@ -1739,33 +1752,22 @@ export class FICFolderAPI{
         let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolder)
     
         let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
-        await FICCache.resetCache();
         return FICFolder.import(parent.packCode,[],result);
     }
+    //Providing null as a packCode will skip the loadFolders part
     static async moveDocumentToFolder(packCode,document,folder){
-        let pack = game.packs.get(packCode);
-        // Disassociate old folder id
+        if (packCode){
+            await FICFolderAPI.loadFolders(packCode);
+        }
         let oldParentId = document.data?.flags?.cf?.id;
         if (oldParentId){
             await game.customFolders.fic.folders.get(oldParentId).removeDocument(document.id);
         }
-        // Set document folderId to provided folder
-        let updateData = {
-            flags:{
-                cf:{
-                    id:folder.id
-                }
-            },
-            id:document.id
-        }
-        FICUtils.packUpdateEntity(pack,updateData);
-        await FICCache.resetCache();
+        await folder.addDocument(document.id);
     }
     static async renameFolder(folder,newName){
-        const oldName = folder.name;
         folder.name = newName;
         await folder.save();
-        ui.notifications.notify("Successfully renamed folder '"+oldName+"' to '"+newName+"'")
     }
     static async refreshPack(folder){
         folder.pack.apps[0].element.find('.cfolders-container').remove();
