@@ -18,6 +18,10 @@ export class FICUtils{
         const cls = pack.documentClass;
         return await cls.updateDocuments(updateData,{pack:pack.collection});
     }
+    static async packDeleteEntities(pack,deleteData){
+        const cls = pack.documentClass;
+        return await cls.deleteDocuments(deleteData,{pack:pack.collection});
+    }
     /*
      *Generating path for world folder
      */
@@ -126,6 +130,11 @@ export class FICUtils{
     }
     static arraysEqual(array1,array2){
         return array1.length === array2.length && array1.every(function(value, index) { return value === array2[index]})
+    }
+    static arrayContentsEqual(array1,array2){
+        const set1 = new Set(array1);
+        const set2 = new Set(array2);
+        return set1.equals(set2);
     }
     static async getFolderData(packCode,tempEntityId){
         let pack = game.packs.get(packCode)
@@ -236,6 +245,7 @@ export class FICFolder {
     }
     getSaveData(){
         let saveData = this.data;
+        saveData.version = game.modules.get('compendium-folders').data.version
         delete saveData.documentId;
         delete saveData.parent;
         return {
@@ -308,9 +318,9 @@ export class FICFolder {
         return this.data.children.map(c => game.customFolders.fic.folders.get(c));
     }
     get orderedChildren(){
-        return this.data.children || game.customFolders.fic.folders.contents.filter(f => f.data.parent === this.id);
+        return (this.data.children || game.customFolders.fic.folders.contents.filter(f => f.data.parent === this.id));
     }
-    get contents(){return this.data.contents}
+    get contents(){return this.data.contents ?? []}
     get name(){return game.i18n.has(this.data.name) ? game.i18n.localize(this.data.name) : this.data.name}
     get color(){return this.data.color}
     get fontColor(){return this.data.fontColor}
@@ -323,6 +333,7 @@ export class FICFolder {
         return path.join(game.CF.FOLDER_SEPARATOR);
     }
     get sorting(){return this.data.sorting}
+    get version(){return this.data.version}
 
     set name(n){this.data.name = n}
     set color(c){this.data.color = c}
@@ -333,6 +344,7 @@ export class FICFolder {
     set contents(c){this.data.contents = c}
     set children(c){this.data.children = c}
     set childrenObjects(childFolders){this.data.children = childFolders.map(x => x.id)}
+    set version(v){this.data.version = v}
 }
 export class FICFolderCollection extends WorldCollection{
     constructor(...args) {
@@ -373,9 +385,11 @@ class FICFolderCreateDialog extends FormApplication{
             color:formData.color,
             fontColor:formData.fontColor,
             icon:formData.icon,
-            sorting:formData.sorting
+            sorting:formData.sorting,
+            contents:[],
+            children:[]
         }
-        await FICManager.createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);
+        await FICManager.createNewFolderWithinCompendium(folderObj,this.object.packCode,this.object.parentId);
         //pack.apps[0].element.find('.cfolders-container').remove();
          
         //folderObj.path = newPath
@@ -701,6 +715,9 @@ export class FICManager{
         
             FICUtils.removeStaleOpenFolderSettings(packCode);
             let allFolderData = await FICFolderAPI.loadFolders(packCode);
+            if (allFolderData === null){
+                return;
+            }
             const rootFolders = allFolderData.filter(f => f.folderPath == null || f.folderPath.length === 0)
             console.log(modName+' | Creating folder structure inside compendium.');
             let openFolders = game.settings.get(mod,'open-temp-folders');
@@ -1333,6 +1350,9 @@ export class FICManager{
     // Folder creation inside compendiums
     // ==========================
     static createFolderWithinCompendium(folderData,parentId,packCode,openFolders){
+        if (document.querySelector('.compendium-folder[data-folder-id=\''+folderData.id+'\']')){
+            return;
+        }
         //Example of adding folders to compendium view
         let folder = document.createElement('li')
         folder.classList.add('compendium-folder','folder');
@@ -1582,159 +1602,22 @@ export class FICManager{
             
     }
     static async deleteFolderWithinCompendium(packCode,folderElement,deleteAll){
-        let pack = game.packs.get(packCode);
-        await pack.apps[0].close();
-        let contents = await pack.getDocuments()
-        let tempEntity = await pack.getDocument(folderElement.getAttribute('data-temp-entity-id'));
-        let tempEntityFolderId = tempEntity.data.flags.cf.id
-        let folderChildren = contents.filter(e => e.data?.flags?.cf?.id === tempEntityFolderId && e.id != tempEntity.id).map(d => d.id);
-        let parentFolderId = null;
-        let parentEntity = null;
-        let parentPath = null;
-        let tempEntityData = tempEntity.data.flags.cf
-        if (tempEntityData.folderPath != null && tempEntityData.folderPath.length>0){
-            parentFolderId = tempEntityData.folderPath[tempEntityData.folderPath.length-1];
-            parentEntity = contents.find(e => e.name === game.CF.TEMP_ENTITY_NAME && 
-                e.data.flags.cf.id === parentFolderId);
-            parentPath = parentEntity.data.flags.cf.path;
-        }
-        
-        let allData = {};
-        let toDelete = [];
-        if (deleteAll){
-            for (let entity of folderElement.querySelectorAll('.directory-item')){
-                if (!toDelete.includes(entity.getAttribute('data-document-id')))
-                    toDelete.push(entity.getAttribute('data-document-id'));
-            }
-            for (let folder of folderElement.querySelectorAll('.compendium-folder')){
-                if (!toDelete.includes(folder.getAttribute('data-temp-entity-id')))
-                    toDelete.push(folder.getAttribute('data-temp-entity-id'));
-            }
-        }else{
-            for (let entity of contents){
-                if (entity.data.flags != null && entity.data.flags.cf != null){
-                    if (folderChildren.includes(entity.id)){
-                        //Move child up to parent folder
-                        // Add ID to parent folder
-                        if (parentFolderId != null){
-                            let parentChildren = parentEntity.data.flags.cf.children;
-                            parentChildren.push(entity.id);
-                            if (allData[parentEntity.id] == null){
-                                allData[parentEntity.id] = {flags:{cf:{children:parentChildren}},id:parentEntity.id}
-                            }else{
-                                allData[parentEntity.id].flags.cf.children = parentChildren;
-                                allData[parentEntity.id].id=parentEntity.id
-                            }
-                        }
-                        // Update parent folderID of entity
-    
-                        if (allData[entity.id] == null){
-                            allData[entity.id] = {flags:{cf:{id:parentFolderId}},id:entity.id}
-                        }else{
-                            allData[entity.id].flags.cf.id = parentFolderId;
-                            allData[entity.id].flags.cf.path = parentEntity.data.flags.cf.path
-                            allData[entity.id].id=entity.id
-                        }
-                        if (parentPath)
-                            allData[entity.id].flags.cf.path = parentPath;
-                    }else{
-                        if (entity.name === game.CF.TEMP_ENTITY_NAME 
-                            && entity.data.flags.cf.folderPath.includes(tempEntityFolderId)){
-                            // Another temp entity representing folder which is a child of parent
-                            let newPath = entity.data.flags.cf.folderPath
-                            newPath.splice(newPath.indexOf(tempEntityFolderId),1)
-                            //let newPath = tempEntity.data.flags.cf.folderPath.splice(tempEntity.data.flags.cf.folderPath.length-1,1);
-                            if (allData[entity.id] == null){
-                                allData[entity.id] = {flags:{cf:{folderPath:newPath}},id:entity.id}
-                            }else{
-                                allData[entity.id].flags.cf.folderPath = newPath             
-                                allData[entity.id].id=entity.id
-                            }      
-                            if (parentPath)
-                            allData[entity.id].flags.cf.path = parentPath;
-                        }
-                    }
-                }
-            }
-        }
-        if (deleteAll){
-            for (let id of toDelete){
-                await FICUtils.packDeleteEntity(pack,id);
-            }
-        }else{
-            for (let data of Object.values(allData)){
-                await FICUtils.packUpdateEntity(pack,data);
-            }
-            await tempEntity.delete({pack:pack.collection});
-        }
-        //await FICUtils.packDeleteEntity(pack,tempEntity.id)
-        document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
-        pack.apps[0].render(true);
+        const folders = await game.CF.FICFolderAPI.getFolders(packCode);
+        const rootFolder = folders.get(folderElement.dataset.folderId)
+        await game.CF.FICFolderAPI.deleteFolder(rootFolder,deleteAll);
     }
     static async updateFolderWithinCompendium(folderObj,packCode,tempEntityId){
-        let pack = game.packs.get(packCode);
-        let entity = await pack.getDocument(tempEntityId); 
-    
-        if (entity != null){
-    
-            let data = {
-                flags:{
-                    cf:foundry.utils.mergeObject(entity.data.flags.cf,folderObj)
-                }
-            }
-            // if (entity.data.flags.cf.folderPath === null){
-            //     data.flags.cf = null;
-            // }
-    
-            
-    
-            const options = {pack:pack.collection};
-            await entity.update(data, options);
-        }
+        const folders = await FICFolderAPI.getFolders(packCode);
+        const folder = folders.get(folderObj.id);
+        await FICUtils.packUpdateEntity(folder.pack,{id:folder.documentId,flags:{cf:folderObj}});
     }
-    static async createNewFolderWithinCompendium(folderObj,packCode,parentTempEntityId){
-        // Exporting temp entity to allow for empty folders being editable
-        let pack = game.packs.get(packCode);
-        let newPath = []
-        if (parentTempEntityId != null){
-            let parent = await pack.getDocument(parentTempEntityId)
-            newPath = parent.data.flags.cf.folderPath.concat(parent.data.flags.cf.id)
-        }
-        
-        let tempData = FICUtils.getTempEntityData(pack.documentClass.documentName);
-        tempData.flags.cf={
-            id:folderObj.id,
-            folderPath:newPath,
-            color:folderObj.color,
-            fontColor:folderObj.fontColor,
-            name:folderObj.name,
-            children:[],
-            icon:folderObj.icon,
-            sorting:folderObj.sorting
-        }
-    
-        let e = await pack.documentClass.create(tempData,{pack:pack.collection});
-        if (!e.data.flags.cf){
-            await e.update({
-                id:e.id,
-                flags:{
-                    cf:{
-                        id:folderObj.id,
-                        folderPath:newPath,
-                        color:folderObj.color,
-                        fontColor:folderObj.fontColor,
-                        name:folderObj.name,
-                        children:[],
-                        icon:folderObj.icon,
-                        sorting:folderObj.sorting
-                    }
-                }
-            })
-        }
-        console.log(`${modName} | Created temp entity for folder in ${pack.collection}`);
-        return newPath
-    }
-    
+    static async createNewFolderWithinCompendium(folderObj,packCode,parentId){
+        const folders = await FICFolderAPI.getFolders(packCode);
+        if (parentId)
+            await FICFolderAPI.createFolderWithParent(folders.get(parentId),folderObj)
+        else
+            await FICFolderAPI.createFolderAtRoot(packCode,folderObj);
+    }   
 }
 export class FICFolderAPI{
     //used for external operations, exposed to public
@@ -1773,27 +1656,39 @@ export class FICFolderAPI{
         const folderDocuments = await pack.getDocuments({_id: {$in: folderIds}});
         const entries = index.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
 
+        const updates = []
         for (let folder of folderDocuments){
+            
             let contents = folder.data.flags.cf.contents;
-            if (!contents){
-                contents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
-                let folderObj = FICFolder.import(packCode,contents,folder);
-                await folderObj.saveNoRefresh();
+            let allContents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
+            if (!FICUtils.arrayContentsEqual(contents,allContents)){
+                if (folder.version === undefined){
+                    contents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
+                    let folderObj = FICFolder.import(packCode,contents,folder);
+                    updates.push(folderObj.getSaveData());
+                }
             }else{
                 FICFolder.import(packCode,contents,folder);
             }
+            
         }
         for (let folder of game.customFolders.fic.folders){
-            let childrenSaved = true;
             let children = folder.data.children;
-            let allChildren =  game.customFolders.fic.folders.contents.filter(f => f.data.parent === folder.id);
-            if (children.length != allChildren.length){
-                childrenSaved = false
-                folder.childrenObjects = allChildren;
+            let allChildren =  game.customFolders.fic.folders.contents.filter(f => f.data.parent === folder.id).map(f => f.id);
+            if (!FICUtils.arrayContentsEqual(children,allChildren)){
+                if (folder.version === undefined){
+                    folder.children = allChildren;
+                    updates.push(folder.getSaveData());
+                }
             }
-            if (!childrenSaved){
-                await folder.saveNoRefresh();
+        }
+        if (updates.length > 0){
+            try{
+                await FICUtils.packUpdateEntities(pack,updates);
+            } catch (error){
+                console.debug(modName+' | Error from updating pack entities, most likely an entry was deleted');
             }
+            return null;
         }
         return game.customFolders.fic.folders;
     }
@@ -1823,30 +1718,44 @@ export class FICFolderAPI{
         let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
         return FICFolder.import(packCode,[],result);
     }
+    static async createFolderAtRoot(packCode,data){
+        let pack = game.packs.get(packCode);
+        let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,data)
+        let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+        return FICFolder.import(packCode,[],result);
+    }
     /*
     * Creates folder with the given FICFolder object as parent
     * returns a FICFolder object representing the folder that was created
     */
     static async createFolderWithParent(parent,name='New Folder',color='#000000',fontColor='#FFFFFF'){
-        let pack = parent.pack;
-        let newFolder = {
+        const pack = parent.pack;
+        const newFolderData = {
             id:FICUtils.generateRandomFolderName('temp_'),
             name:name,
             color:color,
             fontColor:fontColor,
             folderPath:parent.folderPath.concat([parent.id]),
-            path:parent.path + game.CF.FOLDER_SEPARATOR + parent.name + game.CF.FOLDER_SEPARATOR + name,
             children:[],
             icon:null
         }
-        let tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolder)
+        const tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolderData)
     
-        let result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+        const result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
         return FICFolder.import(parent.packCode,[],result);
     }
-    //Providing null as a packCode will skip the loadFolders part
+    static async createFolderWithParent(parent,data={}){
+        const pack = parent.pack;
+        const tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,data)
+        parent.children.push(data.id)
+        data.folderPath = parent.folderPath.concat([parent.id])
+        const parentData = parent.getSaveData();
+        await FICUtils.packUpdateEntity(pack,parentData)
+        const result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
+        return FICFolder.import(parent.packCode,data.contents,result);
+    }
     static async moveDocumentToFolder(packCode,document,folder){
-        const folders = getFolders(packCode);
+        const folders = await this.getFolders(packCode);
         let oldParentId = document.data?.flags?.cf?.id;
         if (oldParentId){
             await folders.get(oldParentId).removeDocument(document.id);
@@ -1857,9 +1766,9 @@ export class FICFolderAPI{
         folder.name = newName;
         await folder.save();
     }
-    static async refreshPack(folder){
-        folder.pack.apps[0].element.find('.cfolders-container').remove();
-        folder.pack.apps[0].render(true)
+    static async refreshPack(pack){
+        pack.apps[0].element.find('.cfolders-container').remove();
+        pack.apps[0].render(true)
     }
     static canMoveToDestFolder(folderToMove,destFolder){
         let currentParent = destFolder.parent;
@@ -1877,7 +1786,7 @@ export class FICFolderAPI{
         }
         return true
     }
-    static async moveFolder(folderToMove,destFolder){
+    static async moveFolder(folderToMove,destFolder,save=true){
         // Sanity check to see if you arent moving a folder to a child of itself
         if (this.canMoveToDestFolder(folderToMove,destFolder)){
             // Go through folderToMove and all child folders
@@ -1895,8 +1804,11 @@ export class FICFolderAPI{
             }
             let destFolderChildren = [...destFolder.children];
             destFolder.children = destFolderChildren.concat(folderToMove.id);
-            
-            await FICUtils.packUpdateEntities(folderToMove.pack,updates);
+            if (save){
+                await FICUtils.packUpdateEntities(folderToMove.pack,updates);
+            }else{
+                return updates;
+            }
         }
     }
     static async recursivelyUpdateFolderPath(currentFolder,folderPath){
@@ -1909,9 +1821,13 @@ export class FICFolderAPI{
         currentFolder.folderPath = folderPath;
         return [currentFolder.getSaveData()];
     }
-    static async moveFolderToRoot(folder){
+    static async moveFolderToRoot(folder,save=true){
         const updates = await this.recursivelyUpdateFolderPath(folder,[]);
-        await FICUtils.packUpdateEntities(folder.pack,updates);
+        if (save) {
+            await FICUtils.packUpdateEntities(folder.pack,updates);
+        } else {
+            return updates;
+        }
     }
     static async moveDocumentToRoot(packCode,documentId,folderId=null){
         const folders = await this.getFolders(packCode);
@@ -1949,5 +1865,61 @@ export class FICFolderAPI{
             parentFolder.children = tempChildren;
             await parentFolder.saveNoRefresh();
         }
+    }
+    static async deleteFolder(folder,deleteAll){
+        const pack = folder.pack;
+        let deleteData = []
+        const updateData = []
+        deleteData.push(folder.documentId);
+        if (deleteAll){
+            const folders = await this.getFolders(pack.collection);
+            const childFolders = folders.filter(f => f.folderPath.includes(folder.id));
+            const childFolderDocIds = childFolders.map(f => f.documentId);
+            const childDocuments = childFolders.map(f => f.contents).deepFlatten();
+            deleteData = deleteData.concat(childFolderDocIds);
+            deleteData = deleteData.concat(childDocuments);
+            deleteData = deleteData.concat(folder.contents);
+        }else{
+            const isRoot = folder.parent === undefined;
+            for (const doc of folder.contents){
+                updateData.push({
+                    _id:doc,
+                    flags:{
+                        cf:{
+                            id: isRoot ? null : folder.parent.id 
+                        }
+                    }
+                })
+            }
+            if (!isRoot){
+                let newContents = [...folder.parent.contents]
+                newContents = newContents.concat(folder.contents);
+                if (!FICUtils.arraysEqual(folder.parent.contents,newContents)){
+                    updateData.push({
+                        _id:folder.parent.documentId,
+                        flags:{
+                            cf:{
+                                contents:newContents
+                            }
+                        }
+                    })
+                }
+            }
+
+            for (const child of folder.childrenObjects){
+                if (isRoot){
+                    updateData.push( ...(await this.moveFolderToRoot(child,false)) );
+                }else{
+                    updateData.push( ...(await this.moveFolder(child,folder.parent,false)) );
+                }
+            }
+        }
+        if (updateData.length > 0){
+            await FICUtils.packUpdateEntities(pack,updateData);
+        }
+        if (deleteData.length > 0){
+            await FICUtils.packDeleteEntities(pack,deleteData);
+        }
+        await this.refreshPack(pack);
     }
 }
