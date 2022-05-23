@@ -1,5 +1,4 @@
 <form id="folder-create" autocomplete="off">
-    <p class='notes'>{{localize "CF.createFolderWithinCompendiumL1"}}</p>
     <div class="form-group">
         <label>{{localize "FOLDER.Name"}}</label>
         <div class="form-fields">
@@ -26,6 +25,13 @@
         <div class="form-fields">
             {{filePicker target="icon" type="image"}}
             <input class="image" type="text" name="icon" placeholder="default folder" value="{{folder.folderIcon}}"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>{{localize "FOLDER.SortMode"}}</label>
+        <div class="form-fields">
+            <label class="checkbox"><input type="radio" name="sorting" value="a"> Alphabetical</label>
+            <label class="checkbox"><input type="radio" name="sorting" value="m" checked> Manual</label>
         </div>
     </div>
     <button type="submit"><i class="fas fa-check"></i>{{localize "FOLDER.Create"}}</button>
