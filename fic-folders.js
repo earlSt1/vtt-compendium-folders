@@ -216,6 +216,8 @@ export class FICUtils{
         //TODO
     }
     static async handleMoveToRoot(event){
+        let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
+        if (game.packs.get(packCode).locked) return;
         const data = TextEditor.getDragEventData(event);
         if (data.type === 'FICFolder'){
             //Move folder to root
@@ -728,7 +730,7 @@ export class FICManager{
                     entity.classList.add('hidden');
                 }
             }
-            if (game.user.isGM && !e.locked){                
+            if (game.user.isGM && !game.packs.get(packCode).locked){                
                 for (let entity of compendiumWindow.querySelectorAll('.directory-item')) {
                     entity.addEventListener('drop',async function(event){
                         const data = TextEditor.getDragEventData(event);
@@ -746,7 +748,7 @@ export class FICManager{
                                 console.log(modName+' | Moving document '+movingDocumentId+' above target document ' + targetDocumentId);
                                 // TODO Implement FICManager.swapDocuments(movingItem,targetItem,folderId)
                                 const folderId = this.getAttribute('data-folder-doc-id');
-                                let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
+                                
                                 let pack = game.packs.get(packCode);
                                 const folder = await pack.getDocument(folderId);
                                 
@@ -1358,7 +1360,7 @@ export class FICManager{
         folder.classList.add('compendium-folder','folder');
         folder.setAttribute('data-folder-id',folderData.id);
         folder.setAttribute('data-temp-entity-id',folderData.documentId);
-        folder.setAttribute('draggable',true);
+        folder.setAttribute('draggable',!game.packs.get(packCode).locked);
         let header = document.createElement('header');
         header.classList.add('compendium-folder-header','flexrow')
         let headerTitle = document.createElement('h3');
