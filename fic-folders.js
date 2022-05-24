@@ -153,10 +153,14 @@ export class FICUtils{
 
             const newFolderDocId = targetFolderElement.getAttribute('data-temp-entity-id');
             const newFolderId = targetFolderElement.getAttribute('data-folder-id');
-            const oldFolderId = targetFolderElement.closest('ol.directory-list').querySelector('.directory-item[data-document-id=\''+movingDocumentId+'\']').getAttribute('data-folder-doc-id');
-            if (newFolderDocId == oldFolderId)
+            const oldFolderElement = targetFolderElement.closest('ol.directory-list').querySelector('.directory-item[data-document-id=\''+movingDocumentId+'\']')
+            const oldFolderDocId = oldFolderElement.getAttribute('data-folder-doc-id');
+            const oldFolderId = oldFolderElement.getAttribute('data-folder-id');
+            if (newFolderDocId == oldFolderDocId)
                 return;
             
+
+
             const newFolder = await p.getDocument(newFolderDocId);
             let newFolderContents = newFolder.data.flags.cf.contents;
             if (!newFolderContents.includes(movingDocumentId))
@@ -172,12 +176,12 @@ export class FICUtils{
             const updates = [newFolderData]
             let oldFolderData = null;
             
-            if (oldFolderId){
-                const oldFolder = await p.getDocument(oldFolderId);
+            if (oldFolderDocId){
+                const oldFolder = await p.getDocument(oldFolderDocId);
                 let oldFolderContents = oldFolder.data.flags.cf.contents;
                 oldFolderContents = oldFolderContents.filter(d => d != movingDocumentId);
                 oldFolderData = {
-                    _id:oldFolderId,
+                    _id:oldFolderDocId,
                     flags:{
                         cf:{
                             contents:oldFolderContents
@@ -187,6 +191,8 @@ export class FICUtils{
                 
                 updates.push(oldFolderData)
             }
+            const cacheUpdates = [...updates]
+            await FICCache.updateCache(packCode,cacheUpdates);
             data = {
                 _id:movingDocumentId,
                 flags:{
@@ -206,7 +212,6 @@ export class FICUtils{
         
         let movingFolder = game.customFolders.fic.folders.get(movingFolderId);
         let targetFolder = game.customFolders.fic.folders.get(targetFolderId);
-
         if (targetFolderElement.hasAttribute('collapsed')){
             // IF FOLDER CLOSED and NOT at root - Move before folder
             await FICFolderAPI.swapFolders(movingFolder,targetFolder);
@@ -216,8 +221,6 @@ export class FICUtils{
         //TODO
     }
     static async handleMoveToRoot(event){
-        let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
-        if (game.packs.get(packCode).locked) return;
         const data = TextEditor.getDragEventData(event);
         if (data.type === 'FICFolder'){
             //Move folder to root
@@ -240,10 +243,19 @@ export class FICFolder {
             icon:null,
             sorting:'a'
         },data);
-        this.documentId = data.id
     }
     toJSON(){
-        return this.data;
+        return {
+            _id:this.documentId,
+            data:this.data
+        }
+    }
+    static fromJSON(jsonObj){
+        
+        const createData = foundry.utils.mergeObject(jsonObj.data,{
+            id:jsonObj._id
+        });
+        return FICFolder.create()
     }
     getSaveData(){
         let saveData = this.data;
@@ -433,86 +445,51 @@ class FICFolderEditDialog extends FormApplication{
         await FICManager.updateFolderWithinCompendium(folderObj,this.object.packCode,this.object.tempEntityId);      
     }
 }
-//Cache
+//Cache - TODO Refactor
 export class FICCache{
-    static async cacheFolderStructure(packCode,groupedFolders,groupedFolderMetadata){
-        if (!game.user.isGM) return;
-        let cache = {
+    static async cacheFolderStructure(packCode,folders){
+        if (!game.user.isGM || folders == null) return;
+        const cache = {
             pack:packCode,
-            groupedFolders:groupedFolders,
-            groupedFolderMetadata:groupedFolderMetadata
+            folders:folders.map(f => f.toJSON())
         }
         await game.settings.set(mod,'cached-folder',cache);
         console.log(modName+' | Cached folder structure');
         // Now store folder structures in game.customFolders.fic.folders
-        await FICFolderAPI.loadFolders(packCode);
+        //await FICFolderAPI.loadFolders(packCode);
 
     }
-    static async loadCachedFolderStructure(packCode){
+    static loadCachedFolderStructure(packCode){
         let cache = game.settings.get(mod,'cached-folder');
         if (Object.keys(cache).length === 0){
             console.log(modName+' | No cached folder structure available');
             return null;
         }
-        if (cache.pack === packCode)
-            return cache.groupedFolders;
-        return null;
+        if (cache.pack === packCode){
+            let allFolders = cache.folders.map(f => FICFolder.create(f.data,f._id,packCode))
+            let folderCollection = new FICFolderCollection([])
+            for (const folder of allFolders){
+                folderCollection.set(folder.id,folder);
+            }
+            // game.customFolders.fic.folders = folderCollection
+            return folderCollection
+        }
     }
-    static async moveEntryInCache(packCode,entryId,folderId){
-        let cache = game.settings.get(mod,'cached-folder');
-        if (Object.keys(cache).length === 0 || cache.pack != packCode){
-            // shouldnt be reachable....
-            return;
+    static async updateCache(packCode,updateData){
+        let cache = game.settings.get(mod,'cached-folder')
+        if (Object.keys(cache).length === 0){
+            console.log(modName+' | No cached folder structure available');
+            return null;
         }
-        let x = await game.packs.get(packCode).getDocument(entryId);
-        let fromFolderMetadata = null
-        if (x.data.flags.cf != null && x.data.flags.cf.id != null){
-            fromFolderMetadata = cache.groupedFolderMetadata[x.data.flags.cf.id]
+        if (cache.pack === packCode){
+            for (const update of updateData){
+                let cacheFolder = cache.folders.find( c => c._id === (update._id ?? update.id))
+                if (cacheFolder){
+                    cacheFolder.data = foundry.utils.mergeObject(cacheFolder.data,update.flags.cf)
+                }
+            }
+            await game.settings.set(mod,'cached-folder',cache);
         }
-        let toFolderMetadata = cache.groupedFolderMetadata[folderId]
-        
-        //if (folderId === id){
-            // Add entry to this folder
-            cache.groupedFolders[toFolderMetadata.depth][toFolderMetadata.index].children.push(entryId);
-            console.debug(modName+' | Adding '+entryId+' to folder ['+cache.groupedFolders[toFolderMetadata.depth][toFolderMetadata.index].name+']');
-        
-        if (fromFolderMetadata != null 
-            && cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].children.includes(entryId)){
-            let index = cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].children.indexOf(entryId);
-            cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].children.splice(index,1);
-
-            console.debug(modName+' | Removing '+entryId+' from folder ['+ cache.groupedFolders[fromFolderMetadata.depth][fromFolderMetadata.index].name+']');
-        }
-        
-        await game.settings.set(mod,'cached-folder',cache);
-        console.log(modName+' | Updated cached folder structure');
-    }
-    //TODO when i get folder structure improved
-    // currently i have to update every single entity in the folder
-    // ideally just give an id and update TEMP_ENTITY with folderdata.
-    static async updateFolderInCache(packCode,folderObj){
-        let cache = game.settings.get(mod,'cached-folder');
-        if (Object.keys(cache).length === 0 || cache.pack != packCode){
-            return;
-        }
-        let folderMetadata = cache.groupedFolderMetadata[folderObj.id]
-        let index = cache.groupedFolders[folderMetadata.depth].findIndex(x => x.id === folderObj.id)
-        cache.groupedFolders[folderMetadata.depth][index].color = folderObj.color
-        cache.groupedFolders[folderMetadata.depth][index].name = game.i18n.has(folderObj.name) ? game.i18n.localize(folderObj.name) : folderObj.name
-        cache.groupedFolders[folderMetadata.depth][index].icon = folderObj.icon
-        cache.groupedFolders[folderMetadata.depth][index].fontColor = folderObj.fontColor
-        cache.groupedFolders[folderMetadata.depth] = cache.groupedFolders[folderMetadata.depth]
-        // Updating index for ALL folders in cache (important if folders swap order after renaming)
-        cache.groupedFolders[folderMetadata.depth].map((x,i) => foundry.utils.mergeObject(x,{index:i}))
-        let i = 0;
-        for (let f of cache.groupedFolders[folderMetadata.depth]){
-            cache.groupedFolderMetadata[f.id].index = i++
-        }
-        //cache.groupedFolderMetadata[folderObj.id].index = cache.groupedFolders[folderMetadata.depth].findIndex(f => f.id === folderObj.id)
-        console.debug(modName+' | Updating folder in cache')
-    
-        await game.settings.set(mod,'cached-folder',cache);
-        console.log(modName+' | Updated cached folder structure');
     }
     static async resetCache(){
         if (!game.user.isGM) return;
@@ -716,7 +693,17 @@ export class FICManager{
             if (!e.collection.index.contents.some(x => x.name === game.CF.TEMP_ENTITY_NAME)) return;
         
             FICUtils.removeStaleOpenFolderSettings(packCode);
-            let allFolderData = await FICFolderAPI.loadFolders(packCode);
+            // TODO Refactor caching system
+            let allFolderData = FICCache.loadCachedFolderStructure(packCode);
+            if (allFolderData){
+                console.log(allFolderData)
+                game.customFolders.fic = {
+                    folders : allFolderData
+                }
+            }else {
+                allFolderData = await FICFolderAPI.loadFolders(packCode);
+                FICCache.cacheFolderStructure(packCode,allFolderData);
+            }
             if (allFolderData === null){
                 return;
             }
@@ -730,7 +717,7 @@ export class FICManager{
                     entity.classList.add('hidden');
                 }
             }
-            if (game.user.isGM && !game.packs.get(packCode).locked){                
+            if (game.user.isGM && !e.locked){                
                 for (let entity of compendiumWindow.querySelectorAll('.directory-item')) {
                     entity.addEventListener('drop',async function(event){
                         const data = TextEditor.getDragEventData(event);
@@ -748,7 +735,7 @@ export class FICManager{
                                 console.log(modName+' | Moving document '+movingDocumentId+' above target document ' + targetDocumentId);
                                 // TODO Implement FICManager.swapDocuments(movingItem,targetItem,folderId)
                                 const folderId = this.getAttribute('data-folder-doc-id');
-                                
+                                let packCode = this.closest('.directory.compendium').getAttribute('data-pack');
                                 let pack = game.packs.get(packCode);
                                 const folder = await pack.getDocument(folderId);
                                 
@@ -765,6 +752,7 @@ export class FICManager{
                                         }
                                     }
                                 };
+                                await FICCache.updateCache(pack.collection,[folderData])
                                 await folder.update(folderData,{pack:pack.collection});
                             }else{
                                 console.debug(modName+' | Target document not in same folder, falling back to moving to new folder');
@@ -1360,7 +1348,7 @@ export class FICManager{
         folder.classList.add('compendium-folder','folder');
         folder.setAttribute('data-folder-id',folderData.id);
         folder.setAttribute('data-temp-entity-id',folderData.documentId);
-        folder.setAttribute('draggable',!game.packs.get(packCode).locked);
+        folder.setAttribute('draggable',true);
         let header = document.createElement('header');
         header.classList.add('compendium-folder-header','flexrow')
         let headerTitle = document.createElement('h3');
@@ -1484,6 +1472,7 @@ export class FICManager{
             for (let child of childElements){
                 if (child != null){
                     child.setAttribute('data-folder-doc-id',folderData.documentId);
+                    child.setAttribute('data-folder-id',folderData.id);
                     packList.appendChild(child);
                 }
             }
@@ -1611,10 +1600,12 @@ export class FICManager{
     static async updateFolderWithinCompendium(folderObj,packCode,tempEntityId){
         const folders = await FICFolderAPI.getFolders(packCode);
         const folder = folders.get(folderObj.id);
+        await FICCache.updateCache(packCode,[{id:folder.documentId,flags:{cf:folderObj}}])
         await FICUtils.packUpdateEntity(folder.pack,{id:folder.documentId,flags:{cf:folderObj}});
     }
     static async createNewFolderWithinCompendium(folderObj,packCode,parentId){
         const folders = await FICFolderAPI.getFolders(packCode);
+        await FICCache.resetCache();
         if (parentId)
             await FICFolderAPI.createFolderWithParent(folders.get(parentId),folderObj)
         else
@@ -1686,15 +1677,15 @@ export class FICFolderAPI{
         }
         if (updates.length > 0){
             if (pack.locked){
-                ui.notifications.notify('Compendium needs migrating, unlock and reopen to perform migration')
+                //ui.notifications.notify('Compendium needs migrating, unlock and reopen to perform migration')
                 return game.customFolders.fic.folders;
             }
             try{
                 //Shut down pack and wait for updates to occur
                 //await pack.apps[0].close();
-                console.debug(modName+' | Migrating compendium to new data structure')
+                console.debug(modName+' | Updating folders with new children/contents')
                 await FICUtils.packUpdateEntities(pack,updates);
-                console.debug(modName+' | Migration complete!');
+                console.debug(modName+' | Updating complete!');
                 //document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
                 //pack.apps[0].render(true);
             } catch (error){
@@ -1818,6 +1809,7 @@ export class FICFolderAPI{
             // destFolder.children = destFolderChildren.concat(folderToMove.id);
             // updates.push(destFolder.getSaveData())
             if (save){
+                await FICCache.resetCache()
                 await FICUtils.packUpdateEntities(folderToMove.pack,updates);
             }else{
                 return updates;
@@ -1836,8 +1828,10 @@ export class FICFolderAPI{
     }
     static async moveFolderToRoot(folder,save=true){
         const updates = await this.recursivelyUpdateFolderPath(folder,[]);
+        
         if (save) {
             await FICUtils.packUpdateEntities(folder.pack,updates);
+            await FICCache.updateCache(folder.pack.collection,updates);
         } else {
             return updates;
         }
@@ -1866,6 +1860,7 @@ export class FICFolderAPI{
             }
         }
         updates.push(documentUpdate)
+        await FICCache.updateCache(packCode,updates);
         await FICUtils.packUpdateEntities(game.packs.get(packCode),updates);
     }
     static async swapFolders(folder1,folder2){
@@ -1876,6 +1871,7 @@ export class FICFolderAPI{
             tempChildren.splice(tempChildren.indexOf(folder1.id), 1);
             tempChildren.splice(tempChildren.indexOf(folder2.id), 0, folder1.id)
             parentFolder.children = tempChildren;
+            await FICCache.updateCache(folder1.pack.collection,[parentFolder.getSaveData()])
             await parentFolder.saveNoRefresh();
         }
     }
@@ -1927,6 +1923,7 @@ export class FICFolderAPI{
                 }
             }
         }
+        FICCache.resetCache();
         if (updateData.length > 0){
             await FICUtils.packUpdateEntities(pack,updateData);
         }
