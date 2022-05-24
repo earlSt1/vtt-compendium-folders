@@ -287,7 +287,7 @@ export class FICFolder {
         if (data?.folderPath?.length > 0){
             data.parent = data.folderPath[data.folderPath.length-1];
         }
-        data.contents = contents;
+        data.contents = contents ?? [];
         return FICFolder.create(data,folder.id,packCode);
     }
     async removeDocument(documentId,save=true){
@@ -443,7 +443,7 @@ export class FICCache{
         await game.settings.set(mod,'cached-folder',cache);
         console.log(modName+' | Cached folder structure');
         // Now store folder structures in game.customFolders.fic.folders
-        FICFolderAPI.loadFolders(packCode);
+        await FICFolderAPI.loadFolders(packCode);
 
     }
     static async loadCachedFolderStructure(packCode){
@@ -799,7 +799,7 @@ export class FICManager{
                     })
                 
                 }
-                compendiumWindow.querySelector('.directory > ol.directory-list').addEventListener('drop',FICUtils.handleMoveToRoot);
+                compendiumWindow.querySelector('.compendium.directory').addEventListener('drop',FICUtils.handleMoveToRoot);
             }
         })
     }
@@ -1652,23 +1652,23 @@ export class FICFolderAPI{
 
         const pack = await game.packs.get(packCode);
         const index = await pack.getIndex({ fields: indexFields });
-        const folderIds = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME).map((i) => i._id);
-        const folderDocuments = await pack.getDocuments({_id: {$in: folderIds}});
+        //const folderIds = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME).map((i) => i._id);
+        const folderIndexes = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME);
+        //const folderDocuments = await pack.getDocuments({_id: {$in: folderIds}});
         const entries = index.filter(x => x.name != game.CF.TEMP_ENTITY_NAME);
 
         const updates = []
-        for (let folder of folderDocuments){
-            
-            let contents = folder.data.flags.cf.contents;
-            let allContents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
+        for (let folder of folderIndexes){
+            let contents = folder.flags.cf.contents;
+            let allContents = entries.filter(x => x.flags?.cf?.id === folder.flags.cf.id).map(e => e._id);
             if (!FICUtils.arrayContentsEqual(contents,allContents)){
-                if (folder.version === undefined){
-                    contents = entries.filter(x => x.flags?.cf?.id === folder.data.flags.cf.id).map(e => e._id);
-                    let folderObj = FICFolder.import(packCode,contents,folder);
+                //if (folder?.data?.flags?.cf.version === undefined){
+                    contents = entries.filter(x => x.flags?.cf?.id === folder.flags.cf.id).map(e => e._id);
+                    let folderObj = FICFolder.import(packCode,contents,{id:folder._id,data:folder});
                     updates.push(folderObj.getSaveData());
-                }
+                //}
             }else{
-                FICFolder.import(packCode,contents,folder);
+                FICFolder.import(packCode,contents,{id:folder._id,data:folder});
             }
             
         }
@@ -1676,15 +1676,25 @@ export class FICFolderAPI{
             let children = folder.data.children;
             let allChildren =  game.customFolders.fic.folders.contents.filter(f => f.data.parent === folder.id).map(f => f.id);
             if (!FICUtils.arrayContentsEqual(children,allChildren)){
-                if (folder.version === undefined){
+                //if (folder.version === undefined){
                     folder.children = allChildren;
                     updates.push(folder.getSaveData());
-                }
+                //}
             }
         }
         if (updates.length > 0){
+            if (pack.locked){
+                ui.notifications.notify('Compendium needs migrating, unlock and reopen to perform migration')
+                return game.customFolders.fic.folders;
+            }
             try{
+                //Shut down pack and wait for updates to occur
+                //await pack.apps[0].close();
+                console.debug(modName+' | Migrating compendium to new data structure')
                 await FICUtils.packUpdateEntities(pack,updates);
+                console.debug(modName+' | Migration complete!');
+                //document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
+                //pack.apps[0].render(true);
             } catch (error){
                 console.debug(modName+' | Error from updating pack entities, most likely an entry was deleted');
             }
@@ -1802,8 +1812,9 @@ export class FICFolderAPI{
                 oldParent.children = oldParentChildren;
                 updates.push(oldParent.getSaveData());
             }
-            let destFolderChildren = [...destFolder.children];
-            destFolder.children = destFolderChildren.concat(folderToMove.id);
+            // let destFolderChildren = [...destFolder.children];
+            // destFolder.children = destFolderChildren.concat(folderToMove.id);
+            // updates.push(destFolder.getSaveData())
             if (save){
                 await FICUtils.packUpdateEntities(folderToMove.pack,updates);
             }else{
