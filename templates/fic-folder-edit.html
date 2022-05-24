@@ -27,5 +27,12 @@
             <input class="image" type="text" name="icon" placeholder="default folder" value="{{this.icon}}"/>
         </div>
     </div>
+    <div class="form-group">
+        <label>{{localize "FOLDER.SortMode"}}</label>
+        <div class="form-fields">
+            <label class="checkbox"><input type="radio" name="sorting" value="a" {{# if this.sorting }}checked{{/if}}> Alphabetical</label>
+            <label class="checkbox"><input type="radio" name="sorting" value="m" {{# unless this.sorting }}checked{{/unless}}> Manual</label>
+        </div>
+    </div>
     <button type="submit"><i class="fas fa-check"></i>{{localize "FOLDER.Update"}}</button>
 </form>
