@@ -359,7 +359,7 @@ export class FICFolder {
 
     // GETTERS AND SETTERS
     get parent(){
-        return game.customFolders.fic.folders.contents.find(x => x.id === this.data.parent)
+        return game.customFolders.fic.folders.contents.find(x => x.id === this.data.parent ?? this.data.folderPath[this.data.folderPath.length-1])
     }
     get id(){return this.data.id}
     get _id(){return this.data.id}
@@ -1657,29 +1657,27 @@ export class FICFolderAPI{
 
         const updates = []
         for (let folder of folderIndexes){
+            let needsUpdate = false;
+
             let contents = folder.flags.cf.contents;
             let allContents = entries.filter(x => x.flags?.cf?.id === folder.flags.cf.id).map(e => e._id);
             if (!FICUtils.arrayContentsEqual(contents,allContents)){
-                //if (folder?.data?.flags?.cf.version === undefined){
-                    contents = entries.filter(x => x.flags?.cf?.id === folder.flags.cf.id).map(e => e._id);
-                    let folderObj = FICFolder.import(packCode,contents,{id:folder._id,data:folder});
-                    updates.push(folderObj.getSaveData());
-                //}
-            }else{
-                FICFolder.import(packCode,contents,{id:folder._id,data:folder});
+                needsUpdate = true;
+                contents = entries.filter(x => x.flags?.cf?.id === folder.flags.cf.id).map(e => e._id);
             }
+
+            let children = folder.flags.cf.children;
+            let allChildren =  folderIndexes.filter(f => 
+                (f.flags.cf.folderPath[f.flags.cf.folderPath.length-1]) === folder.flags.cf.id)
+                .map(f => f.flags.cf.id);
+            if (!FICUtils.arrayContentsEqual(children,allChildren)){
+                folder.flags.cf.children = allChildren;
+            }
+            let folderObj = FICFolder.import(packCode,contents,{id:folder._id,data:folder});
+            if (needsUpdate) updates.push(folderObj.getSaveData());
             
         }
-        for (let folder of game.customFolders.fic.folders){
-            let children = folder.data.children;
-            let allChildren =  game.customFolders.fic.folders.contents.filter(f => f.data.parent === folder.id).map(f => f.id);
-            if (!FICUtils.arrayContentsEqual(children,allChildren)){
-                //if (folder.version === undefined){
-                    folder.children = allChildren;
-                    updates.push(folder.getSaveData());
-                //}
-            }
-        }
+       
         if (updates.length > 0){
             if (pack.locked){
                 //ui.notifications.notify('Compendium needs migrating, unlock and reopen to perform migration')
@@ -1801,6 +1799,7 @@ export class FICFolderAPI{
             // Set path to newPath (cut folderPath at folderToMove, set to destFolder.folderPath + remaining path)
             let newPath = destFolder.folderPath;
             newPath.push(destFolder.id);
+            
             let oldParent = folderToMove.parent;
             const updates = await this.recursivelyUpdateFolderPath(folderToMove,newPath);
             
@@ -1810,9 +1809,7 @@ export class FICFolderAPI{
                 oldParent.children = oldParentChildren;
                 updates.push(oldParent.getSaveData());
             }
-            // let destFolderChildren = [...destFolder.children];
-            // destFolder.children = destFolderChildren.concat(folderToMove.id);
-            // updates.push(destFolder.getSaveData())
+            
             if (save){
                 await FICCache.resetCache()
                 await FICUtils.packUpdateEntities(folderToMove.pack,updates);
