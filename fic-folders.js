@@ -322,9 +322,6 @@ export class FICFolder {
     }
     /** @override */
     static create(data={},documentId,packCode){
-        //TODO
-        //- Folder path is using folderIds
-        //- Swap this in the import function to make things quicker
         let newFolder = new FICFolder(data);
         newFolder.documentId = documentId;
         newFolder.packCode = packCode;
@@ -359,11 +356,13 @@ export class FICFolder {
 
     // GETTERS AND SETTERS
     get parent(){
-        return game.customFolders.fic.folders.contents.find(x => x.id === this.data.parent ?? this.data.folderPath[this.data.folderPath.length-1])
+        return game.customFolders.fic.folders.contents.find(x => x.id === this.parentId)
+    }
+    get parentId(){
+        return this.data.parent ?? this.data.folderPath[this.data.folderPath.length-1]
     }
     get id(){return this.data.id}
     get _id(){return this.data.id}
-    //get documentId(){return this.documentId}
     get children(){
         return this.data.children;
     }
@@ -740,7 +739,7 @@ export class FICManager{
                 }
             }else {
                 allFolderData = await FICFolderAPI.loadFolders(packCode);
-                FICCache.cacheFolderStructure(packCode,allFolderData);
+                await FICCache.cacheFolderStructure(packCode,allFolderData);
             }
             if (allFolderData === null){
                 return;
@@ -1488,7 +1487,7 @@ export class FICManager{
             rootFolders = FICUtils.alphaSortFolders(rootFolders,'name');
         }
         for (const folder of rootFolders){
-            await FICManager.createFolderWithinCompendium(compendiumWindow,folder,folder.data.parent,packCode,openFolders[packCode],sorting)
+            FICManager.createFolderWithinCompendium(compendiumWindow,folder,folder.data.parent ?? folder.parentId,packCode,openFolders[packCode],sorting)
             if (folder.children.length > 0){
                 let children = folder.childrenObjects
                 if (folder.sorting === 'a'){
@@ -1667,10 +1666,12 @@ export class FICFolderAPI{
             }
 
             let children = folder.flags.cf.children;
+            
             let allChildren =  folderIndexes.filter(f => 
                 (f.flags.cf.folderPath[f.flags.cf.folderPath.length-1]) === folder.flags.cf.id)
                 .map(f => f.flags.cf.id);
             if (!FICUtils.arrayContentsEqual(children,allChildren)){
+                needsUpdate = true;
                 folder.flags.cf.children = allChildren;
             }
             let folderObj = FICFolder.import(packCode,contents,{id:folder._id,data:folder});
@@ -1684,13 +1685,9 @@ export class FICFolderAPI{
                 return game.customFolders.fic.folders;
             }
             try{
-                //Shut down pack and wait for updates to occur
-                //await pack.apps[0].close();
                 console.debug(modName+' | Updating folders with new children/contents')
                 await FICUtils.packUpdateEntities(pack,updates);
                 console.debug(modName+' | Updating complete!');
-                //document.querySelector('.compendium-pack[data-pack=\''+packCode+'\']').click();
-                //pack.apps[0].render(true);
             } catch (error){
                 console.debug(modName+' | Error from updating pack entities, most likely an entry was deleted');
             }
