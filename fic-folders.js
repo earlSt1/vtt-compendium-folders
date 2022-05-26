@@ -149,64 +149,11 @@ export class FICUtils{
         const movingDocumentId = data.id;
         if (movingDocumentId) {
             console.log(modName+' | Moving document '+movingDocumentId+' to new folder.');
-            //let entryInFolderElement = this.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item')
-
             let packCode = targetFolderElement.closest('.directory.compendium').getAttribute('data-pack');
-            let p = game.packs.get(packCode);
-
-            const newFolderDocId = targetFolderElement.getAttribute('data-temp-entity-id');
             const newFolderId = targetFolderElement.getAttribute('data-folder-id');
-            const oldFolderElement = targetFolderElement.closest('ol.directory-list').querySelector('.directory-item[data-document-id=\''+movingDocumentId+'\']')
-            const oldFolderDocId = oldFolderElement.getAttribute('data-folder-doc-id');
-            const oldFolderId = oldFolderElement.getAttribute('data-folder-id');
-            if (newFolderDocId == oldFolderDocId)
-                return;
-            
-
-
-            const newFolder = await p.getDocument(newFolderDocId);
-            let newFolderContents = newFolder.data.flags.cf.contents;
-            if (!newFolderContents.includes(movingDocumentId))
-                newFolderContents.push(movingDocumentId)
-            const newFolderData = {
-                _id:newFolderDocId,
-                flags:{
-                    cf:{
-                        contents:newFolderContents
-                    }
-                }
-            };
-            const updates = [newFolderData]
-            let oldFolderData = null;
-            
-            if (oldFolderDocId){
-                const oldFolder = await p.getDocument(oldFolderDocId);
-                let oldFolderContents = oldFolder.data.flags.cf.contents;
-                oldFolderContents = oldFolderContents.filter(d => d != movingDocumentId);
-                oldFolderData = {
-                    _id:oldFolderDocId,
-                    flags:{
-                        cf:{
-                            contents:oldFolderContents
-                        }
-                    }
-                };
-                
-                updates.push(oldFolderData)
-            }
-            const cacheUpdates = [...updates]
-            await FICCache.updateCache(packCode,cacheUpdates);
-            data = {
-                _id:movingDocumentId,
-                flags:{
-                    cf:{
-                        id:newFolderId
-                    }
-                }
-            }
-            updates.push(data);
-            //await FICCache.moveEntryInCache(packCode,movingDocumentId,this.getAttribute('data-folder-id'));
-            await newFolder.constructor.updateDocuments(updates,{pack:p.collection});
+            const folders = await FICFolderAPI.getFolders(packCode)
+            const newFICFolder = folders.get(newFolderId);
+            FICFolderAPI.moveDocumentToFolder(movingDocumentId,newFICFolder);
         }
     }
     static async handleMoveFolderToFolder(data,targetFolderElement){
@@ -217,7 +164,7 @@ export class FICUtils{
         let targetFolder = game.customFolders.fic.folders.get(targetFolderId);
         if (targetFolderElement.hasAttribute('collapsed')){
             // IF FOLDER CLOSED and NOT at root - Move before folder
-            await FICFolderAPI.swapFolders(movingFolder,targetFolder);
+            await FICFolderAPI.insertFolder(movingFolder,targetFolder);
         }else{
             await FICFolderAPI.moveFolder(movingFolder,targetFolder);
         }
@@ -236,27 +183,11 @@ export class FICUtils{
             if (isInSameFolder){
                 event.stopPropagation();
                 console.log(modName+' | Moving document '+movingDocumentId+' above target document ' + targetDocumentId);
-                // TODO Implement FICManager.swapDocuments(movingItem,targetItem,folderId)
-                const folderId = element.getAttribute('data-folder-doc-id');
+                const folderId = element.getAttribute('data-folder-id');
                 let packCode = element.closest('.directory.compendium').getAttribute('data-pack');
-                let pack = game.packs.get(packCode);
-                const folder = await pack.getDocument(folderId);
-                
-                //Insert movingDocument before target document
-                let tempContents = [...folder.data.flags.cf.contents];
-            
-                tempContents.splice(tempContents.indexOf(movingDocumentId), 1);
-                tempContents.splice(tempContents.indexOf(targetDocumentId), 0, movingDocumentId)
-                const folderData = {
-                    _id:folderId,
-                    flags:{
-                        cf:{
-                            contents:tempContents
-                        }
-                    }
-                };
-                await FICCache.updateCache(pack.collection,[folderData])
-                await folder.update(folderData,{pack:pack.collection});
+                const folders = await FICFolderAPI.getFolders(packCode);
+                let folder = folders.get(folderId);
+                await FICFolderAPI.insertDocument(movingDocumentId,targetDocumentId,folder);
             }else{
                 console.debug(modName+' | Target document not in same folder, falling back to moving to new folder');
             }
@@ -310,12 +241,7 @@ export class FICFolder {
         };
     }
     async save(render=false){
-        this.pack.apps[0].close().then(async () => {
-            await FICUtils.packUpdateEntity(this.pack,this.getSaveData())
-            if(render)
-                this.pack.apps[0].render(true)
-        })
-        
+        await FICUtils.packUpdateEntity(this.pack,this.getSaveData())        
     }
     async saveNoRefresh(){
         await FICUtils.packUpdateEntity(this.pack,this.getSaveData())
@@ -1618,17 +1544,7 @@ export class FICManager{
 }
 export class FICFolderAPI{
     //used for external operations, exposed to public
-    /*
-    * - getFolders(pack)
-    * - createFolderAtRoot()
-    * - createFolderUnderFolder(folderObj)
-    * - moveDocumentToFolder(folderObj)
-    * - 
-    * - 
-    * 
-    * 
-    * 
-    */
+    // see API.md in module folder for more information
    
    
     /*
@@ -1743,11 +1659,15 @@ export class FICFolderAPI{
             icon:null
         }
         const tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,newFolderData)
-    
+        parent.children.push(data.id)
+        data.folderPath = parent.folderPath.concat([parent.id])
+        const parentData = parent.getSaveData();
+        await FICUtils.packUpdateEntity(pack,parentData)
         const result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
         return FICFolder.import(parent.packCode,[],result);
     }
     static async createFolderWithParent(parent,data={}){
+        if (data.id) data.id = FICUtils.generateRandomFolderName('temp_')
         const pack = parent.pack;
         const tempEntityData = FICUtils.getTempEntityData(pack.documentClass.documentName,data)
         parent.children.push(data.id)
@@ -1757,13 +1677,57 @@ export class FICFolderAPI{
         const result = await pack.documentClass.create(tempEntityData,{pack:pack.collection});
         return FICFolder.import(parent.packCode,data.contents,result);
     }
-    static async moveDocumentToFolder(packCode,document,folder){
-        const folders = await this.getFolders(packCode);
-        let oldParentId = document.data?.flags?.cf?.id;
-        if (oldParentId){
-            await folders.get(oldParentId).removeDocument(document.id);
+    static async moveDocumentToFolder(packCode,documentId,folder){
+        return await (this.moveDocumentToFolder(documentId,folder))
+    }
+    static async moveDocumentToFolder(documentId,folder,save=true){
+        const folders = await this.getFolders(folder.packCode);
+        const oldFolder = folders.find(f => f.contents.includes(documentId))
+        if (folder.id === oldFolder?.id)
+            return;
+        let newFolderContents = folder.contents;
+        if (!newFolderContents.includes(documentId))
+            newFolderContents.push(documentId)
+        const newFolderData = {
+            _id:folder.documentId,
+            flags:{
+                cf:{
+                    contents:newFolderContents
+                }
+            }
+        };
+        const updates = [newFolderData]
+        let oldFolderData = null;
+        
+        if (oldFolder){
+            let oldFolderContents = oldFolder.contents;
+            oldFolderContents = oldFolderContents.filter(d => d != documentId);
+            oldFolderData = {
+                _id:oldFolder.documentId,
+                flags:{
+                    cf:{
+                        contents:oldFolderContents
+                    }
+                }
+            };
+            
+            updates.push(oldFolderData)
         }
-        await folder.addDocument(document.id);
+        
+        const data = {
+            _id:documentId,
+            flags:{
+                cf:{
+                    id:folder.id
+                }
+            }
+        }
+        updates.push(data);
+        if (save){
+            this.applyUpdates(folder.packCode,updates)
+        } else {
+            return updates;
+        }
     }
     static async renameFolder(folder,newName){
         folder.name = newName;
@@ -1831,13 +1795,12 @@ export class FICFolderAPI{
             update.flags.cf.parent = null
         }
         if (save) {
-            await FICCache.updateCache(folder.pack.collection,updates);
-            await FICUtils.packUpdateEntities(folder.pack,updates);
+            await this.applyUpdates(folder.pack.collection,updates);
         } else {
             return updates;
         }
     }
-    static async moveDocumentToRoot(packCode,documentId,folderId=null){
+    static async moveDocumentToRoot(packCode,documentId,folderId=null,save=true){
         const folders = await this.getFolders(packCode);
         let documentFolder;
         const updates = [];
@@ -1864,10 +1827,29 @@ export class FICFolderAPI{
             }
         }
         updates.push(documentUpdate)
-        await FICCache.updateCache(packCode,updates);
-        await FICUtils.packUpdateEntities(game.packs.get(packCode),updates);
+        if (save){
+            await this.applyUpdates(packCode,updates);
+        }else{
+            return updates;
+        }
     }
-    static async swapFolders(folder1,folder2){
+    static async insertDocument(srcDocument,destDocument,folder) {
+        //Insert movingDocument before target document
+        let tempContents = [...folder.contents];
+    
+        tempContents.splice(tempContents.indexOf(srcDocument), 1);
+        tempContents.splice(tempContents.indexOf(destDocument), 0, srcDocument)
+        const folderData = {
+            _id:folder.documentId,
+            flags:{
+                cf:{
+                    contents:tempContents
+                }
+            }
+        };
+        await this.applyUpdates(folder.packCode,[folderData]);
+    }
+    static async insertFolder(folder1,folder2){
         if (folder1.parent && folder2.parent && (folder1.parent.id == folder2.parent.id)){
             let parentFolder = folder1.parent;
             //Insert movingDocument before target document
@@ -1879,7 +1861,7 @@ export class FICFolderAPI{
             await parentFolder.saveNoRefresh();
         }
     }
-    static async deleteFolder(folder,deleteAll){
+    static async deleteFolder(folder,deleteAll=false){
         const pack = folder.pack;
         let deleteData = []
         const updateData = []
@@ -1935,5 +1917,9 @@ export class FICFolderAPI{
             await FICUtils.packDeleteEntities(pack,deleteData);
         }
         await this.refreshPack(pack);
+    }
+    static async applyUpdates(packCode,updates){
+        await FICCache.updateCache(packCode,updates);
+        await FICUtils.packUpdateEntities(game.packs.get(packCode),updates);
     }
 }
