@@ -197,11 +197,9 @@ export class FICUtils{
         const data = TextEditor.getDragEventData(event);
         if (FICUtils.canDragDrop(event,data)){
             if (data.type === 'FICFolder'){
-                console.log(modName+ ' | Moving folder '+data.id+' to root')
                 //Move folder to root
                 await FICFolderAPI.moveFolderToRoot(game.customFolders.fic.folders.get(data.id))
             }else{
-                console.log(modName+ ' | Moving document '+data.id+' to root')
                 //Move document to root
                 await FICFolderAPI.moveDocumentToRoot(data.pack,data.id);
             }
@@ -942,7 +940,7 @@ export class FICManager{
     
         // Display it as a dialog prompt
         return Dialog.prompt({
-            title: game.i18n.localize("FOLDER.ExportTitle") + `: ${folder.macroList ? folder.name : folder.data.name}`,
+            title: game.i18n.localize("FOLDER.ExportTitle") + `: ${folder.name}`,
             content: html,
             label: game.i18n.localize("FOLDER.ExportTitle"),
             callback: async function(html) {
@@ -952,7 +950,7 @@ export class FICManager{
                 ui.notifications.notify(game.i18n.format('CF.exportFolderNotificationStart',{pack:form.pack.value}));
                 let index = await pack.getIndex();
                 await pack.apps[0].close();
-               
+                await FICCache.resetCache();
                 await FICFolderAPI.loadFolders(form.pack.value);
                 let folderPath = await FICManager.createParentFoldersWithinCompendium(folder,pack);
                 await FICFolderAPI.loadFolders(form.pack.value);
@@ -1413,6 +1411,7 @@ export class FICManager{
             rootFolders = FICUtils.alphaSortFolders(rootFolders,'name');
         }
         for (const folder of rootFolders){
+            if (!folder) return;
             FICManager.createFolderWithinCompendium(compendiumWindow,folder,folder.data.parent ?? folder.parentId,packCode,openFolders[packCode],sorting)
             if (folder.children.length > 0){
                 let children = folder.childrenObjects
@@ -1582,9 +1581,8 @@ export class FICFolderAPI{
             }
 
             let children = folder.flags.cf.children;
-            
             let allChildren =  folderIndexes.filter(f => 
-                (f.flags.cf.folderPath[f.flags.cf.folderPath.length-1]) === folder.flags.cf.id)
+                (f.flags.cf.folderPath != null && f.flags.cf.folderPath[f.flags.cf.folderPath.length-1]) === folder.flags.cf.id)
                 .map(f => f.flags.cf.id);
             if (!FICUtils.arrayContentsEqual(children,allChildren)){
                 needsUpdate = true;
@@ -1790,10 +1788,18 @@ export class FICFolderAPI{
         return [currentFolder.getSaveData()];
     }
     static async moveFolderToRoot(folder,save=true){
+        if (!folder.parent && (folder.folderPath.length === 0)) return;
+        let parentFolder = folder.parent;
+        let tempChildren = [...parentFolder.children]
+        tempChildren.splice(tempChildren.indexOf(folder.id),1);
+        parentFolder.children = tempChildren;
+        console.log(modName+ ' | Moving folder '+folder.id+' to root')
         const updates = await this.recursivelyUpdateFolderPath(folder,[]);
         for (let update of updates){
             update.flags.cf.parent = null
         }
+
+        updates.push(parentFolder.getSaveData());
         if (save) {
             await this.applyUpdates(folder.pack.collection,updates);
         } else {
@@ -1801,6 +1807,7 @@ export class FICFolderAPI{
         }
     }
     static async moveDocumentToRoot(packCode,documentId,folderId=null,save=true){
+        console.log(modName+ ' | Moving document '+documentId+' to root')
         const folders = await this.getFolders(packCode);
         let documentFolder;
         const updates = [];

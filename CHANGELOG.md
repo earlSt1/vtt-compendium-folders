@@ -1,3 +1,20 @@
+# 2.4.4 (2022-05-26)
+- Overhauled folders in compendiums, a lot of refactoring and tidying up the module.
+- Folders now retain sort mode and sort order when importing/exporting. 
+- New option added to the create/edit dialog to chose between Alphabetical or Manual sort
+- Folders in compendiums now support drag/drop. Behaviour is mostly the same as core Folders.
+    - Dragging a folder onto an open folder will move the folder
+    - Dragging a folder onto a closed folder will move the folder above the targetted folder (provided they are in the same folder)
+    - Dragging a document onto a folder will move the document into the folder (like before)
+    - Dragging a document onto another document in the same folder will move the document above the targetted document (provided they are in the same folder)
+    - Dragging a document/folder onto the root directory (which extends over the search bar) will move the document/folder to the root directory.
+    - Finally, drag/drop highlights are enabled
+- Added API documentation (see README for details)
+- Fixed issue where editing a document in the world would sometimes generate an error in the console.
+- Fixed issue where keepId option would not work on Import process
+- Fixed issue where selecting the Delete All option on a folder in a compendium would not remove the selected folder
+- Updating pt-BR translations (thanks MagelaCE!)
+- Fixed name of swedish language in module.json
 # 2.4.3 (2022-02-26)
 - Sorting mode for folders is now saved (thanks @blair)
 - Now supports using getFlags provided by foundry API
