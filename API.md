@@ -123,7 +123,7 @@ await folderAPI.moveFolderToRoot(dogFolder);
 ```
 ### `deleteFolder(folder,deleteAll=false)`
 Deletes `folder` from the compendium. Depending on the value of `deleteAll` 2 things can occur:
-- With `deleteAll` set to `true`, `folder`, and **all child folders and documents will be removed from the compendium**
+- With `deleteAll` set to `true`, `folder`, **all child folders and documents will be removed from the compendium**
 - With `deleteAll` set to `false`, `folder` will be removed from the compendium, and all child folders and documents will be moved to the parent of `folder` (or the root directory if `folder` has no parent)
 
 
