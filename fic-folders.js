@@ -64,7 +64,7 @@ export class FICUtils{
     static shouldCreateFolders(){
         let importing = game.settings.get(mod,'importing');
         let autoCreate = game.settings.get(mod,'auto-create-folders');
-        return (importing || autoCreate)
+        return (importing)
     }
     static async removeStaleOpenFolderSettings(packCode){
         let openFolders = game.settings.get(mod,'open-temp-folders')
@@ -1221,7 +1221,7 @@ export class FICManager{
         // Prepare the source data from which to create the Entity
         const document = await pack.getDocument(entryId);
         const destination = game.collections.get(pack.documentName);
-        const sourceData = destination.fromCompendium(document);
+        const sourceData = destination.fromCompendium(document,options);
         const updateDataWithFolderPath = foundry.utils.mergeObject(updateData,{flags:{cf:{path:folderPath}}});
         if (document.data?.flags?.cf?.sorting === 'm') {
             updateDataWithFolderPath.sorting = document.data.flags.cf.sorting;
@@ -1530,7 +1530,7 @@ export class FICManager{
     // At this point, game.customFolders.fic.folders is populated (only accessible through import process)
     // ==========================
     static async importFolderData(e){
-        if (!game.customFolders.fic || e.compendium) return;
+        if (!game.customFolders.fic) return;
         if (e.data.flags.cf != null){
             //  && e.data.flags.cf.path != null && !e.folder){
             let ficFolder = game.customFolders.fic.folders.get(e.data.flags.cf.id);
