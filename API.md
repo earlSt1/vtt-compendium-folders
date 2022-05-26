@@ -76,12 +76,8 @@ const newFolder = await folderAPI.createFolderWithParent(dogFolder,folderData);
 ```
 
 
-### `moveDocumentToFolder(document,folder,save=true)`
-Moves `document` into the `folder` `FICFolder` The `save` parameter is a boolean flag indicating whether the updates to the documents/folders should be made by the function or later on in the code. This is useful for doing movements in bulk. 
-
-You can use `FICFolderAPI.applyUpdates(packCode,updates)` to save at a later time
-
-**Returns** a list of updates to apply if the `save` parameter is `false`, else nothing
+### `moveDocumentToFolder(document,folder)`
+Moves `document` into the `folder` `FICFolder`
 
 Example usage:
 ```js
@@ -91,29 +87,8 @@ const allFolders = await folderAPI.loadFolders();
 let dogFolder = allFolders.find(f => f.name === 'Dog');
 const updatedFolder = await folderAPI.moveDocumentToFolder(documentId,dogFolder);
 ```
-Example of `save` parameter usage
-```js
-const packCode = 'world.actors';
-const pack = game.packs.get(packCode);
-// A long list of documentIds
-const documentIds = ['1234','1235','1236' ... ];
-const folderAPI = game.CF.FICFolderAPI;
-const allFolders = await folderAPI.loadFolders();
-let dogFolder = allFolders.find(f => f.name === 'Dog');
-const updates = [];
-// Populate a list of updates
-for (const doc of documentIds) {
-    updates.push([...await folderAPI.moveDocumentToFolder(documentId,dogFolder)]);
-}
-// Save in bulk using API (also refreshes the cache)
-await folderAPI.applyUpdates(packCode,updates);
-```
 ### `moveFolder(folderToMove,destFolder,save=true)`
-Moves `folderToMove` into the `destFolder` `FICFolder`. The `save` parameter is a boolean flag indicating whether the updates to the documents/folders should be made by the function or later on in the code. This is useful for doing movements in bulk. 
-
-You can use `FICFolderAPI.applyUpdates(packCode,updates)` to save at a later time
-
-**Returns** a list of updates to apply if the `save` parameter is `false`, else nothing
+Moves `folderToMove` into the `destFolder` `FICFolder`.
 
 Example usage:
 ```js
@@ -123,14 +98,10 @@ let dogFolder = allFolders.find(f => f.name === 'Dog');
 let smallDogFolder = allFolders.find(f => f.name === 'Small Dogs');
 await folderAPI.moveFolder(smallDogFolder,dogFolder);
 ```
-### `moveDocumentToRoot(packCode,documentId,folderId=null,save=true)`
-Moves `documentId` into the root directory. The `save` parameter is a boolean flag indicating whether the updates to the documents/folders should be made by the function or later on in the code. This is useful for doing movements in bulk. 
+### `moveDocumentToRoot(packCode,documentId,folderId=null)`
+Moves `documentId` into the root directory. 
 
 The `folderId` is used internally to keep track of the previous folder the document was in. You can leave this `null`, or to improve performance slightly, pass in the folder ID of the previous folder.
-
-You can use `FICFolderAPI.applyUpdates(packCode,updates)` to save at a later time
-
-**Returns** a list of updates to apply if the `save` parameter is `false`, else nothing
 
 Example usage:
 ```js
@@ -138,10 +109,8 @@ const documentId = '0123abcd...';
 const folderAPI = game.CF.FICFolderAPI;
 await folderAPI.moveDocumentToRoot(packCode,documentId);
 ```
-### `moveFolderToRoot(folder,save=true)`
-Moves `folder` into the root directory. The `save` parameter is a boolean flag indicating whether the updates to the documents/folders should be made by the function or later on in the code. This is useful for doing movements in bulk. 
-
-You can use `FICFolderAPI.applyUpdates(packCode,updates)` to save at a later time
+### `moveFolderToRoot(folder)`
+Moves `folder` into the root directory.
 
 **Returns** a list of updates to apply if the `save` parameter is `false`, else nothing
 
@@ -176,7 +145,7 @@ Example usage:
 const documentId = '0123abcd...';
 const importantDocumentId = '1234abcd...';
 const folderAPI = game.CF.FICFolderAPI;
-const folders = folderAPI.loadFolders('world.actors');
+const folders = await folderAPI.loadFolders('world.actors');
 let folder = folders.find(f => f.name === 'NPCs');
 await folderAPI.insertDocument(importantDocumentId,documentId,folder);
 ```
@@ -189,7 +158,7 @@ Example usage:
 ```js
 // Places importantFolder above folder in folder.parent
 const folderAPI = game.CF.FICFolderAPI;
-const folders = folderAPI.loadFolders('world.actors');
+const folders = await folderAPI.loadFolders('world.actors');
 let folder = folders.find(f => f.name === 'NPCs');
 let importantFolder = folders.find(f => f.name === 'Very Important NPCs');
 // A check is done in the function to see if the parents match
