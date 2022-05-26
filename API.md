@@ -87,7 +87,7 @@ const allFolders = await folderAPI.loadFolders();
 let dogFolder = allFolders.find(f => f.name === 'Dog');
 const updatedFolder = await folderAPI.moveDocumentToFolder(documentId,dogFolder);
 ```
-### `moveFolder(folderToMove,destFolder,save=true)`
+### `moveFolder(folderToMove,destFolder)`
 Moves `folderToMove` into the `destFolder` `FICFolder`.
 
 Example usage:
