@@ -17,11 +17,22 @@ folder.contents
 // Get the compendium this folder belongs to
 folder.pack
 ```
-You can also directly update the properties of a `FICFolder` and save them
+You can directly update the properties of a `FICFolder` and save them
 ```js
 folder.name = 'New Name';
 await folder.save();
 ```
+Or get the update data from a folder once you have updated it, if you wanted to update multiple folders at once and add them to a list of updates
+```js
+const updates = []
+//Find and change the folder, calling getSaveData() to return the data for updates
+folder.name = 'New Name'
+updates.push(folder.getSaveData())
+//Then later you can use updateDocuments(data,options)
+const cls = pack.documentClass;
+return await cls.updateDocuments(updates,{pack:pack.collection});
+```
+
 A lot of the more complicated operations (such as getting the parent folder) only work if you use the API functions, which I will talk about below
 
 ## `game.CF.FICFolderAPI`
@@ -43,7 +54,7 @@ const dogFolder = allFolders.find(f => f.name === 'Dog');
 const alsoDogFolder = game.customFolders.fic.folders.find(f => f.name === 'Dog');
 ```
 
-### `createFolderAtRoot(packCode,data)`
+### `createFolderAtRootData(packCode,data)`
 Creates a new folder at the root directory and updates `game.customFolders.fic.folders`.
 
 **Returns** the `FICFolder` object that was created
@@ -57,9 +68,9 @@ const folderData = {
     icon:'path/to/danger.png',
     fontColor:'#AAAAAA'
 }
-const folder = await folderAPI.createFolderAtRoot('world.actors',folderData);
+const folder = await folderAPI.createFolderAtRootData('world.actors',folderData);
 ```
-### `createFolderWithParent(parent,data)`
+### `createFolderWithParentData(parent,data)`
 Creates a new folder with the `FICFolder` object `parent` as the parent and updates `game.customFolders.fic.folders`
 
 **Returns** the `FICFolder` object that was created
@@ -75,7 +86,7 @@ const folderData = {
     icon:'path/to/dog.png',
     fontColor:'#AAAAAA'
 }
-const newFolder = await folderAPI.createFolderWithParent(dogFolder,folderData);
+const newFolder = await folderAPI.createFolderWithParentData(dogFolder,folderData);
 ```
 
 
