@@ -1,7 +1,10 @@
 # API Documentation
 I have created a helper class as well as some custom data structures to assist with manipulating folders in compendiums programmatically.
 All exposed classes are accessible from the `game.CF` object.
+## `game.CF.TEMP_ENTITY_NAME`
+This constant represents the name given to all temporary documents. You can use this to determine whether a document is a temporary document (holding folder data) or not.
 
+When a compendium is rendered, Compendium Folders looks for all documents with this name, hides them, and creates folders in the compendium window using the data stored in them.
 ## `game.CF.FICFolder`
 The building block of folders in compendiums. This object is designed to be as close to the core `Folder` class as possible. You can do things like 
 ```js
@@ -76,7 +79,7 @@ const newFolder = await folderAPI.createFolderWithParent(dogFolder,folderData);
 ```
 
 
-### `moveDocumentToFolder(document,folder)`
+### `moveDocumentIntoFolder(document,folder)`
 Moves `document` into the `folder` `FICFolder`
 
 Example usage:
@@ -85,7 +88,7 @@ const documentId = '0123abcd...';
 const folderAPI = game.CF.FICFolderAPI;
 const allFolders = await folderAPI.loadFolders();
 let dogFolder = allFolders.find(f => f.name === 'Dog');
-const updatedFolder = await folderAPI.moveDocumentToFolder(documentId,dogFolder);
+const updatedFolder = await folderAPI.moveDocumentIntoFolder(documentId,dogFolder);
 ```
 ### `moveFolder(folderToMove,destFolder)`
 Moves `folderToMove` into the `destFolder` `FICFolder`.
@@ -165,4 +168,64 @@ let importantFolder = folders.find(f => f.name === 'Very Important NPCs');
 // so folder.parent === importantFolder.parent
 await folderAPI.insertDocument(importantFolder,folder);
 ```
+### `exportFolder(packCode,folder,merge,keepId,quietMode=false)`
+Exports the folder structure of `folder`, a Foundry `Folder` object, to the compendium with key `packCode`. 
+
+If `merge` and `keepId` options are not provided, the default is used (configured in the module settings)
+
+If `quietMode` is enabled, notifications will not be displayed to the user.
+
+### `exportFolderWithDialog(folder)`
+Same as above, but presents the user with the Export dialog so they can select the compendium to export to. 
+
+### `importFolder(folder,merge,keepId,quietMode=false)`
+Imports the folder structure of `folder`, a Compendium Folders `FICFolder` object, to the world. 
+
+If `merge` and `keepId` options are not provided, the default is used (configured in the module settings)
+
+If `quietMode` is enabled, notifications will not be displayed to the user.
+### `importFolderWithDialog(folder)`
+Same as above, but presents the user with the Import dialog so they can define the Merge by Name and keep document ID options. 
+
+## Common examples
+### Importing multiple folders at once into the world
+```js
+const folderAPI = game.CF.FICFolderAPI;
+const folders = await folderAPI.loadFolders('world.actors');
+const allImportantFolders = folders.filter(f => f.name.startsWith('Important'));
+for (let folder of allImportantFolders){
+    await folderAPI.importFolder(folder);
+}
+```
+### Deleting all folders in a compendium
+The easiest way to do this is to use the `Remove folder data from compendium` option in the module settings
+
+To do this with a macro, you can use the function directly
+```js
+const packCode = 'world.actors'
+await game.CF.cleanupCompedium(packCode);
+```
+### Deleting all documents outside of a folder
+```js
+const packCode = 'world.actors';
+const pack = game.packs.get(packCode);
+
+const folderAPI = game.CF.FICFolderAPI;
+const folders = await folderAPI.loadFolders(packCode);
+
+const allDocumentsInFolders = folders.map(f => f.contents).deepFlatten();
+const index = await pack.getIndex();
+const allDocuments = index.filter(i => i.name != game.CF.TEMP_ENTITY_NAME).map(i => i._id)
+
+const deleteIds = []
+for (let doc of allDocuments){
+    if (!allDocumentsInFolders.includes(doc))
+        deleteIds.push(doc);
+}
+
+const cls = pack.documentClass;
+return await cls.deleteDocuments(deleteIds,{pack:pack.collection});
+```
+___
+
 Any issues feel free to ping me on Discord `@Erceron#0370`
