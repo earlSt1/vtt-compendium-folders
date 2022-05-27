@@ -615,7 +615,11 @@ export class FICManager{
         libWrapper.register(mod, 'MacroDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
-        
+
+        libWrapper.register(mod, 'PlaylistDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
+            return wrapped(...args).concat(newContextOption);
+        }, 'WRAPPER');
+
         libWrapper.register(mod, 'RollTableDirectory.prototype._getFolderContextOptions', function (wrapped, ...args) {
             return wrapped(...args).concat(newContextOption);
         }, 'WRAPPER');
@@ -956,15 +960,16 @@ export class FICManager{
         return previousPath;
     }
     static async recursivelyExportFolders(index,pack,folderObj,folderId,folderPath,merge,keepId){
+        let entities = folderObj.content;
+        if (folderObj.documentClass.documentName === 'Playlist')
+            entities = folderObj.contents;
         if (folderObj.children.length==0){
-            let entities = folderObj.content;
             let updatedFolder = await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
             if (updatedFolder != null){
                 return [updatedFolder];
             }
             return []
         }else{
-            let entities = folderObj.content;
             await FICManager.exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId)
         }
         for (let child of folderObj.children){
@@ -972,11 +977,21 @@ export class FICManager{
             if (!newPath.includes(folderId))
                 newPath.push(folderId)
     
-            let existingFolderId = await FICManager.getExistingFolderId(child,pack)
+            let existingFolderId = await FICManager.getExistingFolderId(child)
             if (existingFolderId === null)
                 existingFolderId = FICUtils.generateRandomFolderName('temp_')
             await FICManager.recursivelyExportFolders(index,pack,child,existingFolderId,newPath,merge,keepId)
         }
+    }
+    static async getExistingFolderId(folder){
+        let folderPath = FICUtils.getFolderPath(folder);
+        let folders = game.customFolders.fic.folders;
+        let existingFolder = folders.find(x => x.name === folder.name
+            && x.path === folderPath);
+        if (existingFolder){
+            return existingFolder.id;
+        }
+        return null;
     }
     static async exportSingleFolderToCompendium(index,pack,entities,folderObj,folderId,folderPath,merge,keepId){
         let path = FICManager.getFullPath(folderObj)
@@ -1033,7 +1048,7 @@ export class FICManager{
                 await FICUtils.packUpdateEntity(pack,data);           
             } else {
                 result = await pack.documentClass.createDocuments([data],{pack:pack.collection,keepId:keepId});
-                packEntities.push(result.id);
+                packEntities.push(result[0].id);
                 if (result.id != e.id && folderObj.contents != null && folderObj.contents.length>0){
                     folderObj.contents.splice(folderObj.contents.findIndex((x => x.id==e.id)),1,result.id);
                 }
@@ -1166,7 +1181,7 @@ export class FICManager{
         event.stopPropagation();
         const folders = await FICFolderAPI.getFolders(packCode);
         let folderObj = folders.get(folder.getAttribute('data-folder-id'))
-        FICFolderAPI.importFolder(folderObj);
+        FICFolderAPI.importFolderWithDialog(folderObj);
     }
     // ==========================
     // Folder creation inside compendiums
@@ -1239,15 +1254,13 @@ export class FICManager{
                     }).render(true)
                 });
             }
-            if (game.packs.get(packCode).documentClass.documentName != 'Playlist'){
-                let importButton = document.createElement('a');
-                importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
-                importButton.classList.add('import-folder');
-                importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
-                importButton.addEventListener('click',event => FICManager.importFolderFromCompendium(event,folder));
-    
-                header.appendChild(importButton);
-            }
+            let importButton = document.createElement('a');
+            importButton.innerHTML = "<i class='fas fa-upload fa-fw'></i>"
+            importButton.classList.add('import-folder');
+            importButton.setAttribute('title',game.i18n.localize("CF.importFolderHint"))
+            importButton.addEventListener('click',event => FICManager.importFolderFromCompendium(event,folder));
+
+            header.appendChild(importButton);
         }
     
         //If no folder data, or folder is not in open folders AND folder has an id, close folder by default
@@ -1885,16 +1898,15 @@ export class FICFolderAPI{
         let index = await pack.getIndex();
         await pack.apps[0].close();
         await FICCache.resetCache();
-        await FICFolderAPI.loadFolders(form.pack.value);
+        await FICFolderAPI.loadFolders(packCode);
         let folderPath = await FICManager.createParentFoldersWithinCompendium(folder,pack);
-        const folders = await FICFolderAPI.loadFolders(form.pack.value);
-        let existingFolder = folders.find(x => x.name === folder.name
-            && x.path === folderPath);
+        await FICFolderAPI.loadFolders(packCode);
+        let existingFolderId = await FICManager.getExistingFolderId(folder)
+        if (existingFolderId != null){
         // First check if there is an existing folder in compendium for current world folder
-        if (existingFolder != null){
-            await FICManager.recursivelyExportFolders(index,pack,folder,existingFolder.id,folderPath,form.merge.checked,form.keepId.checked)
+            await FICManager.recursivelyExportFolders(index,pack,folder,existingFolderId,folderPath,merge,keepId)
         }else{
-            await FICManager.recursivelyExportFolders(index,pack,folder,FICUtils.generateRandomFolderName('temp_'),folderPath,form.merge.checked,form.keepId.checked)
+            await FICManager.recursivelyExportFolders(index,pack,folder,FICUtils.generateRandomFolderName('temp_'),folderPath,merge,keepId)
         }
         if (!quietMode) pack.render(true);
     }
@@ -1923,12 +1935,12 @@ export class FICFolderAPI{
             label: game.i18n.localize("FOLDER.ExportTitle"),
             callback: async function(html) {
                 const form = html[0].querySelector("form");
-                const pack = game.packs.get(form.pack.value);
+                const pack = form.pack.value;
                 await game.settings.set(mod,'last-pack',form.pack.value);
                 ui.notifications.notify(game.i18n.format('CF.exportFolderNotificationStart',{pack:form.pack.value}));
-                FICFolderAPI.exportFolder(pack,folder,form.merge.checked,form.keepId.checked)
+                await FICFolderAPI.exportFolder(pack,folder,form.merge.checked,form.keepId.checked)
                 ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
-                pack.render(true);
+                game.packs.get(pack).render(true);
             },
             options:{}
         });
