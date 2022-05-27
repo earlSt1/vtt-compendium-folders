@@ -1940,7 +1940,6 @@ export class FICFolderAPI{
                 ui.notifications.notify(game.i18n.format('CF.exportFolderNotificationStart',{pack:form.pack.value}));
                 await FICFolderAPI.exportFolder(pack,folder,form.merge.checked,form.keepId.checked)
                 ui.notifications.notify(game.i18n.localize('CF.exportFolderNotificationFinish'));
-                game.packs.get(pack).render(true);
             },
             options:{}
         });
