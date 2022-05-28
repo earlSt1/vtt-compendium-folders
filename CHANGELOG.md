@@ -1,4 +1,4 @@
-# 2.4.4 (2022-05-26)
+# 2.4.4 (2022-05-28)
 - Overhauled folders in compendiums, a lot of refactoring and tidying up the module.
 - Folders now retain sort mode and sort order when importing/exporting. 
 - New option added to the create/edit dialog to chose between Alphabetical or Manual sort
