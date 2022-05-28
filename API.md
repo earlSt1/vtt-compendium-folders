@@ -199,7 +199,7 @@ If `quietMode` is enabled, notifications will not be displayed to the user.
 Same as above, but presents the user with the Import dialog so they can define the Merge by Name and keep document ID options. 
 
 ### `clearCache()`
-There is a basic caching system implemented for folders in compendiums. This is because whenever you update/create/delete an entry in a compendium, the compendium renders again. This caching system prevents loads of `loadFolders` calls, therefore improving performance.
+I've implemented a basic caching system implemented for folders in compendiums. This is because whenever you update/create/delete an entry in a compendium, the compendium renders again. This caching system prevents multiple `loadFolders` calls, therefore improving performance.
 
 Its rare to experience caching issues, especially as most API function calls perform updates on the cache, but if you do experience issues you can call this function and the cache will be reset, regenerating when you open the next foldered compendium.
 ## Common examples

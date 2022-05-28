@@ -9,7 +9,8 @@
     - Dragging a document onto another document in the same folder will move the document above the targetted document (provided they are in the same folder)
     - Dragging a document/folder onto the root directory (which extends over the search bar) will move the document/folder to the root directory.
     - Finally, drag/drop highlights are enabled
-- Added API documentation (see README for details)
+- Added more functions to the API and added documentation (see README for details)
+- You can now import/export Playlist folder structures
 - Fixed issue where editing a document in the world would sometimes generate an error in the console.
 - Fixed issue where keepId option would not work on Import process
 - Fixed issue where selecting the Delete All option on a folder in a compendium would not remove the selected folder
