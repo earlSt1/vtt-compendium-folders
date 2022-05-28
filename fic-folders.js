@@ -1944,6 +1944,9 @@ export class FICFolderAPI{
             options:{}
         });
     }
+    static async clearCache(){
+        await FICCache.resetCache();
+    }
     static async applyUpdates(packCode,updates){
         await FICCache.updateCache(packCode,updates);
         await FICUtils.packUpdateEntities(game.packs.get(packCode),updates);
