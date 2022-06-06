@@ -737,32 +737,30 @@ export class FICManager{
             FICManager.closeContextMenu()
         }
         let contextMenu = document.createElement('nav');
-        //contextMenu.classList.add('expand-down');
     
         let contextMenuList = document.createElement('ol');
         contextMenuList.classList.add('context-items');
-    
-        //if (header.parentElement.querySelector(':scope > div.folder-contents > ol.entry-list > li.directory-item') != null){
-            let editOption = document.createElement('li');
-            editOption.classList.add('context-item')
-            let editIcon = document.createElement('i');
-            editIcon.classList.add('fas','fa-edit');
-            editOption.innerHTML=editIcon.outerHTML+game.i18n.localize("CF.editFolder");
-            editOption.addEventListener('click',async function(ev){
-                ev.stopPropagation();
-                FICManager.closeContextMenu();
-                let path = FICUtils.getRenderedFolderPath(folder);
-                let folderData = await FICUtils.getFolderData(packCode,tempEntityId);
-                let formObj = mergeObject({
-                    path:path,
-                    packCode:packCode,
-                    tempEntityId:tempEntityId
-                },folderData)
-                
-                new FICFolderEditDialog(formObj).render(true);
-            })
-            contextMenuList.appendChild(editOption);
-        //}
+
+        let editOption = document.createElement('li');
+        editOption.classList.add('context-item')
+        let editIcon = document.createElement('i');
+        editIcon.classList.add('fas','fa-edit');
+        editOption.innerHTML=editIcon.outerHTML+game.i18n.localize("CF.editFolder");
+        editOption.addEventListener('click',async function(ev){
+            ev.stopPropagation();
+            FICManager.closeContextMenu();
+            let path = FICUtils.getRenderedFolderPath(folder);
+            let folderData = await FICUtils.getFolderData(packCode,tempEntityId);
+            let formObj = mergeObject({
+                path:path,
+                packCode:packCode,
+                tempEntityId:tempEntityId
+            },folderData)
+            
+            new FICFolderEditDialog(formObj).render(true);
+        })
+
+
         let deleteOption = document.createElement('li');
         deleteOption.classList.add('context-item')
         let deleteIcon = document.createElement('i');
@@ -799,7 +797,11 @@ export class FICManager{
             FICManager.closeContextMenu();
             FICManager.exportFolderToTable(packCode,folderId)
         });
-        contextMenuList.appendChild(deleteOption);
+        if (game.user.isGM && !game.packs.get(packCode).locked){
+            contextMenuList.appendChild(editOption);
+            contextMenuList.appendChild(deleteOption);
+        }
+        
         contextMenuList.appendChild(exportToTableOption);
         contextMenu.appendChild(contextMenuList);
         
@@ -1216,11 +1218,11 @@ export class FICManager{
             header.style.color='#ffffff';
         header.style.backgroundColor=folderData.color
         
-        if (game.user.isGM && !game.packs.get(packCode).locked){
-            header.addEventListener('contextmenu',function(event){
-                FICManager.createContextMenu(header,event);
-            });
-        }
+
+        header.addEventListener('contextmenu',function(event){
+            FICManager.createContextMenu(header,event);
+        });
+        
     
     
         let contents = document.createElement('div');
