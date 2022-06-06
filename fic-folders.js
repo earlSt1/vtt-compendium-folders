@@ -789,8 +789,18 @@ export class FICManager{
                 }
             }).render(true);
         })
+        const exportToTableOption = document.createElement('li');
+        exportToTableOption.classList.add('context-item')
+        let tableIcon = document.createElement('i');
+        tableIcon.classList.add('fas','fa-th-list');
+        exportToTableOption.innerHTML=tableIcon.outerHTML+"Export to Table";
+        exportToTableOption.addEventListener('click',function(ev){
+            ev.stopPropagation();
+            FICManager.closeContextMenu();
+            FICManager.exportFolderToTable(packCode,folderId)
+        });
         contextMenuList.appendChild(deleteOption);
-            
+        contextMenuList.appendChild(exportToTableOption);
         contextMenu.appendChild(contextMenuList);
         
         document.addEventListener('click',function(ev){
@@ -1458,6 +1468,33 @@ export class FICManager{
         else
             await FICFolderAPI.createFolderAtRootData(packCode,folderObj);
     }   
+    static async exportFolderToTable(packCode,folderId){
+        const folders = await game.CF.FICFolderAPI.loadFolders(packCode);
+        const index = await game.packs.get(packCode).getIndex()
+        
+        let folder = folders.get(folderId)
+        
+        folder.contents = folder.contents.map(c => index.get(c))
+        
+        const results = folder.contents.map((e, i) => {
+            return {
+                text: e.name,
+                type: CONST.TABLE_RESULT_TYPES.COMPENDIUM,
+                collection: packCode,
+                resultId: e.id,
+                img: e.img,
+                weight: 1,
+                range: [i+1, i+1],
+                drawn: false
+              }
+        });
+        return RollTable.create({
+            name: folder.name,
+            description: `A random table created from the contents of the ${folder.name} Folder.`,
+            results: results,
+            formula: `1d${results.length}`
+        }, {renderSheet:true});
+    }
 }
 export class FICFolderAPI{
     //used for external operations, exposed to public
@@ -1849,22 +1886,26 @@ export class FICFolderAPI{
             keepId = game.settings.get(mod,'default-keep-id')
         }
         await game.settings.set(mod,'importing',true);
+        try{
+            if (!quietMode) 
+                ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"))
+            let pack = folder.pack;
+            let coll = pack.contents;
+            let packEntity = pack.documentClass.documentName; 
 
-        if (!quietMode) 
-            ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"))
-        let pack = folder.pack;
-        let coll = pack.contents;
-        let packEntity = pack.documentClass.documentName; 
+            //Make use of new FICFolderAPI
+            await FICFolderAPI.loadFolders(folder.packCode);   
 
-        //Make use of new FICFolderAPI
-        await FICFolderAPI.loadFolders(folder.packCode);   
-
-        await FICManager.importAllParentFolders(pack,coll,folder,merge); 
-        await FICManager.recursivelyImportFolders(pack,coll,folder,merge,keepId);
-        if (!quietMode) 
-            ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
-        await FICUtils.removeTempEntities(packEntity);
-        await game.settings.set(mod,'importing',false);
+            await FICManager.importAllParentFolders(pack,coll,folder,merge); 
+            await FICManager.recursivelyImportFolders(pack,coll,folder,merge,keepId);
+            if (!quietMode) 
+                ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
+            await FICUtils.removeTempEntities(packEntity);
+        } catch (err) {
+            console.error(modName+" | "+err);
+        } finally {
+            await game.settings.set(mod,'importing',false);
+        }
     }
     static async importFolderWithDialog(folder){
         let l1 = game.i18n.format("CF.importFolderL1",{folder:folder.name})

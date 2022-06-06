@@ -1673,7 +1673,7 @@ export class Settings{
             default:{}
         });
         game.settings.register(mod,'importing',{
-            scope:'client',
+            scope:'world',
             config:false,
             type:Boolean,
             default:false
@@ -1869,6 +1869,9 @@ Hooks.once('init',async function(){
     game.CF.FICManager.setup();
     Hooks.once('ready',async function(){
         game.CF.FICFolderAPI.clearCache();
+        if (game.settings.get(mod,'importing')){
+            await game.settings.set(mod,'importing',false);
+        }
         // Ensure compatibility with other modules that rely on the old directory.
         Hooks.on('renderCompendiumFolderDirectory',(html,e) => {
             Hooks.call('renderCompendiumDirectory',html,e);
