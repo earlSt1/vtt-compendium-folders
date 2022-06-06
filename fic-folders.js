@@ -791,7 +791,7 @@ export class FICManager{
         exportToTableOption.classList.add('context-item')
         let tableIcon = document.createElement('i');
         tableIcon.classList.add('fas','fa-th-list');
-        exportToTableOption.innerHTML=tableIcon.outerHTML+"Export to Table";
+        exportToTableOption.innerHTML=tableIcon.outerHTML+"Create RollTable";
         exportToTableOption.addEventListener('click',function(ev){
             ev.stopPropagation();
             FICManager.closeContextMenu();

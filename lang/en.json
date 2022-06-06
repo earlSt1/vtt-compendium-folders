@@ -63,6 +63,6 @@
     "CF.showToPlayers": "Show All to Players",
     "CF.hideFromPlayers":"Hide All From Players",
     "CF.lockAll":"Lock All Contents",
-    "CF.unlockAll":"Unlock All Contents"
-
+    "CF.unlockAll":"Unlock All Contents",
+    "CF.createTable":"Create RollTable"
 }
