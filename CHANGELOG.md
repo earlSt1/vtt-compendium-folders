@@ -1,3 +1,9 @@
+# 2.4.6 (2022-06-06)
+- Fixed issues with import flag not being reset after importing folders
+- Added option to Create RollTable from folder in compendium.
+# 2.4.5 (2022-05-31)
+- Fixed issue where cache would not update if you modified a shared compendium in another world
+- Fixed issue where folders wouldn't render correctly for older compendiums after update 2.4.4
 # 2.4.4 (2022-05-28)
 - Overhauled folders in compendiums, a lot of refactoring and tidying up the module.
 - Folders now retain sort mode and sort order when importing/exporting. 
