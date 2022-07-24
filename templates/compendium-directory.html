@@ -20,14 +20,15 @@
 	{{/if}}
   </header>
   <ol class="subdirectory">
-	{{~#each folder.children as |child i|}}
-      {{> folderPartial folder=child user=../user}}
+	{{~#each node.children}}
+      {{> folderPartial folder=this.folder node=this user=../user}}
     {{/each}}
-    {{#each folder.content}}
+    {{#each node.documents}}
       {{> entityPartial}}
     {{/each}}
   </ol>
 </li>
+
 {{/inline}}
 
 {{#*inline "entityPartial"}}
@@ -40,12 +41,12 @@
         </div>
     </h4>
     <footer class="compendium-footer">
-        <span class="entity-type">{{this.pack.documentClass.documentName}}</span>
-        <span> ({{this.pack.metadata.package}})</span>
+        <span class="document-type">{{this.pack.documentClass.documentName}}</span>
+        <span> ({{this.pack.metadata.packageName}})</span>
     </footer>
 </li>
 {{/inline}}
-<section class="tab sidebar-tab directory flexcol" id="compendium" data-tab="compendium">
+<section class="tab sidebar-tab directory flexcol compendium-sidebar" id="compendium" data-tab="compendium">
     <!-- Directory Header -->
     <header class="directory-header">
         <div class="header-actions action-buttons flexrow">
@@ -67,11 +68,11 @@
     <!-- Directories List -->
 	<ul class="directory-list">
 	    {{~#each tree.children as |f fi|}}
-            {{#if f.content.length }}
-                {{> folderPartial folder=f user=../user}}
+            {{#if f.documents }}
+                {{> folderPartial folder=this.folder node=this user=../user}}
             {{else}}
-                {{#unless f.isDefault }}
-                    {{> folderPartial folder=f user=../user}}
+                {{#unless f.folder.isDefault }}
+                    {{> folderPartial folder=this.folder node=this user=../user}}
                 {{/unless}}
             {{/if}}
 
@@ -80,7 +81,6 @@
         {{> entityPartial}}
 	    {{/each~}}
 	</ul>
-
 	<!-- Directory Footer -->
 	<footer class="directory-footer">
         {{#if isPF1}}

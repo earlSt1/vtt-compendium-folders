@@ -8,7 +8,7 @@
     <div class="form-group">
         <select name='pack'>
             {{#each packs}}
-            <option value='{{this.metadata.package}}.{{this.metadata.name}}'>{{this.metadata.name}} [{{this.metadata.package}}]</option>
+            <option value='{{this.metadata.id}}'>{{this.metadata.name}} [{{this.metadata.packageName}}]</option>
             {{/each}}
         </select>
     </div>
