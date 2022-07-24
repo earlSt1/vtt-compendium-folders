@@ -27,6 +27,8 @@ li.compendium-folder > .compendium-folder-header {
 }
 li.compendium-folder > .compendium-folder-header h3 {
   margin: 0;
+  font-size: 1.17em;
+  border-bottom: none;
   /*color: #FFF;*/
 }
 li.compendium-folder > .compendium-folder-header h3 > i {

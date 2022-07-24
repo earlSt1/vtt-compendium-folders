@@ -1994,9 +1994,9 @@ class FixCompendiumConfig extends FormApplication {
     }
     updateEntityParentIfInvalid(entity, contents) {
         if (entity.data?.flags?.cf?.path) {
-            let fId = entity.data.flags.cf.id;
+            let fId = entity.flags.cf.id;
             let parentEntity = contents.find(
-                (x) => x.name === TEMP_ENTITY_NAME && x.data.flags.cf.id === fId
+                (x) => x.name === TEMP_ENTITY_NAME && x.flags.cf.id === fId
             );
             if (!parentEntity) {
                 console.debug(
@@ -2013,9 +2013,7 @@ class FixCompendiumConfig extends FormApplication {
                         },
                     },
                 };
-            } else if (
-                entity.data.flags.cf.id != parentEntity.data.flags.cf.id
-            ) {
+            } else if (entity.flags.cf.id != parentEntity.flags.cf.id) {
                 console.debug(
                     modName +
                         " | Need to update parent folder ID for " +
@@ -2025,7 +2023,7 @@ class FixCompendiumConfig extends FormApplication {
                     id: entity.id,
                     flags: {
                         cf: {
-                            id: parentEntity.data.flags.cf.id,
+                            id: parentEntity.flags.cf.id,
                         },
                     },
                 };
@@ -2034,30 +2032,29 @@ class FixCompendiumConfig extends FormApplication {
         return {};
     }
     updateFolderPathIfInvalid(folder, contents) {
-        let folderPath = folder.data.flags.cf.folderPath;
+        let folderPath = folder.flags.cf.folderPath;
         let newFolderPath = folderPath;
-        let path = folder.data.flags.cf.path;
+        let path = folder.flags.cf.path;
         for (let folderId of folderPath) {
             if (
                 !contents.some(
                     (x) =>
                         x.name === TEMP_ENTITY_NAME &&
-                        x.data.flags.cf.id === folderId
+                        x.flags.cf.id === folderId
                 )
             ) {
                 console.debug(
                     modName +
                         " | Need to update folderPath for folder " +
-                        folder.data.flags.cf.id
+                        folder.flags.cf.id
                 );
                 let correctFolder = contents.find(
                     (x) =>
-                        x.name === TEMP_ENTITY_NAME &&
-                        x.data.flags.cf.path === path
+                        x.name === TEMP_ENTITY_NAME && x.flags.cf.path === path
                 );
                 if (correctFolder) {
                     newFolderPath[folderPath.indexOf(folderId)] =
-                        correctFolder.data.flags.cf.id;
+                        correctFolder.flags.cf.id;
                 }
             }
         }
@@ -2078,23 +2075,21 @@ class FixCompendiumConfig extends FormApplication {
         let folderId = entity?.data?.flags?.cf?.id;
         if (!path && folderId) {
             let folder = contents.find(
-                (x) =>
-                    x.name === TEMP_ENTITY_NAME &&
-                    x.data.flags.cf.id === folderId
+                (x) => x.name === TEMP_ENTITY_NAME && x.flags.cf.id === folderId
             );
             if (folder) {
                 if (
                     folder.data?.flags?.cf?.path &&
-                    path != folder.data.flags.cf.path
+                    path != folder.flags.cf.path
                 ) {
                     console.debug(
-                        `${modName} | Need to update path for ${entity.name} to ${folder.data.flags.cf.path}`
+                        `${modName} | Need to update path for ${entity.name} to ${folder.flags.cf.path}`
                     );
                     return {
                         id: entity.id,
                         flags: {
                             cf: {
-                                path: folder.data.flags.cf.path,
+                                path: folder.flags.cf.path,
                             },
                         },
                     };
@@ -2102,14 +2097,14 @@ class FixCompendiumConfig extends FormApplication {
                     console.debug(
                         `${modName} | Need to manually construct path for ${entity.name}`
                     );
-                    let folderPath = folder.data.flags.cf.folderPath;
+                    let folderPath = folder.flags.cf.folderPath;
                     let pathNames = folderPath.map(
                         (x) =>
                             contents.find(
                                 (y) =>
                                     y.name === game.CF.TEMP_ENTITY_NAME &&
-                                    y.data.flags.cf.id === x
-                            ).data.flags.cf.name
+                                    y.flags.cf.id === x
+                            ).flags.cf.name
                     );
                     let newPath = pathNames.join(game.CF.FOLDER_SEPARATOR);
                     return {

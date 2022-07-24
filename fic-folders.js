@@ -29,7 +29,7 @@ export class FICUtils {
         if (folder === null) {
             return "";
         }
-        let path = folder.data.name;
+        let path = folder.name;
         let currentFolder = folder;
         while (currentFolder.parentFolder != null) {
             path =
@@ -188,15 +188,10 @@ export class FICUtils {
     static async getFolderData(packCode, tempEntityId) {
         let pack = game.packs.get(packCode);
         let tempEntity = await pack.getDocument(tempEntityId);
-        return tempEntity.data.flags.cf;
+        return tempEntity.flags.cf;
     }
-    static canDragDrop(event, data) {
-        return (
-            data.pack &&
-            event.currentTarget
-                .closest(".compendium.directory")
-                .getAttribute("data-pack") === data.pack
-        );
+    static canDragDrop(event, packCode) {
+        return event.currentTarget.dataset.pack === packCode;
     }
     static async handleMoveDocumentToFolder(data, targetFolderElement) {
         //Moving Document to Folder
@@ -277,18 +272,15 @@ export class FICUtils {
             }
         }
     }
-    static async handleMoveToRoot(event) {
-        const data = TextEditor.getDragEventData(event);
-        if (FICUtils.canDragDrop(event, data)) {
-            if (data.type === "FICFolder") {
-                //Move folder to root
-                await FICFolderAPI.moveFolderToRoot(
-                    game.customFolders.fic.folders.get(data.id)
-                );
-            } else {
-                //Move document to root
-                await FICFolderAPI.moveDocumentToRoot(data.pack, data.id);
-            }
+    static async handleMoveToRoot(data) {
+        if (data.type === "FICFolder") {
+            //Move folder to root
+            await FICFolderAPI.moveFolderToRoot(
+                game.customFolders.fic.folders.get(data.id)
+            );
+        } else {
+            //Move document to root
+            await FICFolderAPI.moveDocumentToRoot(data.pack, data.id);
         }
     }
 }
@@ -316,7 +308,7 @@ export class FICFolder {
     }
     getSaveData() {
         let saveData = this.data;
-        saveData.version = game.modules.get("compendium-folders").data.version;
+        saveData.version = game.modules.get("compendium-folders").version;
         delete saveData.documentId;
         delete saveData.parent;
         return {
@@ -345,7 +337,7 @@ export class FICFolder {
         return newFolder;
     }
     static import(packCode, contents, folder = {}) {
-        let data = folder.data.flags.cf;
+        let data = folder.flags?.cf ?? folder.data.flags.cf;
 
         if (data?.folderPath?.length > 0) {
             data.parent = data.folderPath[data.folderPath.length - 1];
@@ -942,7 +934,7 @@ export class FICManager {
         Settings.clearSearchTerms();
 
         Hooks.on("renderCompendium", async function (e) {
-            let packCode = e.metadata.package + "." + e.metadata.name;
+            let packCode = e.metadata.id;
             const compendiumWindow = document.querySelector(
                 ".compendium.directory[data-pack='" + packCode + "']"
             );
@@ -1011,7 +1003,7 @@ export class FICManager {
                 )) {
                     entity.addEventListener("drop", async function (event) {
                         const data = TextEditor.getDragEventData(event);
-                        if (FICUtils.canDragDrop(event, data)) {
+                        if (FICUtils.canDragDrop(event, packCode)) {
                             await FICUtils.handleMoveDocumentToDocument(
                                 event,
                                 data,
@@ -1050,10 +1042,13 @@ export class FICManager {
                     );
                     folder.addEventListener("drop", async function (event) {
                         const data = TextEditor.getDragEventData(event);
-                        if (FICUtils.canDragDrop(event, data)) {
+                        const isFolder = data.type === "FICFolder";
+                        if (!isFolder) data.id = data.uuid.split(".").pop();
+                        data.pack = packCode;
+                        if (FICUtils.canDragDrop(event, packCode)) {
                             event.stopPropagation();
                             if (data.id != folder.dataset.folderId) {
-                                if (data.type === "FICFolder") {
+                                if (isFolder) {
                                     await FICUtils.handleMoveFolderToFolder(
                                         data,
                                         this
@@ -1071,7 +1066,13 @@ export class FICManager {
                 }
                 compendiumWindow.addEventListener(
                     "drop",
-                    FICUtils.handleMoveToRoot
+                    async function (event) {
+                        const data = TextEditor.getDragEventData(event);
+                        const isFolder = data.type === "FICFolder";
+                        if (!isFolder) data.id = data.uuid.split(".").pop();
+                        data.pack = packCode;
+                        FICUtils.handleMoveToRoot(data);
+                    }
                 );
             }
         });
@@ -1213,12 +1214,10 @@ export class FICManager {
         // for each entity in contents with sub-path in entity path, add id
         let parents = content.filter(
             (e) =>
-                entity.data?.flags?.cf?.path?.startsWith(
-                    e.data.flags.cf.path,
-                    0
-                ) && e.name === game.CF.TEMP_ENTITY_NAME
+                entity.flags?.cf?.path?.startsWith(e.flags.cf.path, 0) &&
+                e.name === game.CF.TEMP_ENTITY_NAME
         );
-        console.debug(entity.data?.flags?.cf?.path + " is entity");
+        console.debug(entity.flags?.cf?.path + " is entity");
         let updateData = {
             flags: {
                 cf: {
@@ -1236,17 +1235,17 @@ export class FICManager {
         // }
         //
         parents = parents.sort((a, b) => {
-            if (a.data.flags.cf.path > b.data.flags.cf.path) {
+            if (a.flags.cf.path > b.flags.cf.path) {
                 return 1;
-            } else if (a.data.flags.cf.path < b.data.flags.cf.path) {
+            } else if (a.flags.cf.path < b.flags.cf.path) {
                 return -1;
             }
             return 0;
         });
         for (let parent of parents) {
-            if (entity.data.flags.cf.path != parent.data.flags.cf.path) {
-                console.debug(parent.data.flags.cf.path);
-                updateData.flags.cf.folderPath.push(parent.data.flags.cf.id);
+            if (entity.flags.cf.path != parent.flags.cf.path) {
+                console.debug(parent.flags.cf.path);
+                updateData.flags.cf.folderPath.push(parent.flags.cf.id);
             }
         }
         updateData.id = entity._id;
@@ -1552,9 +1551,9 @@ export class FICManager {
                 children: packEntities,
                 folderPath: folderPath,
             };
-            if (folderObj.data?.sorting === "m") {
+            if (folderObj.sorting === "m") {
                 // Set the folder sorting to Manual
-                tempData.flags.cf.sorting = folderObj.data.sorting;
+                tempData.flags.cf.sorting = folderObj.sorting;
             }
             await pack.documentClass.create(tempData, {
                 pack: pack.collection,
@@ -1572,9 +1571,9 @@ export class FICManager {
                     },
                 },
             };
-            if (folderObj.data?.sorting === "m") {
+            if (folderObj.sorting === "m") {
                 // Set the folder sorting to Manual
-                folderData.flags.cf.sorting = folderObj.data.sorting;
+                folderData.flags.cf.sorting = folderObj.sorting;
             }
             await FICUtils.packUpdateEntity(pack, folderData);
         }
@@ -1605,8 +1604,8 @@ export class FICManager {
         const updateDataWithFolderPath = foundry.utils.mergeObject(updateData, {
             flags: { cf: { path: folderPath } },
         });
-        if (document.data?.flags?.cf?.sorting === "m") {
-            updateDataWithFolderPath.sorting = document.data.flags.cf.sorting;
+        if (document.flags?.cf?.sorting === "m") {
+            updateDataWithFolderPath.sorting = document.flags.cf.sorting;
         }
         const createData = foundry.utils.mergeObject(
             sourceData,
@@ -1780,6 +1779,7 @@ export class FICManager {
         folder.classList.add("compendium-folder", "folder");
         folder.setAttribute("data-folder-id", folderData.id);
         folder.setAttribute("data-temp-entity-id", folderData.documentId);
+        folder.setAttribute("data-pack", packCode);
         folder.setAttribute("draggable", true);
         let header = document.createElement("header");
         header.classList.add("compendium-folder-header", "flexrow");
@@ -2045,11 +2045,9 @@ export class FICManager {
     // ==========================
     static async importFolderData(e) {
         if (!game.customFolders.fic) return;
-        if (e.data.flags.cf != null) {
+        if (e.flags.cf != null) {
             //  && e.data.flags.cf.path != null && !e.folder){
-            let ficFolder = game.customFolders.fic.folders.get(
-                e.data.flags.cf.id
-            );
+            let ficFolder = game.customFolders.fic.folders.get(e.flags.cf.id);
             let path = ficFolder.path;
             let color = ficFolder.color;
             //a.data.folder -> id;
@@ -2057,7 +2055,7 @@ export class FICManager {
             let folderExists = false;
 
             for (let folder of game.folders.values()) {
-                if (folder.data.type == e.documentName) {
+                if (folder.type == e.documentName) {
                     if (FICUtils.getFolderPath(folder) === path) {
                         folderExists = true;
                         foundFolder = folder;
@@ -2107,7 +2105,7 @@ export class FICManager {
                     name: game.i18n.has(parentFolder.name)
                         ? game.i18n.localize(parentFolder.name)
                         : parentFolder.name,
-                    sorting: parentFolder.data?.sorting || "a",
+                    sorting: parentFolder.sorting || "a",
                     parent: parentId,
                     type: entityType,
                     content: [],
@@ -2771,13 +2769,12 @@ export class FICFolderAPI {
     static async exportFolderWithDialog(folder) {
         // Get eligible pack destinations
         const packs = game.packs.filter(
-            (p) =>
-                p.documentClass.documentName === folder.data.type && !p.locked
+            (p) => p.documentClass.documentName === folder.type && !p.locked
         );
         if (!packs.length) {
             return ui.notifications.warn(
                 game.i18n.format("FOLDER.ExportWarningNone", {
-                    type: folder.data.type,
+                    type: folder.type,
                 })
             );
         }
