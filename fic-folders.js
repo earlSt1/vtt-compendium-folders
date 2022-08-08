@@ -26,17 +26,17 @@ export class FICUtils {
      *Generating path for world folder
      */
     static getFolderPath(folder) {
+        if (!folder.name) {
+            folder = folder.folder;
+        }
         if (folder === null) {
             return "";
         }
         let path = folder.name;
         let currentFolder = folder;
-        while (currentFolder.parentFolder != null) {
-            path =
-                currentFolder.parentFolder.name +
-                game.CF.FOLDER_SEPARATOR +
-                path;
-            currentFolder = currentFolder.parentFolder;
+        while (currentFolder.folder != null) {
+            path = currentFolder.folder.name + game.CF.FOLDER_SEPARATOR + path;
+            currentFolder = currentFolder.folder;
         }
         return path;
     }
@@ -620,8 +620,10 @@ export class FICManager {
         // folder data from the entity
         // and create folders based on them
         Hooks.on("createActor", async function (a) {
-            if (a.isOwner && FICUtils.shouldCreateFolders())
+            if (a.isOwner && FICUtils.shouldCreateFolders()) {
+                console.log(modName + " | Creating actor");
                 await FICManager.importFolderData(a);
+            }
         });
         Hooks.on("createCards", async function (c) {
             if (c.isOwner && FICUtils.shouldCreateFolders())
@@ -657,8 +659,10 @@ export class FICManager {
                 a.isOwner &&
                 game.actors.contents.some((x) => x.name === a.name) &&
                 FICUtils.shouldCreateFolders()
-            )
+            ) {
+                console.log(modName + " | Updating actor");
                 await FICManager.importFolderData(a);
+            }
         });
         Hooks.on("updateCards", async function (c) {
             if (
@@ -1203,8 +1207,8 @@ export class FICManager {
     static getFullPath(folderObj) {
         let path = folderObj.name;
         let currentFolder = folderObj;
-        while (currentFolder.parentFolder != null) {
-            currentFolder = currentFolder.parentFolder;
+        while (currentFolder.folder != null) {
+            currentFolder = currentFolder.folder;
             path = currentFolder.name + game.CF.FOLDER_SEPARATOR + path;
         }
         return path;
@@ -1335,9 +1339,9 @@ export class FICManager {
         let currentFolder = folder;
         const folders = game.customFolders.fic.folders;
 
-        while (currentFolder.parentFolder != null) {
-            parents.push(currentFolder.parentFolder);
-            currentFolder = currentFolder.parentFolder;
+        while (currentFolder.folder != null) {
+            parents.push(currentFolder.folder);
+            currentFolder = currentFolder.folder;
         }
         let previousParent = null;
         let previousPath = [];
@@ -1383,9 +1387,7 @@ export class FICManager {
         merge,
         keepId
     ) {
-        let entities = folderObj.content;
-        if (folderObj.documentClass.documentName === "Playlist")
-            entities = folderObj.contents;
+        let entities = folderObj.documents ?? folderObj.contents;
         if (folderObj.children.length == 0) {
             let updatedFolder = await FICManager.exportSingleFolderToCompendium(
                 index,
@@ -1432,6 +1434,9 @@ export class FICManager {
         }
     }
     static async getExistingFolderId(folder) {
+        if (!folder.name) {
+            folder = folder.folder;
+        }
         let folderPath = FICUtils.getFolderPath(folder);
         let folders = game.customFolders.fic.folders;
         let existingFolder = folders.find(
@@ -1452,6 +1457,9 @@ export class FICManager {
         merge,
         keepId
     ) {
+        if (!folderObj.name) {
+            folderObj = folderObj.folder;
+        }
         let path = FICManager.getFullPath(folderObj);
         const folders = game.customFolders.fic.folders;
         const existingFolder = folders.get(folderId);
@@ -1459,12 +1467,9 @@ export class FICManager {
         if (existingFolder) {
             folderId = existingFolder.id;
         }
-        let color = "#000000";
-        if (folderObj.data.color != null && folderObj.data.color.length > 0) {
-            color = folderObj.data.color;
-        } else if (folderObj.color != null && folderObj.color.length > 0) {
-            color = folderObj.color;
-        }
+
+        let color = folderObj.color ?? "#000000";
+
         let packEntities = [];
         let result = null;
         for (let e of entities) {
@@ -1688,16 +1693,6 @@ export class FICManager {
 
     static async recursivelyImportFolders(pack, coll, folder, merge, keepId) {
         let folderPath = folder.path;
-        // First loop through individual folders
-        for (let childFolder of folder.childrenObjects) {
-            await FICManager.recursivelyImportFolders(
-                pack,
-                coll,
-                childFolder,
-                merge,
-                keepId
-            );
-        }
         //Import the actual folder document
         await FICManager.importFromCollectionWithMerge(
             coll,
@@ -1709,7 +1704,16 @@ export class FICManager {
             merge,
             keepId
         );
-        await new Promise((res) => setTimeout(res, 100));
+        // loop through individual folders
+        for (let childFolder of folder.childrenObjects) {
+            await FICManager.recursivelyImportFolders(
+                pack,
+                coll,
+                childFolder,
+                merge,
+                keepId
+            );
+        }
         //Then import immediate child documents
         for (let documentId of folder.contents) {
             await FICManager.importFromCollectionWithMerge(
@@ -1744,7 +1748,6 @@ export class FICManager {
                     { renderSheet: false },
                     merge
                 );
-                await new Promise((res) => setTimeout(res, 100));
             }
         }
     }
@@ -2072,6 +2075,7 @@ export class FICManager {
                     e
                 );
             }
+            await new Promise((res) => setTimeout(res, 100));
         }
     }
     static async createFolderPath(folder, pColor, entityType, e) {
