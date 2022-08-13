@@ -704,6 +704,7 @@ export class FICManager{
                         const data = TextEditor.getDragEventData(event);
                         if (FICUtils.canDragDrop(event,data)){
                             event.stopPropagation();
+                            await game.CF.FICFolderAPI.loadFolders(packCode);
                             if (data.id != folder.dataset.folderId){
                                 if (data.type === 'FICFolder'){
                                     await FICUtils.handleMoveFolderToFolder(data,this);
