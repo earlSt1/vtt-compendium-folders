@@ -4,8 +4,8 @@
     "description": "Collapsable folders for compendiums",
     "author": "Erceron",
     "version": "2.5.0",
-    "minimumCoreVersion": "9",
-    "compatibleCoreVersion":"9",
+    "minimumCoreVersion": "10",
+    "compatibleCoreVersion":"10",
     "esmodules": [
         "./compendium-folders.js"
       ],
