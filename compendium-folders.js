@@ -2207,6 +2207,18 @@ export class Settings {
             type: Boolean,
             default: false,
         });
+        game.settings.register(mod, "default-cf-sort", {
+            name: "Default Folder Sorting",
+            hint: "Defines the default folder sort when creating new folders in compendiums",
+            scope: "world",
+            config: true,
+            type: String,
+            choices: {
+                a: "Alphabetical",
+                m: "Manual",
+            },
+            default: "m",
+        });
         game.settings.register(mod, "auto-create-folders", {
             name: "Auto Create folders on Import",
             hint: "If enabled, dragging a document from a compendium into your world will create folder structures automatically",

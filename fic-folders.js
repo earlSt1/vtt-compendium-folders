@@ -490,6 +490,7 @@ class FICFolderCreateDialog extends FormApplication {
             color: "#000000",
             fontColor: "#FFFFFF",
             id: this.object.id,
+            sorting: game.settings.get(mod, "default-cf-sort") === "a",
         };
     }
     async _updateObject(options, formData) {
@@ -1051,6 +1052,7 @@ export class FICManager {
                         data.pack = packCode;
                         if (FICUtils.canDragDrop(event, packCode)) {
                             event.stopPropagation();
+                            await game.CF.FICFolderAPI.loadFolders(packCode);
                             if (data.id != folder.dataset.folderId) {
                                 if (isFolder) {
                                     await FICUtils.handleMoveFolderToFolder(

@@ -30,8 +30,8 @@
     <div class="form-group">
         <label>{{localize "FOLDER.SortMode"}}</label>
         <div class="form-fields">
-            <label class="checkbox"><input type="radio" name="sorting" value="a"> Alphabetical</label>
-            <label class="checkbox"><input type="radio" name="sorting" value="m" checked> Manual</label>
+            <label class="checkbox"><input type="radio" name="sorting" value="a" {{# if sorting }}checked{{/if}}> Alphabetical</label>
+            <label class="checkbox"><input type="radio" name="sorting" value="m"  {{# unless sorting }}checked{{/unless}}> Manual</label>
         </div>
     </div>
     <button type="submit"><i class="fas fa-check"></i>{{localize "FOLDER.Create"}}</button>
