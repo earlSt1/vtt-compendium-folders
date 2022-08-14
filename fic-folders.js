@@ -588,7 +588,7 @@ export class FICCache {
     static async updateCache(packCode, updateData) {
         let cache = game.settings.get(mod, "cached-folder");
         if (Object.keys(cache).length === 0) {
-            console.log(modName + " | No cached folder structure available");
+            console.debug(modName + " | No cached folder structure available");
             return null;
         }
         if (cache.pack === packCode) {
@@ -609,7 +609,7 @@ export class FICCache {
     static async resetCache() {
         if (!game.user.isGM) return;
         await game.settings.set(mod, "cached-folder", {});
-        console.log(modName + " | Cleared cached folder structure");
+        console.debug(modName + " | Cleared cached folder structure");
     }
 }
 //------------------------
@@ -2211,7 +2211,12 @@ export class FICFolderAPI {
         const indexFields = ["name", "flags.cf"];
 
         const pack = await game.packs.get(packCode);
-        const index = await pack.getIndex({ fields: indexFields });
+        //Force refresh of the index (like in v9)
+        const index = await pack.documentClass.database.get(pack.documentClass, {
+            query: {},
+            options: { index: true, indexFields: Array.from(indexFields) },
+            pack: pack.collection
+          }, game.user);
         //const folderIds = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME).map((i) => i._id);
         const folderIndexes = index.filter(
             (x) => x.name === game.CF.TEMP_ENTITY_NAME
@@ -2379,7 +2384,7 @@ export class FICFolderAPI {
     static async moveDocumentIntoFolder(documentId, folder) {
         const folders = await this.getFolders(folder.packCode);
         const oldFolder = folders.find((f) => f.contents.includes(documentId));
-        if (folder.id === oldFolder?.id) return;
+        if (folder.id === oldFolder?.id) return;        
         let newFolderContents = folder.contents;
         if (!newFolderContents.includes(documentId))
             newFolderContents.push(documentId);
