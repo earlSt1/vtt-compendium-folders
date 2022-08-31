@@ -66,6 +66,6 @@
     "CF.showToPlayers": "Mostrar a todos los jugadores",
     "CF.hideFromPlayers":"Ocultar a todos los jugadores",
     "CF.lockAll":"Bloquear contenidos",
-    "CF.unlockAll":"Desbloquear contenidos"
-
+    "CF.unlockAll":"Desbloquear contenidos",
+    "CF.createTable":"Crear tabla"
 }
