@@ -1143,9 +1143,7 @@ function defineClasses() {
             }
             event.stopPropagation();
             event.preventDefault();
-            const types = CONST.COMPENDIUM_DOCUMENT_TYPES.filter(
-                (t) => t != "Adventure"
-            );
+            const types = CONST.COMPENDIUM_DOCUMENT_TYPES;
             const html = await renderTemplate(
                 "templates/sidebar/compendium-create.html",
                 { types }
