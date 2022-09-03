@@ -1008,7 +1008,9 @@ export class FICManager {
                 )) {
                     entity.addEventListener("drop", async function (event) {
                         const data = TextEditor.getDragEventData(event);
-                        if (FICUtils.canDragDrop(event, packCode)) {
+                        const isFolder = data.type === "FICFolder";
+                        const isInCompendium = !isFolder && game.packs.get(packCode).index.some(i => i._id === data.id)
+                        if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
                             await FICUtils.handleMoveDocumentToDocument(
                                 event,
                                 data,
@@ -1050,7 +1052,8 @@ export class FICManager {
                         const isFolder = data.type === "FICFolder";
                         if (!isFolder) data.id = data.uuid.split(".").pop();
                         data.pack = packCode;
-                        if (FICUtils.canDragDrop(event, packCode)) {
+                        const isInCompendium = !isFolder && game.packs.get(packCode).index.some(i => i._id === data.id)
+                        if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
                             event.stopPropagation();
                             await game.CF.FICFolderAPI.loadFolders(packCode);
                             if (data.id != folder.dataset.folderId) {
