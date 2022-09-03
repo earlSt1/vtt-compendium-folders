@@ -563,14 +563,14 @@ export class FICCache {
             folders: folders.map((f) => f.toJSON()),
         };
         await game.settings.set(mod, "cached-folder", cache);
-        console.log(modName + " | Cached folder structure");
+        console.debug(modName + " | Cached folder structure");
         // Now store folder structures in game.customFolders.fic.folders
         //await FICFolderAPI.loadFolders(packCode);
     }
     static loadCachedFolderStructure(packCode) {
         let cache = game.settings.get(mod, "cached-folder");
         if (Object.keys(cache).length === 0) {
-            console.log(modName + " | No cached folder structure available");
+            console.debug(modName + " | No cached folder structure available");
             return null;
         }
         if (cache.pack === packCode) {
@@ -622,7 +622,6 @@ export class FICManager {
         // and create folders based on them
         Hooks.on("createActor", async function (a) {
             if (a.isOwner && FICUtils.shouldCreateFolders()) {
-                console.log(modName + " | Creating actor");
                 await FICManager.importFolderData(a);
             }
         });
@@ -661,7 +660,6 @@ export class FICManager {
                 game.actors.contents.some((x) => x.name === a.name) &&
                 FICUtils.shouldCreateFolders()
             ) {
-                console.log(modName + " | Updating actor");
                 await FICManager.importFolderData(a);
             }
         });
@@ -827,8 +825,10 @@ export class FICManager {
             },
             callback: async (header) => {
                 const li = header.parent()[0];
+                const quietMode = game.settings.get(mod, "quiet-mode");
                 await FICFolderAPI.exportFolderWithDialog(
-                    game.folders.get(li.dataset.folderId)
+                    game.folders.get(li.dataset.folderId),
+                    quietMode
                 );
             },
         };
@@ -980,7 +980,7 @@ export class FICManager {
             const rootFolders = allFolderData.filter(
                 (f) => f.folderPath == null || f.folderPath.length === 0
             );
-            console.log(
+            console.debug(
                 modName + " | Creating folder structure inside compendium."
             );
             let openFolders = game.settings.get(mod, "open-temp-folders");
@@ -2213,11 +2213,15 @@ export class FICFolderAPI {
 
         const pack = await game.packs.get(packCode);
         //Force refresh of the index (like in v9)
-        const index = await pack.documentClass.database.get(pack.documentClass, {
-            query: {},
-            options: { index: true, indexFields: Array.from(indexFields) },
-            pack: pack.collection
-          }, game.user);
+        const index = await pack.documentClass.database.get(
+            pack.documentClass,
+            {
+                query: {},
+                options: { index: true, indexFields: Array.from(indexFields) },
+                pack: pack.collection,
+            },
+            game.user
+        );
         //const folderIds = index.filter(x => x.name === game.CF.TEMP_ENTITY_NAME).map((i) => i._id);
         const folderIndexes = index.filter(
             (x) => x.name === game.CF.TEMP_ENTITY_NAME
@@ -2384,7 +2388,7 @@ export class FICFolderAPI {
     static async moveDocumentIntoFolder(documentId, folder) {
         const folders = await this.getFolders(folder.packCode);
         const oldFolder = folders.find((f) => f.contents.includes(documentId));
-        if (folder.id === oldFolder?.id) return;        
+        if (folder.id === oldFolder?.id) return;
         let newFolderContents = folder.contents;
         if (!newFolderContents.includes(documentId))
             newFolderContents.push(documentId);
@@ -2674,10 +2678,11 @@ export class FICFolderAPI {
         }
         await game.settings.set(mod, "importing", true);
         try {
-            if (!quietMode)
-                ui.notifications.notify(
-                    game.i18n.localize("CF.importFolderNotificationStart")
-                );
+            if (quietMode) {
+                console.log(modName + " | " + game.i18n.localize("CF.importFolderNotificationStart"));
+            } else {
+                ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationStart"));
+            }
             let pack = folder.pack;
             let coll = pack.contents;
             let packEntity = pack.documentClass.documentName;
@@ -2693,10 +2698,11 @@ export class FICFolderAPI {
                 merge,
                 keepId
             );
-            if (!quietMode)
-                ui.notifications.notify(
-                    game.i18n.localize("CF.importFolderNotificationFinish")
-                );
+            if (quietMode) {
+                console.log(modName + " | " + game.i18n.localize("CF.importFolderNotificationFinish"));
+            } else {
+                ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
+            }
             await FICUtils.removeTempEntities(packEntity);
         } catch (err) {
             console.error(modName + " | " + err);
@@ -2725,7 +2731,8 @@ export class FICFolderAPI {
             yes: async (h) => {
                 let merge = h[0].querySelector("input[name='merge']").checked;
                 let keepId = h[0].querySelector("input[name='keepId']").checked;
-                await this.importFolder(folder, merge, keepId);
+                const quietMode = game.settings.get(mod, "quiet-mode");
+                await this.importFolder(folder, merge, keepId, quietMode);
             },
         });
     }
@@ -2775,9 +2782,9 @@ export class FICFolderAPI {
                 keepId
             );
         }
-        if (!quietMode) pack.render(true);
+        pack.render(true);
     }
-    static async exportFolderWithDialog(folder) {
+    static async exportFolderWithDialog(folder, quietMode = false) {
         // Get eligible pack destinations
         const packs = game.packs.filter(
             (p) => p.documentClass.documentName === folder.type && !p.locked
@@ -2814,20 +2821,31 @@ export class FICFolderAPI {
                 const form = html[0].querySelector("form");
                 const pack = form.pack.value;
                 await game.settings.set(mod, "last-pack", form.pack.value);
-                ui.notifications.notify(
-                    game.i18n.format("CF.exportFolderNotificationStart", {
+                const exportStartMessage = game.i18n.format(
+                    "CF.exportFolderNotificationStart",
+                    {
                         pack: form.pack.value,
-                    })
+                    }
                 );
+                if (quietMode) {
+                    console.log(modName + " | " + exportStartMessage);
+                } else {
+                    ui.notifications.notify(exportStartMessage);
+                }
                 await FICFolderAPI.exportFolder(
                     pack,
                     folder,
                     form.merge.checked,
                     form.keepId.checked
                 );
-                ui.notifications.notify(
-                    game.i18n.localize("CF.exportFolderNotificationFinish")
+                const exportFinishMessage = game.i18n.localize(
+                    "CF.exportFolderNotificationFinish"
                 );
+                if (quietMode) {
+                    console.log(modName + " | " + exportFinishMessage);
+                } else {
+                    ui.notifications.notify(exportFinishMessage);
+                }
             },
             options: {},
         });

@@ -2217,6 +2217,14 @@ export class Settings {
             },
             default: "m",
         });
+        game.settings.register(mod, "quiet-mode", {
+            name: "Quiet mode",
+            hint: "If enabled, UI notifications will be disabled on import/export - useful if you are importing lots of small folders",
+            scope: "world",
+            config: true,
+            type: Boolean,
+            default: false,
+        });
         game.settings.register(mod, "auto-create-folders", {
             name: "Auto Create folders on Import",
             hint: "If enabled, dragging a document from a compendium into your world will create folder structures automatically",
