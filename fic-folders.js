@@ -26,11 +26,11 @@ export class FICUtils {
      *Generating path for world folder
      */
     static getFolderPath(folder) {
-        if (!folder.name) {
-            folder = folder.folder;
-        }
         if (folder === null) {
             return "";
+        }
+        if (!folder.name) {
+            folder = folder.folder;
         }
         let path = folder.name;
         let currentFolder = folder;
@@ -1706,6 +1706,7 @@ export class FICManager {
             merge,
             keepId
         );
+        await new Promise((res) => setTimeout(res, 100));
         // loop through individual folders
         for (let childFolder of folder.childrenObjects) {
             await FICManager.recursivelyImportFolders(
@@ -2262,7 +2263,6 @@ export class FICFolderAPI {
 
         if (updates.length > 0) {
             if (pack.locked) {
-                //ui.notifications.notify('Compendium needs migrating, unlock and reopen to perform migration')
                 return game.customFolders.fic.folders;
             }
             try {
