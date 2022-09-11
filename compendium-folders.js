@@ -395,7 +395,7 @@ function defineClasses(){
                 filters: [{inputSelector: 'input[name="search"]', contentSelector: ".directory-list"}],           
         });
         }
-
+        onReady(){}
         constructor(...args) {
             super(...args);
         }
