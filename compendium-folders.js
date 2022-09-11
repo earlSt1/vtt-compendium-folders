@@ -1143,7 +1143,15 @@ function defineClasses() {
             }
             event.stopPropagation();
             event.preventDefault();
-            const types = CONST.COMPENDIUM_DOCUMENT_TYPES;
+            const types = CONST.COMPENDIUM_DOCUMENT_TYPES.reduce(
+                (types, documentName) => {
+                    types[documentName] = game.i18n.localize(
+                        getDocumentClass(documentName).metadata.label
+                    );
+                    return types;
+                },
+                {}
+            );
             const html = await renderTemplate(
                 "templates/sidebar/compendium-create.html",
                 { types }
@@ -1155,18 +1163,19 @@ function defineClasses() {
                 callback: async (html) => {
                     const form = html.querySelector("#compendium-create");
                     const fd = new FormDataExtended(form);
-                    const data = fd.toObject();
+                    const data = fd.object;
                     if (!data.label) {
-                        const err = new Error(
-                            game.i18n.localize("COMPENDIUM.ErrorRequireTitle")
-                        );
-                        return ui.notifications.warn(err.message);
+                        let defaultName = game.i18n.format("DOCUMENT.New", {
+                            type: game.i18n.localize("PACKAGE.TagCompendium"),
+                        });
+                        const count = game.packs.size;
+                        if (count > 0) defaultName += ` (${count + 1})`;
+                        data.label = defaultName;
                     }
 
                     // Snippet taken from Compendium.create() (just so I can intercept the pack before it's declared unassigned)
                     CompendiumCollection.createCompendium(data).then(
                         async function (pack) {
-                            console.log(pack);
                             await game.customFolders.compendium.folders
                                 .get(parentId)
                                 .addCompendium(`${pack.metadata.id}`);
