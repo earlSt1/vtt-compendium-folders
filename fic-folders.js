@@ -1009,6 +1009,7 @@ export class FICManager {
                     entity.addEventListener("drop", async function (event) {
                         const data = TextEditor.getDragEventData(event);
                         const isFolder = data.type === "FICFolder";
+                        if (!isFolder) data.id = data.uuid.split(".").pop();
                         const isInCompendium = !isFolder && game.packs.get(packCode).index.some(i => i._id === data.id)
                         if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
                             await FICUtils.handleMoveDocumentToDocument(
@@ -1967,6 +1968,7 @@ export class FICManager {
                         folderData.documentId
                     );
                     child.setAttribute("data-folder-id", folderData.id);
+                    child.setAttribute("data-pack", packCode);
                     packList.appendChild(child);
                 }
             }
