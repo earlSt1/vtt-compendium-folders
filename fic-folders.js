@@ -943,14 +943,7 @@ export class FICManager {
             const compendiumWindow = document.querySelector(
                 ".compendium.directory[data-pack='" + packCode + "']"
             );
-            if (
-                !e.collection.locked &&
-                game.user.isGM &&
-                !(
-                    game.system.id === "CoC7" &&
-                    game.packs.get(packCode).documentName == "Item"
-                )
-            )
+            if (!e.collection.locked && game.user.isGM)
                 FICManager.createNewFolderButtonWithinCompendium(
                     compendiumWindow,
                     packCode,
@@ -2020,12 +2013,7 @@ export class FICManager {
     }
 
     static createNewFolderButtonWithinCompendium(window, packCode) {
-        let directoryHeader = window.querySelector("header.directory-header");
-        if (
-            game.system.id === "CoC7" &&
-            window.querySelector("div.compendiumfilter") != null
-        )
-            directoryHeader = window.querySelector("div.compendiumfilter");
+        const directoryHeader = window.querySelector("header.directory-header");
         let button = document.createElement("button");
         button.classList.add("fic-create");
         button.type = "submit";
