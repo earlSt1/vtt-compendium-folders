@@ -195,7 +195,7 @@ export class FICUtils {
     }
     static async handleMoveDocumentToFolder(data, targetFolderElement) {
         //Moving Document to Folder
-        const movingDocumentId = data.id;
+        const movingDocumentId = data.documentId;
         if (movingDocumentId) {
             console.log(
                 modName +
@@ -1012,11 +1012,14 @@ export class FICManager {
                         if (!isFolder) data.id = data.uuid.split(".").pop();
                         const isInCompendium = !isFolder && game.packs.get(packCode).index.some(i => i._id === data.id)
                         if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
-                            await FICUtils.handleMoveDocumentToDocument(
-                                event,
-                                data,
-                                this
-                            );
+                            if (game.customFolders.fic.folders.some(f => f.contents.includes(data.id) && f.contents.includes(entity.dataset.documentId))){   
+                                event.stopPropagation();           
+                                await FICUtils.handleMoveDocumentToDocument(
+                                    event,
+                                    data,
+                                    this
+                                );
+                            }
                         }
                     });
                 }
@@ -1051,13 +1054,16 @@ export class FICManager {
                     folder.addEventListener("drop", async function (event) {
                         const data = TextEditor.getDragEventData(event);
                         const isFolder = data.type === "FICFolder";
-                        if (!isFolder) data.id = data.uuid.split(".").pop();
+                        if (!isFolder){
+                            data.documentId = data.uuid.split(".").pop();
+                        } 
                         data.pack = packCode;
-                        const isInCompendium = !isFolder && game.packs.get(packCode).index.some(i => i._id === data.id)
+                        const isInCompendium = game.packs.get(packCode).index.some(i => i._id === data.documentId)
                         if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
                             event.stopPropagation();
                             await game.CF.FICFolderAPI.loadFolders(packCode);
-                            if (data.id != folder.dataset.folderId) {
+                            if (game.customFolders.fic.folders.some(x => x.contents.includes(data.documentId)
+                            || game.customFolders.fic.folders.some(x => x.children.includes(data.id)))) {
                                 if (isFolder) {
                                     await FICUtils.handleMoveFolderToFolder(
                                         data,
