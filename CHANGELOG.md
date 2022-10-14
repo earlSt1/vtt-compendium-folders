@@ -1,3 +1,11 @@
+# 2.5.3 (2022-10-14)
+- Updated manifest for v10
+- Added option to disable folders inside compendiums, keeping the sidebar folders
+- Removed obsolete Fix my Compendium dialog
+- Fix issues with create folder button not appearing in CoC7 compendiums
+- Fix issues with dragdrop not reordering correctly inside compendiums
+- Fix various issues related to moving elements inside compendiums
+
 # 2.4.6 (2022-06-06)
 - Fixed issues with import flag not being reset after importing folders
 - Added option to Create RollTable from folder in compendium.
