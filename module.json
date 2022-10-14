@@ -1,11 +1,20 @@
 {
-    "name": "compendium-folders",
+    "id": "compendium-folders",
     "title": "Compendium Folders",
     "description": "Collapsable folders for compendiums",
-    "author": "Erceron",
+    "authors": [
+      {
+        "name": "Erceron",
+        "url": "https://github.com/earlSt1",
+        "discord": "Erceron#0370"
+      }
+    ],
     "version": "2.5.3",
-    "minimumCoreVersion": "10",
-    "compatibleCoreVersion":"10",
+    "compatibility": {
+      "minimum": 10,
+      "verified": "10.288",
+      "maximum": 10
+    },
     "esmodules": [
         "./compendium-folders.js"
       ],
