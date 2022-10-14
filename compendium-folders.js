@@ -1930,6 +1930,15 @@ export class Settings {
             type: Boolean,
             default: false,
         });
+        game.settings.register(mod, "disable-fic", {
+            name: "Disable Folders inside Compendiums",
+            hint: "If enabled, the Folders Inside Compendiums part of the module will be disabled",
+            scope: "world",
+            config: true,
+            type: Boolean,
+            default: false,
+            requiresReload: true
+        });
         game.settings.register(mod, "auto-create-folders", {
             name: "Auto Create folders on Import",
             hint: "If enabled, dragging a document from a compendium into your world will create folder structures automatically",

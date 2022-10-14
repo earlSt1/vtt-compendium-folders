@@ -617,6 +617,9 @@ export class FICCache {
 //------------------------
 export class FICManager {
     static setup() {
+        if (game.settings.get(mod,'disable-fic')){
+            return;
+        }
         // Hooking into the update/create methods to extract
         // folder data from the entity
         // and create folders based on them
