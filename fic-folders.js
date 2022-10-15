@@ -1008,7 +1008,8 @@ export class FICManager {
                         if (!isFolder) data.id = data.uuid.split(".").pop();
                         const isInCompendium = !isFolder && game.packs.get(packCode).index.some(i => i._id === data.id)
                         if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
-                            if (game.customFolders.fic.folders.some(f => f.contents.includes(data.id) && f.contents.includes(entity.dataset.documentId))){   
+                            if (game.customFolders.fic.folders.some(f => f.contents.includes(data.id) && f.contents.includes(entity.dataset.documentId))
+                                && this.dataset.documentId != data.id){   
                                 event.stopPropagation();           
                                 await FICUtils.handleMoveDocumentToDocument(
                                     event,
@@ -1058,20 +1059,17 @@ export class FICManager {
                         if (isInCompendium && FICUtils.canDragDrop(event, packCode)) {
                             event.stopPropagation();
                             await game.CF.FICFolderAPI.loadFolders(packCode);
-                            if (game.customFolders.fic.folders.some(x => x.contents.includes(data.documentId)
-                            || game.customFolders.fic.folders.some(x => x.children.includes(data.id)))) {
-                                if (isFolder) {
-                                    await FICUtils.handleMoveFolderToFolder(
-                                        data,
-                                        this
-                                    );
-                                } else {
-                                    await FICUtils.handleMoveDocumentToFolder(
-                                        data,
-                                        this
-                                    );
-                                }
-                            }
+                            if (isFolder) {
+                                await FICUtils.handleMoveFolderToFolder(
+                                    data,
+                                    this
+                                );
+                            } else {
+                                await FICUtils.handleMoveDocumentToFolder(
+                                    data,
+                                    this
+                                );
+                            }  
                         }
                         folder.classList.remove("droptarget");
                     });
