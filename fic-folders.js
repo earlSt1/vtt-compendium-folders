@@ -1698,8 +1698,8 @@ export class FICManager {
             { renderSheet: false },
             merge,
             keepId
-        );
-        await new Promise((res) => setTimeout(res, 100));
+        )
+        await new Promise((res) => setTimeout(res, 500));
         // loop through individual folders
         for (let childFolder of folder.childrenObjects) {
             await FICManager.recursivelyImportFolders(
