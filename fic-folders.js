@@ -1699,7 +1699,7 @@ export class FICManager {
             merge,
             keepId
         )
-        await new Promise((res) => setTimeout(res, 500));
+        await new Promise((res) => setTimeout(res, 1000));
         // loop through individual folders
         for (let childFolder of folder.childrenObjects) {
             await FICManager.recursivelyImportFolders(
@@ -2067,7 +2067,7 @@ export class FICManager {
                     e
                 );
             }
-            await new Promise((res) => setTimeout(res, 100));
+            await new Promise((res) => setTimeout(res, 500));
         }
     }
     static async createFolderPath(folder, pColor, entityType, e) {
