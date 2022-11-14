@@ -75,9 +75,7 @@ export class FICUtils {
             .replace("0.", prefix || "");
     }
     static shouldCreateFolders() {
-        let importing = game.settings.get(mod, "importing");
-        let autoCreate = game.settings.get(mod, "auto-create-folders");
-        return importing;
+        return !FICManager.allHooksFinished();
     }
     static async removeStaleOpenFolderSettings(packCode) {
         let openFolders = game.settings.get(mod, "open-temp-folders");
@@ -1685,9 +1683,45 @@ export class FICManager {
         createData._id = search[0].id;
         return await pack.documentClass.updateDocuments([createData], options);
     }
-
+    static #totalHooks = 0;
+    static setImportHooks(folder){
+        /// Number of hooks = number of folders importing
+        this.#totalHooks = game.customFolders.fic.folders.contents.filter(x => x.folderPath.includes(folder.id)).length + 1;
+    }
+    static finishHook(){
+        this.#totalHooks -= 1;
+    }
+    static allHooksFinished(){
+        return this.#totalHooks === 0;
+    }
     static async recursivelyImportFolders(pack, coll, folder, merge, keepId) {
         let folderPath = folder.path;
+        Hooks.once("folderCreated_"+folder.id, async function(){
+            // loop through individual folders
+            for (let childFolder of folder.childrenObjects) {
+                await FICManager.recursivelyImportFolders(
+                    pack,
+                    coll,
+                    childFolder,
+                    merge,
+                    keepId
+                );
+            }
+            //Then import immediate child documents
+            for (let documentId of folder.contents) {
+                await FICManager.importFromCollectionWithMerge(
+                    coll,
+                    pack.collection,
+                    documentId,
+                    folderPath,
+                    {},
+                    { renderSheet: false },
+                    merge,
+                    keepId
+                );
+            }
+            FICManager.finishHook();
+        });
         //Import the actual folder document
         await FICManager.importFromCollectionWithMerge(
             coll,
@@ -1699,30 +1733,7 @@ export class FICManager {
             merge,
             keepId
         )
-        await new Promise((res) => setTimeout(res, 1000));
-        // loop through individual folders
-        for (let childFolder of folder.childrenObjects) {
-            await FICManager.recursivelyImportFolders(
-                pack,
-                coll,
-                childFolder,
-                merge,
-                keepId
-            );
-        }
-        //Then import immediate child documents
-        for (let documentId of folder.contents) {
-            await FICManager.importFromCollectionWithMerge(
-                coll,
-                pack.collection,
-                documentId,
-                folderPath,
-                {},
-                { renderSheet: false },
-                merge,
-                keepId
-            );
-        }
+        
     }
     static async importAllParentFolders(pack, coll, folder, merge) {
         // if not root folder, import all parent folders
@@ -1755,6 +1766,91 @@ export class FICManager {
         const folders = await FICFolderAPI.getFolders(packCode);
         let folderObj = folders.get(folder.getAttribute("data-folder-id"));
         FICFolderAPI.importFolderWithDialog(folderObj);
+    }
+    //==========================
+    // Used to update entity when imported from compendium
+    // To keep folder parent and remove folderdata from name
+    // At this point, game.customFolders.fic.folders is populated (only accessible through import process)
+    // ==========================
+    static async importFolderData(e) {
+        if (!game.customFolders.fic) return;
+        if (e.flags.cf != null) {
+            //  && e.data.flags.cf.path != null && !e.folder){
+            let ficFolder = game.customFolders.fic.folders.get(e.flags.cf.id);
+            let path = ficFolder.path;
+            let foundFolder = null;
+            let folderExists = false;
+            let hook = null;
+            if (e.name === game.CF.TEMP_ENTITY_NAME) {
+                console.log("Temp entity importing: "+e.flags.cf.id)
+                hook = "folderCreated_"+e.flags.cf.id; 
+            }
+            for (let folder of game.folders.values()) {
+                if (folder.type == e.documentName) {
+                    if (FICUtils.getFolderPath(folder) === path) {
+                        folderExists = true;
+                        foundFolder = folder;
+                    }
+                }
+            }
+            if (folderExists) {
+                await e.update({ folder: foundFolder.id, flags: { cf: null } });
+            } else {
+                await FICManager.createFolderPath(
+                    ficFolder,
+                    null,
+                    e.documentName,
+                    e
+                );
+            }
+            if (hook != null){
+                Hooks.call(hook);
+            };
+        }
+    }
+    static async createFolderPath(folder, pColor, entityType, e) {
+        let folderList = [folder];
+
+        let currentParent = folder.parent;
+        while (currentParent) {
+            folderList.push(currentParent);
+            currentParent = currentParent.parent;
+        }
+        for (let parentFolder of folderList.reverse()) {
+            let result = game.folders.find(
+                (f) =>
+                    f.type === entityType &&
+                    FICUtils.getFolderPath(f) === parentFolder.path
+            );
+            if (!result) {
+                //Create the folder if it does not exist
+                let parentId = null;
+
+                if (parentFolder.parent) {
+                    parentId = game.folders.find(
+                        (f) =>
+                            f.type === entityType &&
+                            f.name === parentFolder.parent.name &&
+                            FICUtils.getFolderPath(f) ===
+                                parentFolder.parent.path
+                    )?.id;
+                }
+                let data = {
+                    name: game.i18n.has(parentFolder.name)
+                        ? game.i18n.localize(parentFolder.name)
+                        : parentFolder.name,
+                    sorting: parentFolder.sorting || "a",
+                    parent: parentId,
+                    type: entityType,
+                    content: [],
+                    color: parentFolder.color,
+                };
+                let f = await Folder.create(data);
+                if (parentFolder.id === folder.id) {
+                    await e.update({ folder: f.id, flags: { cf: null } });
+                }
+            }
+        }
     }
     // ==========================
     // Folder creation inside compendiums
@@ -2031,88 +2127,6 @@ export class FICManager {
         headerActions.appendChild(button);
         headerActions.style.flex = "0";
         directoryHeader.insertAdjacentElement("beforeend", headerActions);
-    }
-
-    //==========================
-    // Used to update entity when imported from compendium
-    // To keep folder parent and remove folderdata from name
-    // At this point, game.customFolders.fic.folders is populated (only accessible through import process)
-    // ==========================
-    static async importFolderData(e) {
-        if (!game.customFolders.fic) return;
-        if (e.flags.cf != null) {
-            //  && e.data.flags.cf.path != null && !e.folder){
-            let ficFolder = game.customFolders.fic.folders.get(e.flags.cf.id);
-            let path = ficFolder.path;
-            let color = ficFolder.color;
-            //a.data.folder -> id;
-            let foundFolder = null;
-            let folderExists = false;
-
-            for (let folder of game.folders.values()) {
-                if (folder.type == e.documentName) {
-                    if (FICUtils.getFolderPath(folder) === path) {
-                        folderExists = true;
-                        foundFolder = folder;
-                    }
-                }
-            }
-            if (folderExists) {
-                await e.update({ folder: foundFolder.id, flags: { cf: null } });
-            } else {
-                await FICManager.createFolderPath(
-                    ficFolder,
-                    null,
-                    e.documentName,
-                    e
-                );
-            }
-            await new Promise((res) => setTimeout(res, 500));
-        }
-    }
-    static async createFolderPath(folder, pColor, entityType, e) {
-        let folderList = [folder];
-
-        let currentParent = folder.parent;
-        while (currentParent) {
-            folderList.push(currentParent);
-            currentParent = currentParent.parent;
-        }
-        for (let parentFolder of folderList.reverse()) {
-            let result = game.folders.find(
-                (f) =>
-                    f.type === entityType &&
-                    FICUtils.getFolderPath(f) === parentFolder.path
-            );
-            if (!result) {
-                //Create the folder if it does not exist
-                let parentId = null;
-
-                if (parentFolder.parent) {
-                    parentId = game.folders.find(
-                        (f) =>
-                            f.type === entityType &&
-                            f.name === parentFolder.parent.name &&
-                            FICUtils.getFolderPath(f) ===
-                                parentFolder.parent.path
-                    )?.id;
-                }
-                let data = {
-                    name: game.i18n.has(parentFolder.name)
-                        ? game.i18n.localize(parentFolder.name)
-                        : parentFolder.name,
-                    sorting: parentFolder.sorting || "a",
-                    parent: parentId,
-                    type: entityType,
-                    content: [],
-                    color: parentFolder.color,
-                };
-                let f = await Folder.create(data);
-                if (parentFolder.id === folder.id) {
-                    await e.update({ folder: f.id, flags: { cf: null } });
-                }
-            }
-        }
     }
     static async deleteFolderWithinCompendium(
         packCode,
@@ -2680,6 +2694,7 @@ export class FICFolderAPI {
             await FICFolderAPI.loadFolders(folder.packCode);
 
             await FICManager.importAllParentFolders(pack, coll, folder, merge);
+            FICManager.setImportHooks(folder);
             await FICManager.recursivelyImportFolders(
                 pack,
                 coll,
@@ -2692,10 +2707,11 @@ export class FICFolderAPI {
             } else {
                 ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
             }
-            await FICUtils.removeTempEntities(packEntity);
+            //await FICUtils.removeTempEntities(packEntity);
         } catch (err) {
             console.error(modName + " | " + err);
         } finally {
+            console.log(modName+ " | Importing finished")
             await game.settings.set(mod, "importing", false);
         }
     }
