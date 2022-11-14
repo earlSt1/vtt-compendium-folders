@@ -751,7 +751,7 @@ export class FICManager {
         Hooks.on("renderItemDirectory", async function (e) {
             let importing = game.settings.get(mod, "importing");
             if (
-                !importing &&
+                !importing && //FICManager.allHooksFinished() &&
                 game.items.contents.some(
                     (i) => i.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
                 )
@@ -1688,8 +1688,17 @@ export class FICManager {
         /// Number of hooks = number of folders importing
         this.#totalHooks = game.customFolders.fic.folders.contents.filter(x => x.folderPath.includes(folder.id)).length + 1;
     }
-    static finishHook(){
+    static finishHook(documentName){
         this.#totalHooks -= 1;
+        if (this.allHooksFinished()){
+            const quietMode = game.settings.get(mod, "quiet-mode");
+            if (quietMode) {
+                console.log(modName + " | " + game.i18n.localize("CF.importFolderNotificationFinish"));
+            } else {
+                ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
+            }
+            FICUtils.removeTempEntities(documentName);
+        }
     }
     static allHooksFinished(){
         return this.#totalHooks === 0;
@@ -1720,7 +1729,7 @@ export class FICManager {
                     keepId
                 );
             }
-            FICManager.finishHook();
+            FICManager.finishHook(pack.documentName);
         });
         //Import the actual folder document
         await FICManager.importFromCollectionWithMerge(
@@ -2702,17 +2711,9 @@ export class FICFolderAPI {
                 merge,
                 keepId
             );
-            if (quietMode) {
-                console.log(modName + " | " + game.i18n.localize("CF.importFolderNotificationFinish"));
-            } else {
-                ui.notifications.notify(game.i18n.localize("CF.importFolderNotificationFinish"));
-            }
-            //await FICUtils.removeTempEntities(packEntity);
+            await FICUtils.removeTempEntities(packEntity);
         } catch (err) {
             console.error(modName + " | " + err);
-        } finally {
-            console.log(modName+ " | Importing finished")
-            await game.settings.set(mod, "importing", false);
         }
     }
     static async importFolderWithDialog(folder) {
