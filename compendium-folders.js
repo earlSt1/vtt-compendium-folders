@@ -2135,6 +2135,7 @@ Hooks.once("init", async function () {
     defineClasses();
     Settings.registerSettings();
     game.CF.FICManager.setup();
+    game.CF.FICManager.resetHooks();
     Hooks.once("ready", async function () {
         game.CF.FICFolderAPI.clearCache();
         if (game.settings.get(mod, "importing")) {

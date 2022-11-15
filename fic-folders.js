@@ -723,97 +723,6 @@ export class FICManager {
 
         // Adding the export button to all folders
         // ONLY if it contains an entity (either direct child or in child folder)
-
-        Hooks.on("renderActorDirectory", async function (a) {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.actors.contents.some(
-                    (a) => a.name === game.CF.TEMP_ENTITY_NAME
-                ) &&
-                game.user.isGM
-            ) {
-                await FICUtils.removeTempEntities("Actor");
-            }
-        });
-        Hooks.on("renderCardsDirectory", async function (c) {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.cards.contents.some(
-                    (c) => c.name === game.CF.TEMP_ENTITY_NAME
-                ) &&
-                game.user.isGM
-            ) {
-                await FICUtils.removeTempEntities("Cards");
-            }
-        });
-        Hooks.on("renderItemDirectory", async function (e) {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing && //FICManager.allHooksFinished() &&
-                game.items.contents.some(
-                    (i) => i.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
-                )
-            ) {
-                await FICUtils.removeTempEntities("Item");
-            }
-        });
-        Hooks.on("renderJournalDirectory", async function () {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.journal.contents.some(
-                    (j) => j.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
-                )
-            ) {
-                await FICUtils.removeTempEntities("JournalEntry");
-            }
-        });
-        Hooks.on("renderMacroDirectory", async function () {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.macros.contents.some(
-                    (m) => m.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
-                )
-            ) {
-                await FICUtils.removeTempEntities("Macro");
-            }
-        });
-        Hooks.on("renderPlaylistDirectory", async function () {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.playlists.contents.some(
-                    (p) => p.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
-                )
-            ) {
-                await FICUtils.removeTempEntities("Playlist");
-            }
-        });
-        Hooks.on("renderRollTableDirectory", async function () {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.tables.contents.some(
-                    (r) => r.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
-                )
-            ) {
-                await FICUtils.removeTempEntities("RollTable");
-            }
-        });
-        Hooks.on("renderSceneDirectory", async function () {
-            let importing = game.settings.get(mod, "importing");
-            if (
-                !importing &&
-                game.scenes.contents.some(
-                    (s) => s.name === game.CF.TEMP_ENTITY_NAME && game.user.isGM
-                )
-            ) {
-                await FICUtils.removeTempEntities("Scene");
-            }
-        });
         // Adding export buttons to context menus for folders
         let newContextOption = {
             name: "CF.exportFolderHint",
@@ -1594,7 +1503,7 @@ export class FICManager {
     ) {
         const pack = game.packs.get(collection);
         const cls = pack.documentClass;
-        options = { keepId: keepId };
+        options = { keepId: keepId, fromCCompendium:true };
         // Prepare the source data from which to create the Entity
         const document = await pack.getDocument(entryId);
         const destination = game.collections.get(pack.documentName);
@@ -1703,34 +1612,14 @@ export class FICManager {
     static allHooksFinished(){
         return this.#totalHooks === 0;
     }
+    static get hooks(){
+        return this.#totalHooks;
+    }
+    static resetHooks(){
+        this.#totalHooks = 0;
+    }
     static async recursivelyImportFolders(pack, coll, folder, merge, keepId) {
         let folderPath = folder.path;
-        Hooks.once("folderCreated_"+folder.id, async function(){
-            // loop through individual folders
-            for (let childFolder of folder.childrenObjects) {
-                await FICManager.recursivelyImportFolders(
-                    pack,
-                    coll,
-                    childFolder,
-                    merge,
-                    keepId
-                );
-            }
-            //Then import immediate child documents
-            for (let documentId of folder.contents) {
-                await FICManager.importFromCollectionWithMerge(
-                    coll,
-                    pack.collection,
-                    documentId,
-                    folderPath,
-                    {},
-                    { renderSheet: false },
-                    merge,
-                    keepId
-                );
-            }
-            FICManager.finishHook(pack.documentName);
-        });
         //Import the actual folder document
         await FICManager.importFromCollectionWithMerge(
             coll,
@@ -1742,7 +1631,35 @@ export class FICManager {
             merge,
             keepId
         )
-        
+        Hooks.once("folderCreated_"+folder.id, async function(){
+            // loop through individual folders
+            try{
+                for (let childFolder of folder.childrenObjects) {
+                    await FICManager.recursivelyImportFolders(
+                        pack,
+                        coll,
+                        childFolder,
+                        merge,
+                        keepId
+                    );
+                }
+                //Then import immediate child documents
+                for (let documentId of folder.contents) {
+                    await FICManager.importFromCollectionWithMerge(
+                        coll,
+                        pack.collection,
+                        documentId,
+                        folderPath,
+                        {},
+                        { renderSheet: false },
+                        merge,
+                        keepId
+                    );
+                }
+            } finally {
+                FICManager.finishHook(pack.documentName);
+            }
+        });
     }
     static async importAllParentFolders(pack, coll, folder, merge) {
         // if not root folder, import all parent folders
@@ -2711,7 +2628,6 @@ export class FICFolderAPI {
                 merge,
                 keepId
             );
-            await FICUtils.removeTempEntities(packEntity);
         } catch (err) {
             console.error(modName + " | " + err);
         }
