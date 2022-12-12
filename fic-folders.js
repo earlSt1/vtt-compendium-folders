@@ -917,17 +917,6 @@ export class FICManager {
                 "WRAPPER"
             );
         }
-        // Tempoary workaround for getFlag function not working
-        libWrapper.register(
-            mod,
-            "ClientDatabaseBackend.prototype.getFlagScopes",
-            function (wrapped, ...args) {
-                let scopes = wrapped(...args);
-                scopes.push("cf");
-                return scopes;
-            },
-            "WRAPPER"
-        );
         // Folders In Compendium changes
         libWrapper.register(
             mod,
