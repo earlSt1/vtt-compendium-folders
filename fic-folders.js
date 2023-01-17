@@ -1665,8 +1665,8 @@ export class FICManager {
         // if not root folder, import all parent folders
         // Just importing parent folders
         if (folder.parent) {
-            let parentList = [];
             let currentParent = folder.parent;
+            let parentList = [currentParent];
             while (currentParent.parent) {
                 parentList.push(currentParent);
                 currentParent = currentParent.parent;
@@ -2619,15 +2619,27 @@ export class FICFolderAPI {
             //Make use of new FICFolderAPI
             await FICFolderAPI.loadFolders(folder.packCode);
 
-            await FICManager.importAllParentFolders(pack, coll, folder, merge);
             FICManager.setImportHooks(folder);
-            await FICManager.recursivelyImportFolders(
-                pack,
-                coll,
-                folder,
-                merge,
-                keepId
-            );
+            if (folder.parent){
+                Hooks.once("folderCreated_"+folder.parent.id, async function(){
+                    await FICManager.recursivelyImportFolders(
+                        pack,
+                        coll,
+                        folder,
+                        merge,
+                        keepId
+                    );
+                });
+                await FICManager.importAllParentFolders(pack, coll, folder, merge);
+            } else {
+                await FICManager.recursivelyImportFolders(
+                    pack,
+                    coll,
+                    folder,
+                    merge,
+                    keepId
+                );
+            }
         } catch (err) {
             console.error(modName + " | " + err);
         }
