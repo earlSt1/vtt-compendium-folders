@@ -1593,9 +1593,43 @@ export class FICManager {
         return await pack.documentClass.updateDocuments([createData], options);
     }
     static #totalHooks = 0;
-    static setImportHooks(folder){
-        /// Number of hooks = number of folders importing
-        this.#totalHooks = game.customFolders.fic.folders.contents.filter(x => x.folderPath.includes(folder.id)).length + 1;
+    static setImportHook(folder, callback){
+        Hooks.once("folderCreated_"+folder.id, async function(){
+            try{
+                await callback()
+            } finally {
+                FICManager.finishHook(folder.pack.documentName);
+            }
+        });
+    }
+    static initializeHooks(folder){
+        // Number of hooks
+        // For root folder: self + number of child folders
+        // For non-root folder: number of parent folders - root + self + number of child folders
+
+        if (!folder.parent){
+            this.#totalHooks = 1 + this.getAllChildrenCount(folder.id); 
+        } else {
+            this.#totalHooks = this.getDepth(folder.id) + this.getAllChildrenCount(folder.id)
+        }
+    }
+    static getDepth(folderId){
+        let depth = 0;
+        let folder = game.customFolders.fic.folders.get(folderId);
+        let currentFolder = folder;
+        while (currentFolder.parent) {
+            depth++;
+            currentFolder = currentFolder.parent;
+        }
+        return depth;
+    }
+    static getAllChildrenCount(folderId){
+        let folder = game.customFolders.fic.folders.get(folderId);
+        let children = folder.children.length;
+        for (let child of folder.children){
+            children += this.getAllChildrenCount(child);
+        }
+        return children;
     }
     static finishHook(documentName){
         this.#totalHooks -= 1;
@@ -1620,6 +1654,31 @@ export class FICManager {
     }
     static async recursivelyImportFolders(pack, coll, folder, merge, keepId) {
         let folderPath = folder.path;
+        FICManager.setImportHook(folder, async function(){
+            // loop through individual folders
+            for (let childFolder of folder.childrenObjects) {
+                await FICManager.recursivelyImportFolders(
+                    pack,
+                    coll,
+                    childFolder,
+                    merge,
+                    keepId
+                );
+            }
+            //Then import immediate child documents
+            for (let documentId of folder.contents) {
+                await FICManager.importFromCollectionWithMerge(
+                    coll,
+                    pack.collection,
+                    documentId,
+                    folderPath,
+                    {},
+                    { renderSheet: false },
+                    merge,
+                    keepId
+                );
+            }
+        });
         //Import the actual folder document
         await FICManager.importFromCollectionWithMerge(
             coll,
@@ -1631,56 +1690,43 @@ export class FICManager {
             merge,
             keepId
         )
-        Hooks.once("folderCreated_"+folder.id, async function(){
-            // loop through individual folders
-            try{
-                for (let childFolder of folder.childrenObjects) {
-                    await FICManager.recursivelyImportFolders(
-                        pack,
-                        coll,
-                        childFolder,
-                        merge,
-                        keepId
-                    );
-                }
-                //Then import immediate child documents
-                for (let documentId of folder.contents) {
-                    await FICManager.importFromCollectionWithMerge(
-                        coll,
-                        pack.collection,
-                        documentId,
-                        folderPath,
-                        {},
-                        { renderSheet: false },
-                        merge,
-                        keepId
-                    );
-                }
-            } finally {
-                FICManager.finishHook(pack.documentName);
-            }
-        });
     }
     static async importAllParentFolders(pack, coll, folder, merge) {
         // if not root folder, import all parent folders
         // Just importing parent folders
         if (folder.parent) {
             let currentParent = folder.parent;
-            let parentList = [currentParent];
+            let parentList = [];
             while (currentParent.parent) {
                 parentList.push(currentParent);
                 currentParent = currentParent.parent;
             }
-            for (let p of parentList.reverse()) {
-                await FICManager.importFromCollectionWithMerge(
-                    coll,
-                    pack.collection,
-                    p.documentId,
-                    p.path,
-                    { flags: { cf: { import: true } } },
-                    { renderSheet: false },
-                    merge
-                );
+            parentList.push(currentParent);
+
+            for (let p of parentList) {
+                if (!p.parent){
+                    await FICManager.importFromCollectionWithMerge(
+                        coll,
+                        pack.collection,
+                        p.documentId,
+                        p.path,
+                        { flags: { cf: { import: true } } },
+                        { renderSheet: false },
+                        merge
+                    );
+                } else {
+                    FICManager.setImportHook(p.parent,  async function() {
+                        await FICManager.importFromCollectionWithMerge(
+                            coll,
+                            pack.collection,
+                            p.documentId,
+                            p.path,
+                            { flags: { cf: { import: true } } },
+                            { renderSheet: false },
+                            merge
+                        );
+                    });
+                }
             }
         }
     }
@@ -1708,7 +1754,6 @@ export class FICManager {
             let folderExists = false;
             let hook = null;
             if (e.name === game.CF.TEMP_ENTITY_NAME) {
-                console.log("Temp entity importing: "+e.flags.cf.id)
                 hook = "folderCreated_"+e.flags.cf.id; 
             }
             for (let folder of game.folders.values()) {
@@ -2614,12 +2659,11 @@ export class FICFolderAPI {
             }
             let pack = folder.pack;
             let coll = pack.contents;
-            let packEntity = pack.documentClass.documentName;
 
             //Make use of new FICFolderAPI
             await FICFolderAPI.loadFolders(folder.packCode);
-
-            FICManager.setImportHooks(folder);
+            
+            FICManager.initializeHooks(folder)
             if (folder.parent){
                 Hooks.once("folderCreated_"+folder.parent.id, async function(){
                     await FICManager.recursivelyImportFolders(
