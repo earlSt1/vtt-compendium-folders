@@ -186,9 +186,7 @@ function defineClasses() {
                 data.compendiums = [];
             }
             // Set open state
-            data.expanded = game.settings
-                .get(mod, "open-folders")
-                .includes(data._id);
+            data.expanded = game.settings.get(mod, "open-folders").includes(data._id);
 
             return CompendiumFolder.create(data);
         }
@@ -211,24 +209,18 @@ function defineClasses() {
                     // create folder
                     allFolders[this.id] = this._getSaveData();
                 } else {
-                    allFolders[this.id] = mergeObject(
-                        currentFolder,
-                        this._getSaveData()
-                    );
+                    allFolders[this.id] = mergeObject(currentFolder, this._getSaveData());
                 }
                 await game.settings.set(mod, "cfolders", allFolders);
             }
-            game.customFolders.compendium.folders.get(this.id).data =
-                Object.assign({}, this.data);
+            game.customFolders.compendium.folders.get(this.id).data = Object.assign({}, this.data);
             if (refresh) {
                 await initFolders(false);
                 ui.compendium.render(true);
             }
         }
         async delete(refresh = true) {
-            let nextFolder = this.parent
-                ? this.parent
-                : this.collection.default;
+            let nextFolder = this.parent ? this.parent : this.collection.default;
             for (let pack of this.compendiumList) {
                 await nextFolder.addCompendium(pack);
             }
@@ -277,9 +269,7 @@ function defineClasses() {
             if (del) {
                 game.customFolders.compendium.entries.delete(pack.packCode);
             } else {
-                let entry = game.customFolders.compendium.entries.get(
-                    pack.packCode
-                );
+                let entry = game.customFolders.compendium.entries.get(pack.packCode);
                 let hiddenFolder = this.collection.hidden;
                 hiddenFolder._addPack(entry);
                 await hiddenFolder.save(false);
@@ -287,11 +277,7 @@ function defineClasses() {
             await this.save(refresh);
         }
         async removeCompendiumByCode(packCode, del = false, refresh = true) {
-            await this.removeCompendium(
-                game.customFolders.compendium.entries.get(packCode),
-                del,
-                refresh
-            );
+            await this.removeCompendium(game.customFolders.compendium.entries.get(packCode), del, refresh);
         }
         async moveFolder(destId, updateParent = true) {
             let destFolder = this.collection.get(destId);
@@ -306,19 +292,13 @@ function defineClasses() {
         _addPack(pack) {
             if (!this.data.compendiumList.includes(pack.packCode)) {
                 this.content = this.content.concat(pack);
-                this.data.compendiumList = this.data.compendiumList.concat(
-                    pack.packCode
-                );
+                this.data.compendiumList = this.data.compendiumList.concat(pack.packCode);
             }
             pack.folder = this.id;
         }
         _removePack(pack, del = false) {
-            this.data.compendiumList = this.data.compendiumList.filter(
-                (x) => x != pack.packCode
-            );
-            this.content = this.content.filter(
-                (x) => x.packCode != pack.packCode
-            );
+            this.data.compendiumList = this.data.compendiumList.filter((x) => x != pack.packCode);
+            this.content = this.content.filter((x) => x.packCode != pack.packCode);
             if (del && pack.folder) pack.folder = null;
         }
         _removeFolder(child) {
@@ -469,8 +449,7 @@ function defineClasses() {
         static get defaultOptions() {
             return foundry.utils.mergeObject(super.defaultOptions, {
                 id: "compendium",
-                template:
-                    "modules/compendium-folders/templates/compendium-directory.html",
+                template: "modules/compendium-folders/templates/compendium-directory.html",
                 title: "Compendium Packs",
                 dragDrop: [
                     {
@@ -496,9 +475,7 @@ function defineClasses() {
             CompendiumDirectory.prototype._toggleOpenState(pack);
         }
         async checkDeleted() {
-            let goneCompendiums = game.customFolders.compendium.entries.filter(
-                (x) => !x.pack
-            );
+            let goneCompendiums = game.customFolders.compendium.entries.filter((x) => !x.pack);
             for (let c of goneCompendiums) {
                 await c.parent.removeCompendium(c, true, false);
             }
@@ -513,12 +490,8 @@ function defineClasses() {
                 this.folders = [...this.constructor.folders];
                 this.documents = [...this.constructor.collection];
             } else {
-                this.folders = [...this.constructor.folders].filter((x) =>
-                    x?.content?.find((y) => !y?.pack?.private)
-                );
-                this.documents = [...this.constructor.collection].filter(
-                    (z) => !z?.pack?.private
-                );
+                this.folders = [...this.constructor.folders].filter((x) => x?.content?.find((y) => !y?.pack?.private));
+                this.documents = [...this.constructor.collection].filter((z) => !z?.pack?.private);
             }
             let toAdd = [];
             //Check for cyclic looping folders
@@ -526,10 +499,7 @@ function defineClasses() {
                 let parent = folder.parent;
                 while (parent) {
                     if (parent.path.includes(folder._id)) {
-                        console.debug(
-                            modName +
-                                " | Cyclic folders identified, moving one to root for safety"
-                        );
+                        console.debug(modName + " | Cyclic folders identified, moving one to root for safety");
                         folder.parent = null;
                         folder.path = [];
                         folder.save(false);
@@ -542,36 +512,20 @@ function defineClasses() {
             for (let folder of this.folders) {
                 let parent = folder.parent;
                 while (parent) {
-                    if (
-                        !this.folders.some((x) => x.id === parent.id) &&
-                        !toAdd.some((x) => x.id === parent.id)
-                    )
-                        toAdd.push(parent);
+                    if (!this.folders.some((x) => x.id === parent.id) && !toAdd.some((x) => x.id === parent.id)) toAdd.push(parent);
                     parent = parent.parent;
                 }
             }
             this.folders = this.folders.concat(toAdd);
-            let tree = this.constructor.setupFolders(
-                this.folders,
-                this.documents
-            );
+            let tree = this.constructor.setupFolders(this.folders, this.documents);
 
             this.tree = this._sortTreeAlphabetically(tree);
         }
         checkCache() {
             //Check cache
             let cache = game.settings.get(mod, "cached-folder");
-            if (
-                game.user.isGM &&
-                cache.pack &&
-                !this.documents.some((x) => cache.pack === x.code)
-            ) {
-                console.debug(
-                    modName +
-                        " | Compendium " +
-                        cache.pack +
-                        " no longer exists. Clearing cache"
-                );
+            if (game.user.isGM && cache.pack && !this.documents.some((x) => cache.pack === x.code)) {
+                console.debug(modName + " | Compendium " + cache.pack + " no longer exists. Clearing cache");
                 game.settings.set(mod, "cached-folder", {});
             }
         }
@@ -630,9 +584,7 @@ function defineClasses() {
             event.preventDefault();
             event.stopPropagation();
             const button = event.currentTarget;
-            const parent = game.customFolders.compendium.folders.get(
-                button.dataset.parentFolder
-            );
+            const parent = game.customFolders.compendium.folders.get(button.dataset.parentFolder);
             const data = new game.CF.CompendiumFolder();
             if (parent) {
                 data.path = parent.path.concat(parent.id);
@@ -640,19 +592,13 @@ function defineClasses() {
             }
             const options = {
                 top: button.offsetTop,
-                left:
-                    window.innerWidth - 310 - FolderConfig.defaultOptions.width,
+                left: window.innerWidth - 310 - FolderConfig.defaultOptions.width,
             };
             new CompendiumFolderEditConfig(data, options).showDialog(false);
         }
         /** @override */
         activateListeners(html) {
-            ContextMenu.create(
-                this,
-                html,
-                ".compendium-pack",
-                this._getEntryContextOptions()
-            );
+            ContextMenu.create(this, html, ".compendium-pack", this._getEntryContextOptions());
             super.activateListeners(html);
 
             // Taken from CopmendiumDirectory.activateListeners(html)
@@ -664,9 +610,7 @@ function defineClasses() {
                 else {
                     li.attr("data-open", "1");
 
-                    li.find("i.folder")
-                        .removeClass("fa-folder")
-                        .addClass("fa-folder-open");
+                    li.find("i.folder").removeClass("fa-folder").addClass("fa-folder-open");
                     pack.render(true);
                 }
             });
@@ -678,82 +622,44 @@ function defineClasses() {
                 ui.compendium.render(true);
             });
             if (game.system.id === "pf1") {
-                html.find(".compendium-footer .compendium.spells").click((e) =>
-                    this._onBrowsePF1Compendium(e, "spells")
-                );
-                html.find(".compendium-footer .compendium.items").click((e) =>
-                    this._onBrowsePF1Compendium(e, "items")
-                );
-                html.find(".compendium-footer .compendium.bestiary").click(
-                    (e) => this._onBrowsePF1Compendium(e, "bestiary")
-                );
-                html.find(".compendium-footer .compendium.feats").click((e) =>
-                    this._onBrowsePF1Compendium(e, "feats")
-                );
-                html.find(".compendium-footer .compendium.classes").click((e) =>
-                    this._onBrowsePF1Compendium(e, "classes")
-                );
-                html.find(".compendium-footer .compendium.races").click((e) =>
-                    this._onBrowsePF1Compendium(e, "races")
-                );
-                html.find(".compendium-footer .compendium.buffs").click((e) =>
-                    this._onBrowsePF1Compendium(e, "buffs")
-                );
+                html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowsePF1Compendium(e, "spells"));
+                html.find(".compendium-footer .compendium.items").click((e) => this._onBrowsePF1Compendium(e, "items"));
+                html.find(".compendium-footer .compendium.bestiary").click((e) => this._onBrowsePF1Compendium(e, "bestiary"));
+                html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowsePF1Compendium(e, "feats"));
+                html.find(".compendium-footer .compendium.classes").click((e) => this._onBrowsePF1Compendium(e, "classes"));
+                html.find(".compendium-footer .compendium.races").click((e) => this._onBrowsePF1Compendium(e, "races"));
+                html.find(".compendium-footer .compendium.buffs").click((e) => this._onBrowsePF1Compendium(e, "buffs"));
             }
             if (game.system.id === "D35E") {
-                html.find(".compendium-footer .compendium.spells").click((e) =>
-                    this._onBrowseD35ECompendium(e, "spells")
-                );
-                html.find(".compendium-footer .compendium.items").click((e) =>
-                    this._onBrowseD35ECompendium(e, "items")
-                );
-                html.find(".compendium-footer .compendium.bestiary").click(
-                    (e) => this._onBrowseD35ECompendium(e, "bestiary")
-                );
-                html.find(".compendium-footer .compendium.feats").click((e) =>
-                    this._onBrowseD35ECompendium(e, "feats")
-                );
-                html.find(".compendium-footer .compendium.enhancements").click(
-                    (e) => this._onBrowseD35ECompendium(e, "enhancements")
-                );
-                html.find(".compendium-footer .compendium.buffs").click((e) =>
-                    this._onBrowseD35ECompendium(e, "buffs")
-                );
+                html.find(".compendium-footer .compendium.spells").click((e) => this._onBrowseD35ECompendium(e, "spells"));
+                html.find(".compendium-footer .compendium.items").click((e) => this._onBrowseD35ECompendium(e, "items"));
+                html.find(".compendium-footer .compendium.bestiary").click((e) => this._onBrowseD35ECompendium(e, "bestiary"));
+                html.find(".compendium-footer .compendium.feats").click((e) => this._onBrowseD35ECompendium(e, "feats"));
+                html.find(".compendium-footer .compendium.enhancements").click((e) => this._onBrowseD35ECompendium(e, "enhancements"));
+                html.find(".compendium-footer .compendium.buffs").click((e) => this._onBrowseD35ECompendium(e, "buffs"));
             }
             if (game.system.id === "pf2e") {
-                html.find(".compendium-footer > .compendium-browser-btn").on(
-                    "click",
-                    () => {
-                        game.pf2e.compendiumBrowser.render(true);
-                    }
-                );
+                html.find(".compendium-footer > .compendium-browser-btn").on("click", () => {
+                    game.pf2e.compendiumBrowser.render(true);
+                });
             }
             // Options below are GM only
             if (!game.user.isGM) return;
 
             // Create Compendium
-            html.find(".create-compendium").click(
-                this._onCreateCompendium.bind(this)
-            );
-            html.find(".create-entity-c").click(
-                this._onCreateCompendium.bind(this)
-            );
+            html.find(".create-compendium").click(this._onCreateCompendium.bind(this));
+            html.find(".create-entity-c").click(this._onCreateCompendium.bind(this));
         }
         _onBrowsePF1Compendium(event, type) {
             event.preventDefault();
 
-            if (game.pf1.isMigrating)
-                return ui.notifications.warn(
-                    game.i18n.localize("PF1.Migration.Ongoing")
-                );
+            if (game.pf1.isMigrating) return ui.notifications.warn(game.i18n.localize("PF1.Migration.Ongoing"));
 
             game.pf1.compendiums[type]._render(true);
         }
         _onBrowseD35ECompendium(event, type) {
             event.preventDefault();
-            game.D35E.CompendiumDirectoryPF.browser.compendiums[type]._render(
-                true
-            );
+            game.D35E.CompendiumDirectoryPF.browser.compendiums[type]._render(true);
         }
 
         /** @override */
@@ -761,42 +667,27 @@ function defineClasses() {
             if (!game.user.isGM) return [];
             let x = CompendiumDirectory.prototype._getEntryContextOptions();
             // Modify the Duplicate callback to place duplicated compendium in folder of parent.
-            x.find((c) => c.name === "COMPENDIUM.Duplicate").callback = (
-                li
-            ) => {
+            x.find((c) => c.name === "COMPENDIUM.Duplicate").callback = (li) => {
                 let pack = game.packs.get(li.data("pack"));
-                let folder = game.customFolders.compendium.entries.get(
-                    li.data("pack")
-                ).parent;
+                let folder = game.customFolders.compendium.entries.get(li.data("pack")).parent;
                 const html = `<form>
                     <div class="form-group">
-                        <label>${game.i18n.localize(
-                            "COMPENDIUM.DuplicateTitle"
-                        )}</label>
+                        <label>${game.i18n.localize("COMPENDIUM.DuplicateTitle")}</label>
                         <input type="text" name="label" value="${pack.title}"/>
-                        <p class="notes">${game.i18n.localize(
-                            "COMPENDIUM.DuplicateHint"
-                        )}</p>
+                        <p class="notes">${game.i18n.localize("COMPENDIUM.DuplicateHint")}</p>
                     </div>
                 </form>`;
                 return Dialog.confirm({
-                    title: `${game.i18n.localize(
-                        "COMPENDIUM.DuplicateTitle"
-                    )}: ${pack.title}`,
+                    title: `${game.i18n.localize("COMPENDIUM.DuplicateTitle")}: ${pack.title}`,
                     content: html,
                     yes: async (html) => {
-                        const label = html.querySelector(
-                            'input[name="label"]'
-                        ).value;
+                        const label = html.querySelector('input[name="label"]').value;
                         let newPack = await pack.duplicateCompendium({ label });
                         await folder.addCompendium(newPack.collection);
                         return newPack;
                     },
                     options: {
-                        top: Math.min(
-                            li[0].offsetTop,
-                            window.innerHeight - 350
-                        ),
+                        top: Math.min(li[0].offsetTop, window.innerHeight - 350),
                         left: window.innerWidth - 720,
                         width: 400,
                         jQuery: false,
@@ -808,9 +699,7 @@ function defineClasses() {
             // Limit importAll to only work for compendiums with no folders in them
             x[i].condition = (li) => {
                 let pack = game.packs.get(li.data("pack"));
-                return !pack.index.contents.some(
-                    (x) => x.name === game.CF.TEMP_ENTITY_NAME
-                );
+                return !pack.index.contents.some((x) => x.name === game.CF.TEMP_ENTITY_NAME);
             };
             x[i].callback = async (li) => {
                 await game.settings.set(mod, "importing", true);
@@ -825,13 +714,9 @@ function defineClasses() {
                     name: "CF.hideForGM",
                     icon: '<i class="fas fa-eye"></i>',
                     callback: (li) => {
-                        game.customFolders.compendium.folders.hidden
-                            .addCompendium(li.data("pack"))
-                            .then(() => {
-                                ui.notifications.notify(
-                                    game.i18n.localize("CF.hideMessage")
-                                );
-                            });
+                        game.customFolders.compendium.folders.hidden.addCompendium(li.data("pack")).then(() => {
+                            ui.notifications.notify(game.i18n.localize("CF.hideMessage"));
+                        });
                     },
                 },
             ]);
@@ -846,57 +731,33 @@ function defineClasses() {
                     // TODO
                     callback: (header) => {
                         const li = header.parent()[0];
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.dataset.folderId
-                            );
+                        const folder = game.customFolders.compendium.folders.get(li.dataset.folderId);
                         const options = {
                             top: li.offsetTop,
-                            left:
-                                window.innerWidth -
-                                310 -
-                                FolderConfig.defaultOptions.width,
+                            left: window.innerWidth - 310 - FolderConfig.defaultOptions.width,
                         };
-                        new CompendiumFolderEditConfig(
-                            folder,
-                            options
-                        ).showDialog();
+                        new CompendiumFolderEditConfig(folder, options).showDialog();
                     },
                 },
                 {
                     name: "FOLDER.Remove",
                     icon: '<i class="fas fa-trash"></i>',
                     condition: (header) => {
-                        return (
-                            game.user.isGM &&
-                            !game.customFolders.compendium.folders.get(
-                                header.parent().data("folderId")
-                            ).isDefault
-                        );
+                        return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault;
                     },
                     callback: (header) => {
                         const li = header.parent();
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.data("folderId")
-                            );
+                        const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
                         // TODO
                         Dialog.confirm({
-                            title: `${game.i18n.localize("FOLDER.Remove")} ${
-                                folder.name
-                            }`,
+                            title: `${game.i18n.localize("FOLDER.Remove")} ${folder.name}`,
                             content: `
                                 <p>${game.i18n.localize("AreYouSure")}</p>
-                                <p>${game.i18n.localize(
-                                    "FOLDER.DeleteWarning"
-                                )}</p>
+                                <p>${game.i18n.localize("FOLDER.DeleteWarning")}</p>
                             `,
                             yes: () => folder.delete(),
                             options: {
-                                top: Math.min(
-                                    li[0].offsetTop,
-                                    window.innerHeight - 350
-                                ),
+                                top: Math.min(li[0].offsetTop, window.innerHeight - 350),
                                 left: window.innerWidth - 720,
                                 width: 400,
                             },
@@ -907,19 +768,11 @@ function defineClasses() {
                     name: "CF.moveFolder",
                     icon: '<i class="fas fa-sitemap"></i>',
                     condition: (header) => {
-                        return (
-                            game.user.isGM &&
-                            !game.customFolders.compendium.folders.get(
-                                header.parent().data("folderId")
-                            ).isDefault
-                        );
+                        return game.user.isGM && !game.customFolders.compendium.folders.get(header.parent().data("folderId")).isDefault;
                     },
                     callback: (header) => {
                         const li = header.parent();
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.data("folderId")
-                            );
+                        const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
                         new CompendiumFolderMoveDialog(folder, {}).render(true);
                     },
                 },
@@ -931,14 +784,8 @@ function defineClasses() {
                     },
                     callback: async (header) => {
                         const li = header.parent();
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.data("folderId")
-                            );
-                        let allConfig = game.settings.get(
-                            "core",
-                            "compendiumConfiguration"
-                        );
+                        const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
+                        let allConfig = game.settings.get("core", "compendiumConfiguration");
                         for (let p of folder.content) {
                             let pack = game.packs.get(p.packCode);
                             if (pack.private) {
@@ -952,11 +799,7 @@ function defineClasses() {
                                 }
                             }
                         }
-                        await game.settings.set(
-                            "core",
-                            "compendiumConfiguration",
-                            allConfig
-                        );
+                        await game.settings.set("core", "compendiumConfiguration", allConfig);
                     },
                 },
                 {
@@ -967,14 +810,8 @@ function defineClasses() {
                     },
                     callback: async (header) => {
                         const li = header.parent();
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.data("folderId")
-                            );
-                        let allConfig = game.settings.get(
-                            "core",
-                            "compendiumConfiguration"
-                        );
+                        const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
+                        let allConfig = game.settings.get("core", "compendiumConfiguration");
                         for (let p of folder.content) {
                             let pack = game.packs.get(p.packCode);
                             if (!pack.private) {
@@ -988,11 +825,7 @@ function defineClasses() {
                                 }
                             }
                         }
-                        await game.settings.set(
-                            "core",
-                            "compendiumConfiguration",
-                            allConfig
-                        );
+                        await game.settings.set("core", "compendiumConfiguration", allConfig);
                     },
                 },
                 {
@@ -1003,14 +836,8 @@ function defineClasses() {
                     },
                     callback: async (header) => {
                         const li = header.parent();
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.data("folderId")
-                            );
-                        let allConfig = game.settings.get(
-                            "core",
-                            "compendiumConfiguration"
-                        );
+                        const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
+                        let allConfig = game.settings.get("core", "compendiumConfiguration");
                         for (let p of folder.content) {
                             let pack = game.packs.get(p.packCode);
                             if (!pack.locked) {
@@ -1024,11 +851,7 @@ function defineClasses() {
                                 }
                             }
                         }
-                        await game.settings.set(
-                            "core",
-                            "compendiumConfiguration",
-                            allConfig
-                        );
+                        await game.settings.set("core", "compendiumConfiguration", allConfig);
                     },
                 },
                 {
@@ -1039,14 +862,8 @@ function defineClasses() {
                     },
                     callback: async (header) => {
                         const li = header.parent();
-                        const folder =
-                            game.customFolders.compendium.folders.get(
-                                li.data("folderId")
-                            );
-                        let allConfig = game.settings.get(
-                            "core",
-                            "compendiumConfiguration"
-                        );
+                        const folder = game.customFolders.compendium.folders.get(li.data("folderId"));
+                        let allConfig = game.settings.get("core", "compendiumConfiguration");
                         for (let p of folder.content) {
                             let pack = game.packs.get(p.packCode);
                             if (pack.locked) {
@@ -1060,11 +877,7 @@ function defineClasses() {
                                 }
                             }
                         }
-                        await game.settings.set(
-                            "core",
-                            "compendiumConfiguration",
-                            allConfig
-                        );
+                        await game.settings.set("core", "compendiumConfiguration", allConfig);
                     },
                 },
             ];
@@ -1104,31 +917,20 @@ function defineClasses() {
 
             if (folderId) {
                 if (data.type === this.constructor.documentName) {
-                    if (
-                        game.customFolders.compendium.entries.get(data.id)
-                            .folder != folderId
-                    )
-                        await game.customFolders.compendium.folders
-                            .get(folderId)
-                            .addCompendium(data.id);
+                    if (game.customFolders.compendium.entries.get(data.id).folder != folderId)
+                        await game.customFolders.compendium.folders.get(folderId).addCompendium(data.id);
                 } else if (data.type === "Folder") {
                     // Move folder
                     let destFolderId = folderId;
                     let movingFolderId = data.id;
-                    let destFolder =
-                        game.customFolders.compendium.folders.get(destFolderId);
-                    let movingFolder =
-                        game.customFolders.compendium.folders.get(
-                            movingFolderId
-                        );
+                    let destFolder = game.customFolders.compendium.folders.get(destFolderId);
+                    let movingFolder = game.customFolders.compendium.folders.get(movingFolderId);
                     if (
                         !destFolder.isHidden &&
                         !destFolder.isDefault &&
                         destFolderId != movingFolderId &&
                         destFolderId != movingFolder?.parent?.id &&
-                        ((!destFolder.path?.includes(movingFolderId) &&
-                            destFolder.path.length > 0) ||
-                            destFolder.path.length === 0)
+                        ((!destFolder.path?.includes(movingFolderId) && destFolder.path.length > 0) || destFolder.path.length === 0)
                     ) {
                         movingFolder.moveFolder(destFolderId);
                     }
@@ -1143,19 +945,11 @@ function defineClasses() {
             }
             event.stopPropagation();
             event.preventDefault();
-            const types = CONST.COMPENDIUM_DOCUMENT_TYPES.reduce(
-                (types, documentName) => {
-                    types[documentName] = game.i18n.localize(
-                        getDocumentClass(documentName).metadata.label
-                    );
-                    return types;
-                },
-                {}
-            );
-            const html = await renderTemplate(
-                "templates/sidebar/compendium-create.html",
-                { types }
-            );
+            const types = CONST.COMPENDIUM_DOCUMENT_TYPES.reduce((types, documentName) => {
+                types[documentName] = game.i18n.localize(getDocumentClass(documentName).metadata.label);
+                return types;
+            }, {});
+            const html = await renderTemplate("templates/sidebar/compendium-create.html", { types });
             return Dialog.prompt({
                 title: game.i18n.localize("COMPENDIUM.Create"),
                 content: html,
@@ -1174,13 +968,9 @@ function defineClasses() {
                     }
 
                     // Snippet taken from Compendium.create() (just so I can intercept the pack before it's declared unassigned)
-                    CompendiumCollection.createCompendium(data).then(
-                        async function (pack) {
-                            await game.customFolders.compendium.folders
-                                .get(parentId)
-                                .addCompendium(`${pack.metadata.id}`);
-                        }
-                    );
+                    CompendiumCollection.createCompendium(data).then(async function (pack) {
+                        await game.customFolders.compendium.folders.get(parentId).addCompendium(`${pack.metadata.id}`);
+                    });
                 },
                 rejectClose: false,
                 options: { jQuery: false },
@@ -1208,11 +998,7 @@ function defineClasses() {
                 // Match folder tree
                 const includeFolders = (fids) => {
                     const folders = this.folders.filter((f) => fids.has(f.id));
-                    const pids = new Set(
-                        folders
-                            .filter((f) => f.data.parent)
-                            .map((f) => f.data.parent)
-                    );
+                    const pids = new Set(folders.filter((f) => f.data.parent).map((f) => f.data.parent));
                     if (pids.size) {
                         pids.forEach((p) => folderIds.add(p));
                         includeFolders(pids);
@@ -1222,15 +1008,10 @@ function defineClasses() {
             }
 
             // Toggle each directory item
-            for (let el of html.querySelectorAll(
-                ".directory-item,.compendium-pack"
-            )) {
+            for (let el of html.querySelectorAll(".directory-item,.compendium-pack")) {
                 // Entities
                 if (el.classList.contains("directory-item")) {
-                    el.style.display =
-                        !isSearch || entityIds.has(el.dataset.pack)
-                            ? ""
-                            : "none";
+                    el.style.display = !isSearch || entityIds.has(el.dataset.pack) ? "" : "none";
                 }
 
                 // Folders
@@ -1238,11 +1019,7 @@ function defineClasses() {
                     let match = isSearch && folderIds.has(el.dataset.folderId);
                     el.style.display = !isSearch || match ? "" : "none";
                     if (isSearch && match) el.classList.remove("collapsed");
-                    else
-                        el.classList.toggle(
-                            "collapsed",
-                            !game.folders._expanded[el.dataset.folderId]
-                        );
+                    else el.classList.toggle("collapsed", !game.folders._expanded[el.dataset.folderId]);
                 }
             }
         }
@@ -1256,8 +1033,7 @@ function defineClasses() {
     //CompendiumFolderDirectory._onCreateCompendium = CompendiumDirectory.prototype._onCreateCompendium;
     // CompendiumFolderDirectory._onCreateCompendium = (event) => {    event.preventDefault();
     //     event.stopPropagation();};
-    CompendiumFolderDirectory._onDeleteCompendium =
-        CompendiumDirectory.prototype._onDeleteCompendium;
+    CompendiumFolderDirectory._onDeleteCompendium = CompendiumDirectory.prototype._onDeleteCompendium;
 
     //was Compendium.create
     libWrapper.register(
@@ -1291,71 +1067,36 @@ function defineClasses() {
         mod,
         "Compendium.prototype._onSearchFilter",
         function (wrapped, ...args) {
-            if (
-                this.collection.index.contents.some(
-                    (x) => x.name === TEMP_ENTITY_NAME
-                )
-            ) {
+            if (this.collection.index.contents.some((x) => x.name === TEMP_ENTITY_NAME)) {
                 //Do custom search
-                let existingSearchTerms = game.settings.get(
-                    mod,
-                    "last-search-packs"
-                );
+                let existingSearchTerms = game.settings.get(mod, "last-search-packs");
                 let query = [...args][1];
                 let html = [...args][3];
                 existingSearchTerms[this.collection.collection] = query;
-                game.settings.set(
-                    mod,
-                    "last-search-packs",
-                    existingSearchTerms
-                );
+                game.settings.set(mod, "last-search-packs", existingSearchTerms);
                 if (query?.length > 0) {
                     filterSelectorBySearchTerm(html, query, ".directory-item");
                 } else {
-                    let openTempFolders = game.settings.get(
-                        mod,
-                        "open-temp-folders"
-                    )[this.collection.collection];
-                    for (let folder of html.querySelectorAll(
-                        ".compendium-folder"
-                    )) {
-                        if (
-                            openTempFolders &&
-                            openTempFolders.includes(folder.dataset.folderId)
-                        ) {
-                            folder.querySelector(
-                                ".folder-contents"
-                            ).style.display = "";
+                    let openTempFolders = game.settings.get(mod, "open-temp-folders")[this.collection.collection];
+                    for (let folder of html.querySelectorAll(".compendium-folder")) {
+                        if (openTempFolders && openTempFolders.includes(folder.dataset.folderId)) {
+                            folder.querySelector(".folder-contents").style.display = "";
                             folder.removeAttribute("collapsed");
-                            folder
-                                .querySelector("header > h3 > i")
-                                ?.classList.remove("fa-folder");
-                            folder
-                                .querySelector("header > h3 > i")
-                                ?.classList.add("fa-folder-open");
+                            folder.querySelector("header > h3 > i")?.classList.remove("fa-folder");
+                            folder.querySelector("header > h3 > i")?.classList.add("fa-folder-open");
                         } else {
-                            folder.querySelector(
-                                ".folder-contents"
-                            ).style.display = "none";
+                            folder.querySelector(".folder-contents").style.display = "none";
                             folder.setAttribute("collapsed", "");
-                            folder
-                                .querySelector("header > h3 > i")
-                                ?.classList.add("fa-folder");
-                            folder
-                                .querySelector("header > h3 > i")
-                                ?.classList.remove("fa-folder-open");
+                            folder.querySelector("header > h3 > i")?.classList.add("fa-folder");
+                            folder.querySelector("header > h3 > i")?.classList.remove("fa-folder-open");
                         }
                     }
-                    for (let entry of html.querySelectorAll(
-                        ".compendium-folder"
-                    )) {
+                    for (let entry of html.querySelectorAll(".compendium-folder")) {
                         if (!entry.classList.contains("hidden")) {
                             entry.style.display = "";
                         }
                     }
-                    for (let entry of html.querySelectorAll(
-                        ".directory-item"
-                    )) {
+                    for (let entry of html.querySelectorAll(".directory-item")) {
                         if (!entry.classList.contains("hidden")) {
                             entry.style.display = "";
                         }
@@ -1394,9 +1135,7 @@ function defineClasses() {
     };
 }
 async function closeFolder(parent, save) {
-    let folderIcon = parent.firstChild.querySelector(
-        "h3 > .fa-folder, .fa-folder-open"
-    );
+    let folderIcon = parent.firstChild.querySelector("h3 > .fa-folder, .fa-folder-open");
     let cogLink = parent.querySelector("a.edit-folder");
     let newFolderLink = parent.querySelector("a.create-folder");
     let moveFolderLink = parent.querySelector("a.move-folder");
@@ -1407,12 +1146,7 @@ async function closeFolder(parent, save) {
         folderIcon.classList.add("fa-folder");
     }
     contents.style.display = "none";
-    if (
-        game.user.isGM &&
-        cogLink != null &&
-        newFolderLink != null &&
-        moveFolderLink != null
-    ) {
+    if (game.user.isGM && cogLink != null && newFolderLink != null && moveFolderLink != null) {
         cogLink.style.display = "none";
         if (parent.getAttribute("data-cfolder-id") != "default") {
             newFolderLink.style.display = "none";
@@ -1424,17 +1158,12 @@ async function closeFolder(parent, save) {
     parent.setAttribute("collapsed", "");
     if (save) {
         let openFolders = game.settings.get(mod, "open-folders");
-        openFolders.splice(
-            openFolders.indexOf(parent.getAttribute("data-cfolder-id")),
-            1
-        );
+        openFolders.splice(openFolders.indexOf(parent.getAttribute("data-cfolder-id")), 1);
         await game.settings.set(mod, "open-folders", openFolders);
     }
 }
 async function openFolder(parent, save) {
-    let folderIcon = parent.firstChild.querySelector(
-        "h3 > .fa-folder, .fa-folder-open"
-    );
+    let folderIcon = parent.firstChild.querySelector("h3 > .fa-folder, .fa-folder-open");
     let cogLink = parent.querySelector("a.edit-folder");
     let newFolderLink = parent.querySelector("a.create-folder");
     let moveFolderLink = parent.querySelector("a.move-folder");
@@ -1444,12 +1173,7 @@ async function openFolder(parent, save) {
         folderIcon.classList.add("fa-folder-open");
     }
     contents.style.display = "";
-    if (
-        game.user.isGM &&
-        cogLink != null &&
-        newFolderLink != null &&
-        moveFolderLink != null
-    ) {
+    if (game.user.isGM && cogLink != null && newFolderLink != null && moveFolderLink != null) {
         cogLink.style.display = "";
         if (parent.getAttribute("data-cfolder-id") != "default") {
             newFolderLink.style.display = "";
@@ -1474,19 +1198,13 @@ function filterSelectorBySearchTerm(parent, searchTerm, selector) {
                 compendium.removeAttribute("search-failed");
             }
         }
-        parent
-            .querySelectorAll(".compendium-folder")
-            .forEach(function (folder) {
-                folder.style.display = "";
-                closeFolder(folder);
-            });
+        parent.querySelectorAll(".compendium-folder").forEach(function (folder) {
+            folder.style.display = "";
+            closeFolder(folder);
+        });
     } else {
         for (let compendium of parent.querySelectorAll(selector)) {
-            if (
-                !compendium.innerText
-                    .toLowerCase()
-                    .includes(searchTerm.toLowerCase())
-            ) {
+            if (!compendium.innerText.toLowerCase().includes(searchTerm.toLowerCase())) {
                 //Hide not matching
                 compendium.style.display = "none";
                 compendium.setAttribute("search-failed", "");
@@ -1498,23 +1216,21 @@ function filterSelectorBySearchTerm(parent, searchTerm, selector) {
                 }
             }
         }
-        parent
-            .querySelectorAll(".compendium-folder")
-            .forEach(function (folder) {
-                let shouldHide = true;
-                folder.querySelectorAll(selector).forEach(function (comp) {
-                    if (!comp.hasAttribute("search-failed")) {
-                        shouldHide = false;
-                    }
-                });
-                if (shouldHide) {
-                    folder.style.display = "none";
-                    closeFolder(folder);
-                } else {
-                    folder.style.display = "";
-                    openFolder(folder);
+        parent.querySelectorAll(".compendium-folder").forEach(function (folder) {
+            let shouldHide = true;
+            folder.querySelectorAll(selector).forEach(function (comp) {
+                if (!comp.hasAttribute("search-failed")) {
+                    shouldHide = false;
                 }
             });
+            if (shouldHide) {
+                folder.style.display = "none";
+                closeFolder(folder);
+            } else {
+                folder.style.display = "";
+                openFolder(folder);
+            }
+        });
     }
 }
 // Edit functions
@@ -1522,8 +1238,7 @@ class ImportExportConfig extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
         options.id = "compendium-folder-edit";
-        options.template =
-            "modules/compendium-folders/templates/import-export.html";
+        options.template = "modules/compendium-folders/templates/import-export.html";
         options.width = 500;
         return options;
     }
@@ -1543,36 +1258,22 @@ class ImportExportConfig extends FormApplication {
                 let importJson = JSON.parse(importData);
                 let success = true;
                 Object.keys(importJson).forEach(function (key) {
-                    if (
-                        importJson[key].pathToFolder != null &&
-                        importJson[key].pathToFolder.length > FOLDER_LIMIT
-                    ) {
+                    if (importJson[key].pathToFolder != null && importJson[key].pathToFolder.length > FOLDER_LIMIT) {
                         success = false;
                     }
                 });
                 if (success) {
-                    game.settings
-                        .set(mod, "cfolders", importJson)
-                        .then(async function () {
-                            game.customFolders.compendium = null;
-                            await initFolders();
-                            ui.compendium.refresh();
-                            ui.notifications.info(
-                                game.i18n.localize("CF.folderImportSuccess")
-                            );
-                        });
+                    game.settings.set(mod, "cfolders", importJson).then(async function () {
+                        game.customFolders.compendium = null;
+                        await initFolders();
+                        ui.compendium.refresh();
+                        ui.notifications.info(game.i18n.localize("CF.folderImportSuccess"));
+                    });
                 } else {
-                    ui.notifications.error(
-                        game.i18n.localize("CF.folderImportMaxDepth") +
-                            " (" +
-                            FOLDER_LIMIT +
-                            ")"
-                    );
+                    ui.notifications.error(game.i18n.localize("CF.folderImportMaxDepth") + " (" + FOLDER_LIMIT + ")");
                 }
             } catch (error) {
-                ui.notifications.error(
-                    game.i18n.localize("CF.folderImportFailure")
-                );
+                ui.notifications.error(game.i18n.localize("CF.folderImportFailure"));
             }
         }
     }
@@ -1582,8 +1283,7 @@ class CompendiumFolderMoveDialog extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
         options.id = "compendium-folder-move";
-        options.template =
-            "modules/compendium-folders/templates/compendium-folder-move.html";
+        options.template = "modules/compendium-folders/templates/compendium-folder-move.html";
         options.width = 500;
         return options;
     }
@@ -1600,9 +1300,7 @@ class CompendiumFolderMoveDialog extends FormApplication {
                 folder.id != this.object?.parent?.id &&
                 folder.id != this.object.id &&
                 // Folder path does not contain this.object.id
-                ((!folder.path?.includes(this.object.id) &&
-                    folder.path.length > 0) ||
-                    folder.path.length === 0)
+                ((!folder.path?.includes(this.object.id) && folder.path.length > 0) || folder.path.length === 0)
 
                 // Folder is not this
             ) {
@@ -1639,14 +1337,12 @@ class CompendiumFolderMoveDialog extends FormApplication {
 
     async _updateObject(event, formData) {
         let destFolderId = null;
-        document
-            .querySelectorAll("#folder-move input[type='radio']")
-            .forEach(function (e) {
-                if (e.checked) {
-                    destFolderId = e.value;
-                    return;
-                }
-            });
+        document.querySelectorAll("#folder-move input[type='radio']").forEach(function (e) {
+            if (e.checked) {
+                destFolderId = e.value;
+                return;
+            }
+        });
         this.object.moveFolder(destFolderId);
         return;
     }
@@ -1655,16 +1351,13 @@ class CompendiumFolderEditConfig extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
         options.id = "compendium-folder-edit";
-        options.template =
-            "modules/compendium-folders/templates/compendium-folder-edit.html";
+        options.template = "modules/compendium-folders/templates/compendium-folder-edit.html";
         options.width = 500;
         return options;
     }
 
     get title() {
-        return this.isEditDialog
-            ? `${game.i18n.localize("FOLDER.Update")}: ${this.object.name}`
-            : game.i18n.localize("FOLDER.Create");
+        return this.isEditDialog ? `${game.i18n.localize("FOLDER.Update")}: ${this.object.name}` : game.i18n.localize("FOLDER.Create");
     }
     getGroupedPacks() {
         let allFolders = game.settings.get(mod, "cfolders");
@@ -1695,13 +1388,8 @@ class CompendiumFolderEditConfig extends FormApplication {
             fpacks: game.packs,
             apacks: alphaSortCompendiums(Object.values(allPacks[0])),
             upacks: alphaSortCompendiums(Object.values(allPacks[1])),
-            submitText: game.i18n.localize(
-                this.isEditDialog ? "FOLDER.Update" : "FOLDER.Create"
-            ),
-            deleteText:
-                this.isEditDialog && this.object._id != "default"
-                    ? "Delete Folder"
-                    : null,
+            submitText: game.i18n.localize(this.isEditDialog ? "FOLDER.Update" : "FOLDER.Create"),
+            deleteText: this.isEditDialog && this.object._id != "default" ? "Delete Folder" : null,
         };
     }
 
@@ -1732,20 +1420,10 @@ class CompendiumFolderEditConfig extends FormApplication {
             let packsToRemove = [];
             for (let entry of game.packs.contents) {
                 let formEntryId = entry.metadata.id;
-                if (
-                    formData[formEntryId] &&
-                    !this.object?.content
-                        ?.map((c) => c.id)
-                        ?.includes(entry.collection)
-                ) {
+                if (formData[formEntryId] && !this.object?.content?.map((c) => c.id)?.includes(entry.collection)) {
                     // Box ticked AND compendium not in folder
                     packsToAdd.push(entry.collection);
-                } else if (
-                    !formData[formEntryId] &&
-                    this.object?.content
-                        ?.map((c) => c.id)
-                        ?.includes(entry.collection)
-                ) {
+                } else if (!formData[formEntryId] && this.object?.content?.map((c) => c.id)?.includes(entry.collection)) {
                     // Box unticked AND compendium in folder
                     packsToRemove.push(entry.collection);
                 }
@@ -1760,9 +1438,7 @@ class CompendiumFolderEditConfig extends FormApplication {
             //If folder needs to be moved to parent (for some reason)
             if (
                 this.object.data.parent &&
-                !game.customFolders.compendium.folders
-                    .get(this.object.data.parent)
-                    ?.children?.some((x) => x.id === this.object.id)
+                !game.customFolders.compendium.folders.get(this.object.data.parent)?.children?.some((x) => x.id === this.object.id)
             ) {
                 await this.object.moveFolder(this.object.data.parent);
             }
@@ -1782,9 +1458,7 @@ class CompendiumFolderEditConfig extends FormApplication {
 // This is accessible from the module settings
 // ==========================
 async function cleanupCompendium(pack) {
-    ui.notifications.notify(
-        game.i18n.format("CF.cleanupNotificationStart", { pack: pack })
-    );
+    ui.notifications.notify(game.i18n.format("CF.cleanupNotificationStart", { pack: pack }));
     let p = game.packs.get(pack);
     let index = await p.getIndex();
     let allData = await p.getDocuments();
@@ -1809,8 +1483,7 @@ class CleanupPackConfig extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
         options.id = "cleanup-compendium";
-        options.template =
-            "modules/compendium-folders/templates/cleanup-compendium.html";
+        options.template = "modules/compendium-folders/templates/cleanup-compendium.html";
         //options.width = 500;
         return options;
     }
@@ -1937,7 +1610,7 @@ export class Settings {
             config: true,
             type: Boolean,
             default: false,
-            requiresReload: true
+            requiresReload: true,
         });
         game.settings.register(mod, "auto-create-folders", {
             name: "Auto Create folders on Import",
@@ -2014,10 +1687,7 @@ async function initFolders(refresh = false) {
         allFolders.default._id = "default";
     }
     let init1 = false;
-    if (
-        Object.keys(allFolders).length <= 2 &&
-        allFolders.constructor === Object
-    ) {
+    if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object) {
         // initialize settings
         init1 = true;
         let entityId = {};
@@ -2037,12 +1707,9 @@ async function initFolders(refresh = false) {
         };
         for (let pack of game.packs.contents) {
             if (allFolders[entityId[pack.documentClass.documentName]]) {
-                allFolders[
-                    entityId[pack.documentClass.documentName]
-                ].compendiumList.push(pack.collection);
+                allFolders[entityId[pack.documentClass.documentName]].compendiumList.push(pack.collection);
             } else {
-                entityId[pack.documentClass.documentName] =
-                    "cfolder-" + randomID(10);
+                entityId[pack.documentClass.documentName] = "cfolder-" + randomID(10);
                 allFolders[entityId[pack.documentClass.documentName]] = {
                     _id: entityId[pack.documentClass.documentName],
                     titleText: pack.documentClass.documentName,
@@ -2057,11 +1724,9 @@ async function initFolders(refresh = false) {
         let compendiums = [];
         folder.compendiums = [];
         for (let pack of folder.compendiumList) {
-            let existingPack =
-                game.customFolders?.compendium?.entries?.get(pack);
+            let existingPack = game.customFolders?.compendium?.entries?.get(pack);
             if (game.packs.has(pack)) {
-                if (!existingPack)
-                    compendiums.push(new CompendiumEntry(pack, folder._id));
+                if (!existingPack) compendiums.push(new CompendiumEntry(pack, folder._id));
                 else compendiums.push(existingPack);
             } else {
                 toRemove.push(pack);
@@ -2073,9 +1738,7 @@ async function initFolders(refresh = false) {
         if (init1) await f.save(false);
     }
     // Set default folder content
-    let unassigned = game.packs.contents.filter(
-        (x) => !assigned.includes(x.collection)
-    );
+    let unassigned = game.packs.contents.filter((x) => !assigned.includes(x.collection));
     for (let pack of unassigned.map((y) => y.collection)) {
         if (game.customFolders.compendium.entries.has(pack)) {
             // Pack has an entry (assigned to default folder)
@@ -2088,24 +1751,14 @@ async function initFolders(refresh = false) {
         }
     }
     game.customFolders.compendium.folders.default.compendiumList = [
-        ...new Set(
-            game.customFolders.compendium.folders.default.compendiumList.concat(
-                unassigned.map((y) => y.collection)
-            )
-        ),
+        ...new Set(game.customFolders.compendium.folders.default.compendiumList.concat(unassigned.map((y) => y.collection))),
     ];
     game.customFolders.compendium.folders.default.content = [
-        ...new Set(
-            game.customFolders.compendium.folders.default.content.concat(
-                unassigned
-            )
-        ),
+        ...new Set(game.customFolders.compendium.folders.default.content.concat(unassigned)),
     ];
     // Check for removed compendiums
     let missingCompendiums = false;
-    let goneCompendiums = game.customFolders.compendium.entries.filter(
-        (x) => !x.pack
-    );
+    let goneCompendiums = game.customFolders.compendium.entries.filter((x) => !x.pack);
     for (let c of goneCompendiums) {
         c.parent.removeCompendium(c, true, false);
         missingCompendiums = true;
@@ -2119,9 +1772,7 @@ async function initFolders(refresh = false) {
     let allEntries = [...game.customFolders.compendium.folders.values()];
     for (let cf of allEntries) {
         let directChildren = allEntries.filter(
-            (f) =>
-                f.data?.pathToFolder?.length > 0 &&
-                f.data.pathToFolder[f.data.pathToFolder.length - 1] === cf._id
+            (f) => f.data?.pathToFolder?.length > 0 && f.data.pathToFolder[f.data.pathToFolder.length - 1] === cf._id
         );
         cf.children = directChildren;
     }
@@ -2156,10 +1807,7 @@ Hooks.once("init", async function () {
         await initFolders(true);
     });
 
-    Hooks.on(
-        "getCompendiumFolderDirectoryEntryContext",
-        async (html, options) => {
-            Hooks.call("getCompendiumDirectoryEntryContext", html, options);
-        }
-    );
+    Hooks.on("getCompendiumFolderDirectoryEntryContext", async (html, options) => {
+        Hooks.call("getCompendiumDirectoryEntryContext", html, options);
+    });
 });
