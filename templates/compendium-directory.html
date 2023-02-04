@@ -25,7 +25,8 @@
     {{/each}}
     {{#each node.documents}}
       {{> entityPartial}}
-    {{/each}}
+    {{/each}} 
+    <ol class="document-matches"></ol>
   </ol>
 </li>
 
@@ -118,4 +119,13 @@
         </footer>
         {{/if}}
     </footer>
+    {{#if isPF2e}}
+    <template id="compendium-search-match">
+        <li class="match" >
+            <div class="thumbnail"><img /></div>
+            <a class="name"></a>
+            <span class="details"></span>
+        </li>
+    </template>
+    {{/if}}
 </section>

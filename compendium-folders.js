@@ -445,9 +445,10 @@ function defineClasses() {
         }
     }
     class CompendiumFolderDirectory extends SidebarDirectory {
+        static allIndexes = [];
         /** @override */
         static get defaultOptions() {
-            return foundry.utils.mergeObject(super.defaultOptions, {
+            const options = foundry.utils.mergeObject(super.defaultOptions, {
                 id: "compendium",
                 template: "modules/compendium-folders/templates/compendium-directory.html",
                 title: "Compendium Packs",
@@ -464,6 +465,10 @@ function defineClasses() {
                     },
                 ],
             });
+            if (game.system.id === "pf2e") {
+                options.dragDrop.push({ dragSelector: "ol.document-matches > li.match" });
+            }
+            return options;
         }
 
         constructor(...args) {
@@ -520,6 +525,22 @@ function defineClasses() {
             let tree = this.constructor.setupFolders(this.folders, this.documents);
 
             this.tree = this._sortTreeAlphabetically(tree);
+            this.compileSearchIndex();
+        }
+        compileSearchIndex() {
+            console.debug("Compendium Folders | compiling search index");
+            const packs = game.packs.filter((p) => p.index.size > 0 && (game.user.isGM || !p.private));
+            CompendiumFolderDirectory.allIndexes = [];
+            for (const pack of packs) {
+                pack.index
+                    .map((i) => ({
+                        ...i,
+                        metadata: pack.metadata,
+                    }))
+                    .forEach((e) => {
+                        CompendiumFolderDirectory.allIndexes.push(e);
+                    });
+            }
         }
         checkCache() {
             //Check cache
@@ -882,24 +903,63 @@ function defineClasses() {
                 },
             ];
         }
-        // _contextMenu(html){
-        //     super._contextMenu(html);
-        //     //CompendiumDirectory.prototype._contextMenu(html);
-        // }
 
         /** @override */
         _onDragStart(event) {
             let li = event.currentTarget.closest("li");
-            if (li.dataset.folderId === "default" || !game.user.isGM) return;
-            const dragData = li.classList.contains("folder")
-                ? {
-                      type: "Folder",
-                      id: li.dataset.folderId,
-                      entity: this.constructor.documentName,
-                  }
-                : { type: this.constructor.documentName, id: li.dataset.pack };
-            event.dataTransfer.setData("text/plain", JSON.stringify(dragData));
-            this._dragType = dragData.type;
+            if (li.classList.contains("match")) {
+                // pf2e functionality
+                this.pf2eDragStart(event);
+            } else {
+                if (li.dataset.folderId === "default" || !game.user.isGM) return;
+                const dragData = li.classList.contains("folder")
+                    ? {
+                          type: "Folder",
+                          id: li.dataset.folderId,
+                          entity: this.constructor.documentName,
+                      }
+                    : { type: this.constructor.documentName, id: li.dataset.pack };
+                event.dataTransfer.setData("text/plain", JSON.stringify(dragData));
+                this._dragType = dragData.type;
+            }
+        }
+        static get #dragPreview() {
+            const preview = document.createElement("div");
+            preview.id = "pack-search-drag-preview";
+
+            const thumbnail = document.createElement("img");
+            const title = document.createElement("h4");
+            preview.append(thumbnail, title);
+
+            return preview;
+        }
+        pf2eDragStart(event) {
+            const dragElement = event.currentTarget;
+            const { uuid } = dragElement.dataset;
+            if (!uuid) return;
+
+            const indexEntry = fromUuidSync(uuid);
+            if (!indexEntry) throw ErrorPF2e("Unexpected error retrieving index data");
+
+            // Clean up old drag preview
+            document.querySelector("#pack-search-drag-preview")?.remove();
+
+            // Create a new drag preview
+            const dragPreview = CompendiumFolderDirectory.#dragPreview.cloneNode(true);
+            const [img, title] = Array.from(dragPreview.childNodes);
+            title.innerText = indexEntry.name;
+            img.src = "img" in indexEntry && indexEntry.img ? indexEntry.img : "icons/svg/book.svg";
+
+            document.body.appendChild(dragPreview);
+            const documentType = (() => {
+                if (indexEntry instanceof foundry.abstract.Document) return indexEntry.documentName;
+                const pack = game.packs.get(indexEntry.pack ?? "");
+                return pack?.documentName ?? null;
+            })();
+            if (!documentType) return;
+
+            event.dataTransfer.setDragImage(dragPreview, 75, 25);
+            event.dataTransfer.setData("text/plain", JSON.stringify({ type: documentType, uuid }));
         }
         async _onDrop(event) {
             event.stopPropagation();
@@ -976,42 +1036,147 @@ function defineClasses() {
                 options: { jQuery: false },
             });
         }
+        handlePF2eSearch(query, html) {
+            // Match documents within each compendium by name
+            const docMatches = query.length > 0 ? this.searchIndexes(query) : [];
+            const isInCompendiumFolder = (packId, folderId) => {
+                return game.customFolders.compendium.folders.get(folderId)?.compendiumList.includes(packId);
+            };
+
+            // Create a list of document matches
+            const matchTemplate = document.querySelector("#compendium-search-match");
+            if (!matchTemplate) throw Error(modName + " | Match template not found");
+
+            const packAndFolderIds = this.getPacksAndFoldersThatMatch(query);
+            let packIds = packAndFolderIds[0];
+            let folderIds = packAndFolderIds[1];
+            for (const compendiumFolder of html.querySelectorAll("li.compendium-folder")) {
+                const typedMatches = docMatches.filter((d) => isInCompendiumFolder(d.metadata.id, compendiumFolder.dataset.folderId));
+                const listElements = typedMatches.map((match) => {
+                    const li = matchTemplate.content.firstElementChild?.cloneNode(true);
+                    const matchUUID = `Compendium.${match.metadata.id}.${match._id}`;
+                    li.dataset.uuid = matchUUID;
+
+                    // Show a thumbnail if available
+                    const thumbnail = li.querySelector("img");
+                    if (typeof match.img === "string") {
+                        thumbnail.src = game.pf2e.system.moduleArt.map.get(matchUUID)?.img ?? match.img;
+                    } else if (match.metadata.type === "JournalEntry") {
+                        thumbnail.src = "icons/svg/book.svg";
+                    }
+
+                    // Open compendium on result click
+                    li.addEventListener("click", async (event) => {
+                        event.stopPropagation();
+                        const doc = await fromUuid(matchUUID);
+                        await doc?.sheet?.render(true, { editable: doc.sheet.isEditable });
+                    });
+
+                    const anchor = li.querySelector("a");
+                    anchor.innerText = match.name;
+                    const details = li.querySelector("span");
+                    const systemType =
+                        match.metadata.type === "Actor"
+                            ? game.i18n.localize(`ACTOR.Type${match.type.titleCase()}`)
+                            : match.metadata.type === "Item"
+                            ? game.i18n.localize(`ITEM.Type${match.type.titleCase()}`)
+                            : null;
+                    details.innerText = systemType ? `${systemType} (${match.metadata.label})` : `(${match.metadata.label})`;
+
+                    folderIds.add(compendiumFolder.dataset.folderId);
+
+                    return li;
+                });
+
+                const matchesList = compendiumFolder.querySelector("ol.subdirectory").lastElementChild;
+                matchesList.style.display = listElements.length > 0 ? "" : "none";
+                matchesList.replaceChildren(...listElements);
+                for (const dragDrop of this._dragDrop) {
+                    dragDrop.bind(matchesList);
+                }
+
+                for (let el of html.querySelectorAll(".compendium-pack")) {
+                    el.style.display = packIds.has(el.dataset.pack) ? "" : "none";
+                }
+
+                for (let el of html.querySelectorAll(".compendium-folder")) {
+                    // Folders
+                    let match = folderIds.has(el.dataset.folderId);
+                    el.style.display = match ? "" : "none";
+                    if (match) el.classList.remove("collapsed");
+                    else el.classList.toggle("collapsed", !game.folders._expanded[el.dataset.folderId]);
+                }
+            }
+        }
+        searchIndexes(query) {
+            const regex = new RegExp(RegExp.escape(query), "i");
+            let results = [];
+            for (const index of CompendiumFolderDirectory.allIndexes) {
+                if (query.length > 2 && regex.test(index.name)) {
+                    results.push(index);
+                }
+            }
+            return results;
+        }
         // Taken from SidebarDirectory._onSearchFilter()
         // modified slightly for custom data structures
         _onSearchFilter(event, query, rgx, html) {
+            if (game.system.id === "pf2e") {
+                if (query.length > 2) {
+                    //this.handleCFSearch(query, html);
+                    this.handlePF2eSearch(query, html);
+                } else {
+                    for (const compendiumFolder of html.querySelectorAll("li.compendium-folder")) {
+                        const matchesList = compendiumFolder.querySelector("ol.subdirectory").lastElementChild;
+                        matchesList.style.display = "none";
+                        matchesList.replaceChildren();
+                    }
+                    this.handleCFSearch(query, html);
+                }
+            } else {
+                this.handleCFSearch(query, html);
+            }
+        }
+        getPacksAndFoldersThatMatch(query) {
+            const rgx = new RegExp(RegExp.escape(query), "i");
+            let packIds = new Set();
+            let folderIds = new Set();
+            for (let e of this.documents) {
+                if (rgx.test(e.name)) {
+                    packIds.add(e.id);
+                    if (e.parent.id) folderIds.add(e.parent.id);
+                }
+            }
+
+            // Match folder tree
+            const includeFolders = (fids) => {
+                const folders = this.folders.filter((f) => fids.has(f.id));
+                const pids = new Set(folders.filter((f) => f.data.parent).map((f) => f.data.parent));
+                if (pids.size) {
+                    pids.forEach((p) => folderIds.add(p));
+                    includeFolders(pids);
+                }
+            };
+            includeFolders(folderIds);
+            return [packIds, folderIds];
+        }
+        handleCFSearch(query, html) {
             const isSearch = !!query;
-            let entityIds = new Set();
+            let packIds = new Set();
             let folderIds = new Set();
 
             // Match entities and folders
             if (isSearch) {
-                const rgx = new RegExp(RegExp.escape(query), "i");
-
-                // Match entity names
-                for (let e of this.documents) {
-                    if (rgx.test(e.name)) {
-                        entityIds.add(e.id);
-                        if (e.parent.id) folderIds.add(e.parent.id);
-                    }
-                }
-
-                // Match folder tree
-                const includeFolders = (fids) => {
-                    const folders = this.folders.filter((f) => fids.has(f.id));
-                    const pids = new Set(folders.filter((f) => f.data.parent).map((f) => f.data.parent));
-                    if (pids.size) {
-                        pids.forEach((p) => folderIds.add(p));
-                        includeFolders(pids);
-                    }
-                };
-                includeFolders(folderIds);
+                const packAndFolderIds = this.getPacksAndFoldersThatMatch(query);
+                packIds = packAndFolderIds[0];
+                folderIds = packAndFolderIds[1];
             }
 
             // Toggle each directory item
             for (let el of html.querySelectorAll(".directory-item,.compendium-pack")) {
                 // Entities
                 if (el.classList.contains("directory-item")) {
-                    el.style.display = !isSearch || entityIds.has(el.dataset.pack) ? "" : "none";
+                    el.style.display = !isSearch || packIds.has(el.dataset.pack) ? "" : "none";
                 }
 
                 // Folders
@@ -1023,7 +1188,6 @@ function defineClasses() {
                 }
             }
         }
-
         get documentName() {
             return "CompendiumFolderDirectory";
         }
@@ -1133,6 +1297,9 @@ function defineClasses() {
         FICFolderAPI,
         cleanupCompendium,
     };
+    if (game.system.id === "pf2e") {
+        CONFIG.ui.compendium = game.CF.CompendiumFolderDirectory;
+    }
 }
 async function closeFolder(parent, save) {
     let folderIcon = parent.firstChild.querySelector("h3 > .fa-folder, .fa-folder-open");

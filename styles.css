@@ -65,6 +65,51 @@ li.compendium-folder  label{
 #compendium .create-compendium{
   flex-basis:0%;
 }
+li.compendium-folder ol.document-matches {
+  background: rgba(0, 0, 0, 25%);
+  padding: 0;
+}
+li.match {
+  align-items: center;
+  column-gap: 2px;
+  cursor: pointer;
+  display: grid;
+  font-size: var(--font-size-12);
+  grid-template-areas:
+      "thumbnail name"
+      "thumbnail details";
+  grid-template-columns: calc(36px + 2px) 1fr;
+  grid-template-rows: 1fr 1fr;
+  list-style: none;
+  padding: 2px 0 2px 4px;  
+}
+li.match > * {
+  align-items: inherit;
+  display: flex;
+  height: 100%;
+}
+li.match:hover {
+  background: rgba(255, 255, 255, 10%);
+}
+li.match .thumbnail {
+  grid-area: thumbnail;
+  justify-content: start;
+}
+li.match .thumbnail .img {
+  border: none;
+  height: 36px;
+  object-fit: contain;
+  object-position: 50% 0;
+  padding: 2px 0;
+  width: 36px;
+}
+li.match.name {
+  grid-area: name;
+}
+li.match.details {
+  color: var(--color-text-light-primary);
+  grid-area: details;
+}
 /* 0.8.x */
 li.compendium-folder > .compendium-folder-header .create-entity-c{
   flex: 0 0 20px;
