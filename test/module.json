@@ -11,6 +11,6 @@
       ],
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
-    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/improved-import/test/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/improved-import.zip"
+    "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/10x-update/test/module.json",
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/archive/10x-update.zip"
   }
