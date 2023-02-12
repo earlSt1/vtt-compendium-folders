@@ -556,6 +556,7 @@ function defineClasses() {
 
             // Check for removed packs
             await this.checkDeleted();
+            this.compileSearchIndex();
             ui.compendium.render(true);
         }
         _sortTreeAlphabetically(tree) {
