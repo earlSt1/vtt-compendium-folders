@@ -809,6 +809,9 @@ export class FICManager {
                     FICUtils.handleMoveToRoot(data);
                 });
             }
+
+            FICManager.createZoomButtonsWithinCompendium(compendiumWindow);
+            FICManager.createResizeHandle(compendiumWindow, e);
         });
     }
 
@@ -1762,6 +1765,134 @@ export class FICManager {
             },
             { renderSheet: true }
         );
+    }
+
+    static getZoomLevel(window) {
+        const currentValue = window.style.getPropertyValue("--compendium-image-size") || "48px";
+        return parseInt(currentValue, 10) / 48;
+    }
+    static setZoomLevel(window, zoomLevel) {
+        const newSize = 48 * zoomLevel;
+        window.style.setProperty("--compendium-image-size", `${newSize}px`);
+    }
+    static createZoomButtonsWithinCompendium(window) {
+        const currentZoom = FICManager.getZoomLevel(window);
+
+        const controls = document.createElement('div');
+        controls.classList.add('header-controls');
+        controls.innerHTML = `
+          <div class="mode-selector">
+            <a class="fic-mode-list selected" title="List"><i class="fa-solid fa-list"></i></a>
+            <a class="fic-mode-grid" title="Grid"><i class="fa-solid fa-grid"></i></a>
+          </div>
+          <div class="zoom-buttons">
+            <a class="fic-zoom-out" title="Zoom Out"><i class="fas fa-fw fa-magnifying-glass-minus"></i></a>
+            <input type="range" min="1" max="10" value="${currentZoom}" class="zoom-slider" />
+            <a class="fic-zoom-in" title="Zoom In"><i class="fas fa-fw fa-magnifying-glass-plus"></i></a>
+          </div>
+        `;
+
+        const directoryHeader = window.querySelector("header.directory-header");
+        directoryHeader.insertAdjacentElement("afterend", controls);
+
+        const zoomSlider = controls.querySelector('.zoom-slider');
+        const onSlide = (e) => {
+            const value = e.target.value;
+            FICManager.setZoomLevel(window, value);
+        };
+        zoomSlider.addEventListener("input", onSlide);
+        zoomSlider.addEventListener("change", onSlide);
+
+        const zoomInButton = controls.querySelector('.fic-zoom-in');
+        zoomInButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const currentZoom = FICManager.getZoomLevel(window);
+            const newZoom = currentZoom + 1;
+
+            FICManager.setZoomLevel(window, Math.min(newZoom, 10));
+
+            const zoomSlider = controls.querySelector('.zoom-slider');
+            zoomSlider.value = newZoom;
+        });
+
+        const zoomOutButton = controls.querySelector('.fic-zoom-out');
+        zoomOutButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const currentZoom = FICManager.getZoomLevel(window);
+            const newZoom = currentZoom - 1;
+
+            FICManager.setZoomLevel(window, Math.min(newZoom, 10));
+
+            const zoomSlider = controls.querySelector('.zoom-slider');
+            zoomSlider.value = newZoom;
+        });
+
+        const gridModeButton = controls.querySelector('.fic-mode-grid');
+        const listModeButton = controls.querySelector('.fic-mode-list');
+
+        gridModeButton.addEventListener('click', () => {
+            window.classList.add('display-mode-grid');
+            gridModeButton.classList.add('selected');
+            listModeButton.classList.remove('selected');
+        });
+
+        listModeButton.addEventListener('click', () => {
+            window.classList.remove('display-mode-grid');
+            listModeButton.classList.add('selected');
+            gridModeButton.classList.remove('selected');
+        });
+    }
+
+    static createResizeHandle(compendiumWindow, compendium) {
+        const handle = document.createElement('div');
+        handle.classList.add('compendium-resize-handle');
+
+        const icon = document.createElement("i");
+        icon.classList.add("fas", "fa-arrows-alt-h");
+        handle.appendChild(icon);
+
+        compendiumWindow.appendChild(handle);
+
+        const minimum_size = 20;
+        let original_width = 0;
+        let original_height = 0;
+        let original_x = 0;
+        let original_y = 0;
+        let original_mouse_x = 0;
+        let original_mouse_y = 0;
+
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault()
+            original_width = compendium.position.width;
+            original_height = compendium.position.height;
+            original_x = compendium.position.left;
+            original_y = compendium.position.top;
+            original_mouse_x = e.pageX;
+            original_mouse_y = e.pageY;
+            window.addEventListener('mousemove', resize)
+            window.addEventListener('mouseup', stopResize)
+        })
+
+        function resize(e) {
+            const width = original_width + (e.pageX - original_mouse_x);
+            const height = original_height + (e.pageY - original_mouse_y)
+            if (width > minimum_size) {
+                compendium.setPosition({
+                    ...compendium.position,
+                    width
+                });
+            }
+            if (height > minimum_size) {
+                compendium.setPosition({
+                    ...compendium.position,
+                    height
+                });
+            }
+        }
+
+        function stopResize() {
+            window.removeEventListener('mousemove', resize)
+        }
     }
 }
 export class FICFolderAPI {
