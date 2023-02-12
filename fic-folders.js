@@ -721,6 +721,10 @@ export class FICManager {
             let packCode = e.metadata.id;
             const compendiumWindow = document.querySelector(".compendium.directory[data-pack='" + packCode + "']");
             if (!e.collection.locked && game.user.isGM) FICManager.createNewFolderButtonWithinCompendium(compendiumWindow, packCode, null);
+            FICManager.addClickListeners(compendiumWindow);
+            FICManager.createZoomButtonsWithinCompendium(compendiumWindow);
+            FICManager.createResizeHandle(compendiumWindow, e);
+            FICManager.addSearchHandler(compendiumWindow, FICManager.onSearch.bind(compendiumWindow));
             if (!e.collection.index.contents.some((x) => x.name === game.CF.TEMP_ENTITY_NAME)) return;
 
             FICUtils.removeStaleOpenFolderSettings(packCode);
@@ -809,9 +813,6 @@ export class FICManager {
                     FICUtils.handleMoveToRoot(data);
                 });
             }
-
-            FICManager.createZoomButtonsWithinCompendium(compendiumWindow);
-            FICManager.createResizeHandle(compendiumWindow, e);
         });
     }
 
@@ -1893,6 +1894,29 @@ export class FICManager {
         function stopResize() {
             window.removeEventListener('mousemove', resize)
         }
+    }
+    static addClickListeners(compendiumWindow) {
+        for (let entity of compendiumWindow.querySelectorAll(".directory-item")) {
+            const thumbnail = entity.querySelector('.thumbnail');
+            if (thumbnail) {
+                thumbnail.removeEventListener('click', FICManager.openItem);
+                thumbnail.addEventListener('click', FICManager.openItem, false);
+            }
+        }
+    }
+    static openItem(ev) {
+        ev.stopPropagation();
+        ev.target.parentElement.querySelector('a').click();
+    }
+    static addSearchHandler(compendiumWindow, searchFn) {
+        const search = compendiumWindow.querySelector('input[name="search"]');
+        search.removeEventListener('keyup', searchFn);
+        search.addEventListener('keyup', searchFn);
+    }
+    static onSearch(e) {
+        const compendiumWindow = this; // bound from parent context
+        const hasValue = e.target?.value?.length > 0;
+        compendiumWindow.querySelector('.directory-list').classList.toggle('searching', hasValue);
     }
 }
 export class FICFolderAPI {

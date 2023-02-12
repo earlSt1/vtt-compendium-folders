@@ -84,7 +84,7 @@ li.match {
   grid-template-columns: calc(36px + 2px) 1fr;
   grid-template-rows: 1fr 1fr;
   list-style: none;
-  padding: 2px 0 2px 4px;  
+  padding: 2px 0 2px 4px;
 }
 li.match > * {
   align-items: inherit;
@@ -123,7 +123,7 @@ li.compendium-folder > .compendium-folder-header .create-entity-c{
 #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
 /* Form styles */
 .form-compendium-list,.form-folder-list {
-  height:300px; 
+  height:300px;
   overflow:auto;
   background:rgba(0,0,0,0.05);
   border:1px solid #7a7971;
@@ -215,16 +215,16 @@ button.create-compendium{
 }
 .folder-header a.export-folder,a.import-folder,a.create-fic{
   flex: 0 0 20px;
-    text-align: center;
-    /*color: #CCC;*/
-    font-size: 14px;
+  text-align: center;
+  /*color: #CCC;*/
+  font-size: 14px;
 }
 div.compendium .compendium-folder-header > h3 > img {
   width:22px !important;
   height:22px !important;
   margin: 0 8px 0 0px !important;
   margin-bottom: -6px !important;
-  border:0px !important; 
+  border:0px !important;
   border-radius:0px !important;
 }
 /*Context menu*/
@@ -263,10 +263,10 @@ button.dialog-button.deleteAll  {
   background-color:#c51c1c
 }
 .d35ecustom #sidebar li.folder::before{
-	background:none
+  background:none
 }
 .d35ecustom #sidebar li.folder h3 i{
-	display:inline	
+  display:inline
 }
 #fix-compendium table{
   border-left: 1px solid #7a7971;
@@ -277,7 +277,7 @@ button.dialog-button.deleteAll  {
 }
 button[data-key='compendium-folders.cleanupCompendiums']{
   background-color: #aa0000;
-    color: #f0f0e0;
+  color: #f0f0e0;
 }
 
 :root {
@@ -286,6 +286,12 @@ button[data-key='compendium-folders.cleanupCompendiums']{
 .compendium .directory-item .thumbnail {
   width: var(--compendium-image-size);
   height: var(--compendium-image-size);
+}
+.compendium .directory-item {
+  cursor: pointer;
+}
+.compendium .directory-item:hover a {
+  text-shadow: 0 0 8px var(--color-shadow-primary);
 }
 .compendium.directory .directory-list .entry-list .directory-item.scene {
   height: calc(var(--compendium-image-size) + 2px);
@@ -299,6 +305,19 @@ button[data-key='compendium-folders.cleanupCompendiums']{
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+.display-mode-grid .directory-list .cfolders-container {
+  width: 100%;
+}
+.display-mode-grid .directory-list {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-content: flex-start;
+}
+.display-mode-grid .directory-list .directory-item {
+  display: flex;
 }
 .display-mode-grid .directory-list .directory-item.scene {
   height: auto;
