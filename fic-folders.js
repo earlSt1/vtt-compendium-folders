@@ -539,6 +539,11 @@ export class FICCache {
 // Main manager class
 //------------------------
 export class FICManager {
+    static recompileSearchIndex(d) {
+        if (d.compendium && game.system.id === "pf2e") {
+            ui.compendium.compileSearchIndex();
+        }
+    }
     static setup() {
         if (game.settings.get(mod, "disable-fic")) {
             return;
@@ -550,61 +555,77 @@ export class FICManager {
             if (a.isOwner && FICUtils.shouldCreateFolders()) {
                 await FICManager.importFolderData(a);
             }
+            FICManager.recompileSearchIndex(a);
         });
         Hooks.on("createCards", async function (c) {
             if (c.isOwner && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(c);
+            FICManager.recompileSearchIndex(c);
         });
         Hooks.on("createItem", async function (i) {
             if (i.isOwner && !i.isEmbedded && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(i);
+            FICManager.recompileSearchIndex(i);
         });
         Hooks.on("createJournalEntry", async function (j) {
             if (j.isOwner && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(j);
+            FICManager.recompileSearchIndex(j);
         });
         Hooks.on("createMacro", async function (m) {
             if (m.isOwner && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(m);
+            FICManager.recompileSearchIndex(m);
         });
         Hooks.on("createPlaylist", async function (p) {
             if (p.isOwner && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(p);
+            FICManager.recompileSearchIndex(p);
         });
         Hooks.on("createRollTable", async function (r) {
             if (r.isOwner && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(r);
+            FICManager.recompileSearchIndex(r);
         });
         Hooks.on("createScene", async function (s) {
             if (s.isOwner && FICUtils.shouldCreateFolders()) await FICManager.importFolderData(s);
+            FICManager.recompileSearchIndex(s);
         });
 
         Hooks.on("updateActor", async function (a) {
             if (a.isOwner && game.actors.contents.some((x) => x.name === a.name) && FICUtils.shouldCreateFolders()) {
                 await FICManager.importFolderData(a);
             }
+            FICManager.recompileSearchIndex(a);
         });
         Hooks.on("updateCards", async function (c) {
             if (c.isOwner && game.cards.contents.some((x) => x.name === c.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(c);
+            FICManager.recompileSearchIndex(c);
         });
         Hooks.on("updateItem", async function (i) {
             if (i.isOwner && game.items.contents.some((x) => x.name === i.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(i);
+            FICManager.recompileSearchIndex(i);
         });
         Hooks.on("updateJournalEntry", async function (j) {
             if (j.isOwner && game.journal.contents.some((x) => x.name === j.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(j);
+            FICManager.recompileSearchIndex(j);
         });
         Hooks.on("updateMacro", async function (m) {
             if (m.isOwner && game.macros.contents.some((x) => x.name === m.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(m);
+            FICManager.recompileSearchIndex(m);
         });
         Hooks.on("updatePlaylist", async function (p) {
             if (p.isOwner && game.playlists.contents.some((x) => x.name === p.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(p);
+            FICManager.recompileSearchIndex(p);
         });
         Hooks.on("updateRollTable", async function (r) {
             if (r.isOwner && game.tables.contents.some((x) => x.name === r.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(r);
+            FICManager.recompileSearchIndex(r);
         });
         Hooks.on("updateScene", async function (s) {
             if (s.isOwner && game.scenes.contents.some((x) => x.name === s.name) && FICUtils.shouldCreateFolders())
                 await FICManager.importFolderData(s);
+            FICManager.recompileSearchIndex(s);
         });
 
         // Adding the export button to all folders

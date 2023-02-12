@@ -528,7 +528,7 @@ function defineClasses() {
             this.compileSearchIndex();
         }
         compileSearchIndex() {
-            console.debug("Compendium Folders | compiling search index");
+            console.debug("Compendium Folders | Compiling search index");
             const packs = game.packs.filter((p) => p.index.size > 0 && (game.user.isGM || !p.private));
             CompendiumFolderDirectory.allIndexes = [];
             for (const pack of packs) {
