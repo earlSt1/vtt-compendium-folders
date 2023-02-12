@@ -9,7 +9,7 @@
             "discord": "Erceron#0370"
         }
     ],
-    "version": "2.5.6",
+    "version": "2.5.7",
     "compatibility": {
         "minimum": 10,
         "verified": "10.291",
@@ -62,5 +62,5 @@
     "styles": ["./styles.css"],
     "url": "https://github.com/earlSt1/vtt-compendium-folders",
     "manifest": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/10x-update/module.json",
-    "download": "https://github.com/earlSt1/vtt-compendium-folders/releases/download/2.5.6/2.5.6.zip"
+    "download": "https://github.com/earlSt1/vtt-compendium-folders/releases/download/2.5.7/2.5.7.zip"
 }
