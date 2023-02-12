@@ -1274,6 +1274,16 @@ function defineClasses() {
         "MIXED"
     );
 
+    libWrapper.register(
+        mod,
+        "CompendiumCollection.prototype.importDialog",
+        function (wrapped, ...args) {
+            wrapped({
+                keepId: game.settings.get(mod, "default-keep-id"),
+            });
+        },
+        "WRAPPER"
+    );
     CONFIG.CompendiumEntry = { documentClass: CompendiumEntry };
     CONFIG.CompendiumFolder = { documentClass: CompendiumFolder };
     CONFIG.CompendiumEntryCollection = {
