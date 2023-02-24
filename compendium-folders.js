@@ -1793,6 +1793,12 @@ export class Settings {
             type: String,
             default: "",
         });
+        game.settings.register(mod, "grid-settings", {
+            scope: "client",
+            config: false,
+            type: Object,
+            default: {},
+        });
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;
 

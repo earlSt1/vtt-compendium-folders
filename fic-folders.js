@@ -722,7 +722,7 @@ export class FICManager {
             const compendiumWindow = document.querySelector(".compendium.directory[data-pack='" + packCode + "']");
             if (!e.collection.locked && game.user.isGM) FICManager.createNewFolderButtonWithinCompendium(compendiumWindow, packCode, null);
             FICManager.addClickListeners(compendiumWindow);
-            FICManager.createZoomButtonsWithinCompendium(compendiumWindow);
+            FICManager.createZoomButtonsWithinCompendium(compendiumWindow, packCode);
             FICManager.createResizeHandle(compendiumWindow, e);
             FICManager.addSearchHandler(compendiumWindow, FICManager.onSearch.bind(compendiumWindow));
             if (!e.collection.index.contents.some((x) => x.name === game.CF.TEMP_ENTITY_NAME)) return;
@@ -1768,22 +1768,57 @@ export class FICManager {
         );
     }
 
-    static getZoomLevel(window) {
-        const currentValue = window.style.getPropertyValue("--compendium-image-size") || "48px";
-        return parseInt(currentValue, 10) / 48;
+    static getPackGridSettings(packCode) {
+        const allGridSettings = game.settings.get(mod, 'grid-settings');
+        return allGridSettings[packCode] || {
+            zoom: 1,
+            displayType: 'list'
+        };
     }
-    static setZoomLevel(window, zoomLevel) {
+    static async setPackGridSettings(packCode, newSettings) {
+        const allGridSettings = game.settings.get(mod, 'grid-settings');
+        const currentSettings = FICManager.getPackGridSettings(packCode);
+        allGridSettings[packCode] = {
+            ...currentSettings,
+            ...newSettings,
+        };
+        await game.settings.set(mod, 'grid-settings', allGridSettings);
+    }
+    static getZoomLevel(packCode) {
+        const { zoom } = FICManager.getPackGridSettings(packCode);
+        return parseInt(zoom, 10);
+    }
+    static setZoomLevel(window, zoomLevel, packCode) {
         const newSize = 48 * zoomLevel;
         window.style.setProperty("--compendium-image-size", `${newSize}px`);
+        FICManager.setPackGridSettings(packCode, {
+            zoom: parseInt(zoomLevel, 10)
+        });
     }
-    static createZoomButtonsWithinCompendium(window) {
-        const currentZoom = FICManager.getZoomLevel(window);
+    static getDisplayType(packCode) {
+        const { displayType } = FICManager.getPackGridSettings(packCode);
+        return displayType;
+    }
+    static setDisplayType(window, displayType, packCode) {
+        window.classList.toggle('display-mode-grid', displayType === 'grid');
+        FICManager.setPackGridSettings(packCode, {
+            displayType: displayType
+        });
+    }
+    static createZoomButtonsWithinCompendium(window, packCode) {
+        const currentZoom = FICManager.getZoomLevel(packCode);
+        const newSize = 48 * currentZoom;
+        window.style.setProperty("--compendium-image-size", `${newSize}px`);
+
+        if (FICManager.getDisplayType(packCode) === 'grid') {
+            window.classList.add('display-mode-grid');
+        }
 
         const controls = document.createElement('div');
         controls.classList.add('header-controls');
         controls.innerHTML = `
           <div class="mode-selector">
-            <a class="fic-mode-list selected" title="List"><i class="fa-solid fa-list"></i></a>
+            <a class="fic-mode-list" title="List"><i class="fa-solid fa-list"></i></a>
             <a class="fic-mode-grid" title="Grid"><i class="fa-solid fa-grid"></i></a>
           </div>
           <div class="zoom-buttons">
@@ -1799,7 +1834,7 @@ export class FICManager {
         const zoomSlider = controls.querySelector('.zoom-slider');
         const onSlide = (e) => {
             const value = e.target.value;
-            FICManager.setZoomLevel(window, value);
+            FICManager.setZoomLevel(window, value, packCode);
         };
         zoomSlider.addEventListener("input", onSlide);
         zoomSlider.addEventListener("change", onSlide);
@@ -1810,7 +1845,7 @@ export class FICManager {
             const currentZoom = FICManager.getZoomLevel(window);
             const newZoom = currentZoom + 1;
 
-            FICManager.setZoomLevel(window, Math.min(newZoom, 10));
+            FICManager.setZoomLevel(window, Math.min(newZoom, 10), packCode);
 
             const zoomSlider = controls.querySelector('.zoom-slider');
             zoomSlider.value = newZoom;
@@ -1822,7 +1857,7 @@ export class FICManager {
             const currentZoom = FICManager.getZoomLevel(window);
             const newZoom = currentZoom - 1;
 
-            FICManager.setZoomLevel(window, Math.min(newZoom, 10));
+            FICManager.setZoomLevel(window, Math.min(newZoom, 10), packCode);
 
             const zoomSlider = controls.querySelector('.zoom-slider');
             zoomSlider.value = newZoom;
@@ -1832,15 +1867,11 @@ export class FICManager {
         const listModeButton = controls.querySelector('.fic-mode-list');
 
         gridModeButton.addEventListener('click', () => {
-            window.classList.add('display-mode-grid');
-            gridModeButton.classList.add('selected');
-            listModeButton.classList.remove('selected');
+            FICManager.setDisplayType(window, 'grid', packCode);
         });
 
         listModeButton.addEventListener('click', () => {
-            window.classList.remove('display-mode-grid');
-            listModeButton.classList.add('selected');
-            gridModeButton.classList.remove('selected');
+            FICManager.setDisplayType(window, 'list', packCode);
         });
     }
 

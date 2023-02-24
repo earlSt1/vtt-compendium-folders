@@ -341,8 +341,14 @@ button[data-key='compendium-folders.cleanupCompendiums']{
   align-items: center;
   gap: 5px;
 }
-.mode-selector .selected {
+.fic-mode-list {
   color: darkorange;
+}
+.display-mode-grid .fic-mode-grid {
+  color: darkorange;
+}
+.display-mode-grid .fic-mode-list {
+  color: inherit;
 }
 .zoom-buttons {
   display: flex;
