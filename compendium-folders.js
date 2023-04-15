@@ -585,6 +585,12 @@ export class Settings {
             type: Object,
             default: {},
         });
+        game.settings.register(mod, "hasMigratedTov11", {
+            scope: "world",
+            config: false,
+            type: Boolean,
+            default: false,
+        });
         game.settings.registerMenu(mod, "cleanupCompendiums", {
             name: game.i18n.localize("CF.cleanup"),
             icon: "fas fa-atlas",
@@ -679,13 +685,29 @@ async function migrateSidebar() {
     await game.settings.set(mod, "cfolders", {});
     ui.notifications.notify(modName + " | Migration complete!");
 }
+async function runEOLPrompt() {
+    const contentHtml = await renderTemplate("modules/compendium-folders/templates/eol-prompt.html");
+    Dialog.prompt({
+        title: "Compendium Folders and v11",
+        label: "Begin Sidebar Migration",
+        content: contentHtml,
+        callback: async (html) => {
+            await migrateSidebar();
+            await game.settings.set(mod, "hasMigratedTov11", true);
+        },
+        options: {
+            jQuery: false,
+            height: "600px",
+        },
+    });
+}
 Hooks.once("init", async function () {
     defineClasses();
     Settings.registerSettings();
     Hooks.once("ready", async function () {
         await initFolders(true);
-        if (Object.keys(game.settings.get(mod, "cfolders")).length > 0) {
-            await migrateSidebar();
+        if (!game.settings.get(mod, "hasMigratedTov11")) {
+            await runEOLPrompt();
         }
     });
 });
