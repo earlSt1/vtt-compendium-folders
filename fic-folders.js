@@ -1,3 +1,4 @@
+import { FICMigration } from "./migrateFIC.js";
 const mod = "compendium-folders";
 const modName = "Compendium Folders";
 
@@ -52,6 +53,42 @@ export class FICFolder {
             },
             data
         );
+    }
+    toJSON() {
+        return {
+            _id: this.documentId,
+            data: this.data,
+        };
+    }
+    getSaveData() {
+        let saveData = this.data;
+        saveData.version = game.modules.get("compendium-folders").version;
+        delete saveData.documentId;
+        delete saveData.parent;
+        return {
+            id: this.documentId,
+            _id: this.documentId,
+            flags: {
+                cf: saveData,
+            },
+        };
+    }
+    async save(render = false) {
+        await FICUtils.packUpdateEntity(this.pack, this.getSaveData());
+    }
+    async saveNoRefresh() {
+        await FICUtils.packUpdateEntity(this.pack, this.getSaveData());
+    }
+    /** @override */
+    static create(data = {}, documentId, packCode) {
+        let newFolder = new FICFolder(data);
+        newFolder.documentId = documentId;
+        newFolder.packCode = packCode;
+        if (game.customFolders?.fic?.folders) {
+            game.customFolders.fic.folders.set(newFolder.id, newFolder);
+        }
+
+        return newFolder;
     }
     static import(packCode, contents, folder = {}) {
         let data = folder.flags?.cf ?? folder.data.flags.cf;
@@ -242,5 +279,19 @@ export class FICFolderAPI {
             return this.loadFolders(packCode);
         }
         return game.customFolders.fic.folders;
+    }
+    static async migrateCompendium(packCode) {
+        const targetPack = game.packs.get(packCode);
+        if (targetPack == null) {
+            ui.notifications.error('Could not find compendium with code "' + packCode + '"');
+            return;
+        }
+        if (targetPack.locked) {
+            ui.notifications.error('Cannot migrate compendium "' + targetPack.name + '", unlock the compendium first');
+            return;
+        }
+        await FICMigration.migrate(packCode);
+
+        ui.notifications.notify("Migration complete.");
     }
 }

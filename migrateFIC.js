@@ -2,44 +2,57 @@ import { FICFolderAPI } from "./fic-folders.js";
 
 export class FICMigration {
     static async migrate(packCode) {
-        const targetPack = game.packs.get(targetPackCode);
-        if (targetPack.locked) {
-            ui.notifications.error('Cannot migrate pack "' + targetPack.name + '", unlock the compendium first');
-            return;
-        }
-        await this.migrate(packCode, packCode);
+        await this.migrateToTarget(packCode, packCode);
     }
-    static async migrate(sourcePackCode, targetPackCode) {
+    static async migrateToTarget(sourcePackCode, targetPackCode) {
         const targetPack = game.packs.get(targetPackCode);
         const cfFolders = await FICFolderAPI.loadFolders(sourcePackCode);
         const rootFolders = cfFolders.contents.filter((x) => !x.parent);
-        await convert(targetPack, rootFolders);
+        await this.convert(targetPack, rootFolders);
+        await this.backupOldFolders(cfFolders, targetPack);
     }
-    createFoundryFolderData(targetPack, cfFolder, parentFolder = null) {
+    static async backupOldFolders(cfFolders, targetPack) {
+        console.log("Backing up old folders");
+        const backupFolder = await Folder.create(
+            {
+                type: targetPack.documentName,
+                name: "CF_Folder backup",
+            },
+            { pack: targetPack.collection }
+        );
+        const updateData = cfFolders.contents.map((f) => ({
+            _id: f.documentId,
+            folder: backupFolder._id,
+        }));
+        await targetPack.documentClass.updateDocuments(updateData, { pack: targetPack.collection });
+    }
+    static createFoundryFolderData(targetPack, cfFolder, parentFolder = null) {
         return foundry.utils.mergeObject(cfFolder.data, {
             type: targetPack.documentName,
             folder: parentFolder?._id,
         });
     }
-    async updateDocuments(targetPack, cfFolder, folder = null) {
+    static async updateDocuments(targetPack, cfFolder, folder = null) {
         const updateData = cfFolder.contents.map((docId) => ({
             _id: docId,
             folder: folder?._id,
         }));
         console.log(updateData);
-        await targetPack.documentClass.updateDocuments(updateData, { pack: targetPackCode });
+        await targetPack.documentClass.updateDocuments(updateData, { pack: targetPack.collection });
     }
-    async convertFolder(targetPack, cfFolder, parentFolder = null) {
-        const folder = await Folder.create(createFoundryFolderData(targetPack, cfFolder, parentFolder), { pack: targetPackCode });
-        await updateDocuments(targetPack, cfFolder, folder);
+    static async convertFolder(targetPack, cfFolder, parentFolder = null) {
+        const folder = await Folder.create(this.createFoundryFolderData(targetPack, cfFolder, parentFolder), {
+            pack: targetPack.collection,
+        });
+        await this.updateDocuments(targetPack, cfFolder, folder);
 
         for (const f of cfFolder.children) {
-            await convertFolder(targetPack, cfFolders.get(f), folder);
+            await this.convertFolder(targetPack, game.customFolders.fic.folders.get(f), folder);
         }
     }
-    async convert(targetPack, rootFolders) {
+    static async convert(targetPack, rootFolders) {
         for (const folder of rootFolders) {
-            await convertFolder(targetPack, folder);
+            await this.convertFolder(targetPack, folder);
         }
     }
 }
