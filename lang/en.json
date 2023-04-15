@@ -65,9 +65,9 @@
     "CF.unlockAll": "Unlock All Contents",
     "CF.createTable": "Create RollTable",
 
-    "CF.migrateLabel": "Migration to V11",
+    "CF.migrateLabel": "Migrate to v11",
     "CF.migrateButtonLabel": "Migrate Compendium",
-    "CF.migrateL1": "This will convert all existing Compendium Folders folders inside a compendium to core FoundryVTT V11 folders.",
-    "CF.migrateL2": "Once the process has finished, the old fake folders that Compendium Folders created will be moved into a folder called <strong>CF_Folder backup</strong>.Have a look through the compendium to make sure the migration as worked ok, if it has, you can safely delete this folder.",
-    "CF.migrateL3": "Finally, you'll need to use the <strong>Cleanup Compendium</strong> option in the module settings to clear the flags on all documents that Compendium Folders used to render folders."
+    "CF.migrateL1": "This will convert all existing Compendium Folders folders inside a compendium to core FoundryVTT v11 folders.",
+    "CF.migrateL2": "Once the process has finished, the old fake folders that Compendium Folders created will be moved into a backup folder called \"CF_Folder backup\". Have a look through the compendium to make sure the migration has worked ok, if it has, you can safely delete this folder.",
+    "CF.migrateL3": "Finally, you'll need to use the Cleanup Compendium option in the module settings to clear the flags on all documents that Compendium Folders used to render folders."
 }
