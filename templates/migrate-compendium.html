@@ -1,0 +1,16 @@
+<form id="select-compendium" autocomplete="off" onsubmit="event.preventDefault();">
+    <p>{{localize "CF.migrateL1"}}</p>
+    <p>{{localize "CF.migrateL2"}}</p>
+    <p>{{localize "CF.migrateL3"}}</p>
+    <div class="form-group">
+        <p>Select compendium to migrate</p>
+    </div>
+    <div class="form-group">
+        <select name="pack">
+            {{#each packs}}
+            <option value="{{this.metadata.id}}">{{this.title}} [{{this.metadata.packageName}}]</option>
+            {{/each}}
+        </select>
+    </div>
+    <button class="select-submit" type="submit"><i class="fas fa-check"></i> Migrate</button>
+</form>

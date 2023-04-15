@@ -437,6 +437,30 @@ function defineClasses() {
     };
 }
 // Edit functions
+class MigrateCompendiumConfig extends FormApplication {
+    static get defaultOptions() {
+        const options = super.defaultOptions;
+        options.id = "compendium-folder-migrate";
+        options.template = "modules/compendium-folders/templates/migrate-compendium.html";
+        options.width = 500;
+        return options;
+    }
+    get title() {
+        return game.i18n.localize("CF.migrateButtonLabel");
+    }
+    async getData(options) {
+        return {
+            packs: game.packs.contents.filter((pack) => {
+                return !pack.locked && pack.index.some((doc) => doc.name === TEMP_ENTITY_NAME);
+            }),
+        };
+    }
+    async _updateObject(event, formData) {
+        let packCode = formData.pack;
+        await FICFolderAPI.migrateCompendium(packCode);
+    }
+}
+// Edit functions
 class ImportExportConfig extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
@@ -540,6 +564,13 @@ class CleanupPackConfig extends FormApplication {
 //==========================
 export class Settings {
     static registerSettings() {
+        game.settings.registerMenu(mod, "migrateMenu", {
+            name: game.i18n.localize("CF.migrateLabel"),
+            label: game.i18n.localize("CF.migrateButtonLabel"),
+            icon: "fas fa-refresh",
+            type: MigrateCompendiumConfig,
+            restricted: true,
+        });
         game.settings.registerMenu(mod, "settingsMenu", {
             name: game.i18n.localize("CF.configuration"),
             label: game.i18n.localize("CF.importExportLabel"),
