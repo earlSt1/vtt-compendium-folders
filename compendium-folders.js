@@ -7,17 +7,6 @@ const TEMP_ENTITY_NAME = "#[CF_tempEntity]";
 const FOLDER_SEPARATOR = "#/CF_SEP/";
 
 // ==========================
-// Utility functions
-// ==========================
-Handlebars.registerHelper("ifIn", function (elem, compendiums, options) {
-    let packName = elem.id;
-    if (compendiums.indexOf(packName) > -1) {
-        return options.fn(this);
-    }
-    return options.inverse(this);
-});
-
-// ==========================
 // Folder object structure
 // ==========================
 function defineClasses() {
@@ -170,9 +159,6 @@ function defineClasses() {
             } else {
                 data.compendiums = [];
             }
-            // Set open state
-            data.expanded = game.settings.get(mod, "open-folders").includes(data._id);
-
             return CompendiumFolder.create(data);
         }
         // Update using data
@@ -567,12 +553,6 @@ export class Settings {
             type: Object,
             default: {},
         });
-        game.settings.register(mod, "open-folders", {
-            scope: "client",
-            config: false,
-            type: Object,
-            default: [],
-        });
         game.settings.registerMenu(mod, "cleanupCompendiums", {
             name: game.i18n.localize("CF.cleanup"),
             icon: "fas fa-atlas",
@@ -580,95 +560,7 @@ export class Settings {
             type: CleanupPackConfig,
             restricted: true,
         });
-        game.settings.register(mod, "open-temp-folders", {
-            scope: "client",
-            config: false,
-            type: Object,
-            default: {},
-        });
-        game.settings.register(mod, "last-search-packs", {
-            scope: "client",
-            config: false,
-            type: Object,
-            default: {},
-        });
-        game.settings.register(mod, "converted-packs", {
-            scope: "world",
-            config: false,
-            type: Object,
-            default: [],
-        });
-        game.settings.register(mod, "cached-folder", {
-            scope: "world",
-            config: false,
-            type: Object,
-            default: {},
-        });
-        game.settings.register(mod, "importing", {
-            scope: "world",
-            config: false,
-            type: Boolean,
-            default: false,
-        });
-        game.settings.register(mod, "default-mbn", {
-            name: "Default Merge by name",
-            hint: "If enabled, the Merge by name option will be enabled by default when importing compendiums",
-            scope: "world",
-            config: true,
-            type: Boolean,
-            default: false,
-        });
-        game.settings.register(mod, "default-keep-id", {
-            name: "Default Keep ID",
-            hint: "If enabled, the Keep ID option will be enabled by default when importing compendiums",
-            scope: "world",
-            config: true,
-            type: Boolean,
-            default: false,
-        });
-        game.settings.register(mod, "default-cf-sort", {
-            name: "Default Folder Sorting",
-            hint: "Defines the default folder sort when creating new folders in compendiums",
-            scope: "world",
-            config: true,
-            type: String,
-            choices: {
-                a: "Alphabetical",
-                m: "Manual",
-            },
-            default: "m",
-        });
-        game.settings.register(mod, "quiet-mode", {
-            name: "Quiet mode",
-            hint: "If enabled, UI notifications will be disabled on import/export - useful if you are importing lots of small folders",
-            scope: "world",
-            config: true,
-            type: Boolean,
-            default: false,
-        });
-        game.settings.register(mod, "disable-fic", {
-            name: "Disable Folders inside Compendiums",
-            hint: "If enabled, the Folders Inside Compendiums part of the module will be disabled",
-            scope: "world",
-            config: true,
-            type: Boolean,
-            default: false,
-            requiresReload: true,
-        });
-        game.settings.register(mod, "auto-create-folders", {
-            name: "Auto Create folders on Import",
-            hint: "If enabled, dragging a document from a compendium into your world will create folder structures automatically",
-            scope: "world",
-            config: true,
-            type: Boolean,
-            default: false,
-        });
-        game.settings.register(mod, "last-pack", {
-            scope: "client",
-            config: false,
-            type: String,
-            default: "",
-        });
+
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;
 
@@ -706,9 +598,6 @@ export class Settings {
     }
     static getFolders() {
         return game.settings.get(mod, "cfolders");
-    }
-    static async clearSearchTerms() {
-        game.settings.set(mod, "last-search-packs", {});
     }
 }
 // ==========================

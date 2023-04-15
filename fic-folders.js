@@ -26,12 +26,6 @@ export class FICUtils {
             .toString(36)
             .replace("0.", prefix || "");
     }
-    static async removeStaleOpenFolderSettings(packCode) {
-        let openFolders = game.settings.get(mod, "open-temp-folders");
-        let newSettings = {};
-        newSettings[packCode] = openFolders[packCode];
-        await game.settings.set(mod, "open-temp-folders", newSettings);
-    }
     static arrayContentsEqual(array1, array2) {
         const set1 = new Set(array1);
         const set2 = new Set(array2);
