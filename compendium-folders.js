@@ -1,5 +1,6 @@
 "use strict";
 import { FICUtils, FICFolderAPI } from "./fic-folders.js";
+import { SidebarMigration } from "./migrateSidebar.js";
 export const modName = "Compendium Folders";
 const mod = "compendium-folders";
 const FOLDER_LIMIT = 8;
@@ -436,7 +437,6 @@ function defineClasses() {
         cleanupCompendium,
     };
 }
-// Edit functions
 class MigrateCompendiumConfig extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
@@ -462,7 +462,6 @@ class MigrateCompendiumConfig extends FormApplication {
         ui.notifications.notify("Migration complete!");
     }
 }
-// Edit functions
 class ImportExportConfig extends FormApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
@@ -645,46 +644,6 @@ async function initFolders(refresh = false) {
     // let refresh = false;
     let assigned = [];
     let toRemove = [];
-    if (allFolders.hidden && !allFolders.hidden._id) {
-        allFolders.hidden._id = "hidden";
-    }
-    if (allFolders.default && !allFolders.default._id) {
-        allFolders.default._id = "default";
-    }
-    let init1 = false;
-    if (Object.keys(allFolders).length <= 2 && allFolders.constructor === Object) {
-        // initialize settings
-        init1 = true;
-        let entityId = {};
-
-        allFolders = {
-            hidden: {
-                compendiumList: [],
-                titleText: "hidden-compendiums",
-                _id: "hidden",
-            },
-            default: {
-                compendiumList: [],
-                titleText: "Default",
-                _id: "default",
-                colorText: "#000000",
-            },
-        };
-        for (let pack of game.packs.contents) {
-            if (allFolders[entityId[pack.documentClass.documentName]]) {
-                allFolders[entityId[pack.documentClass.documentName]].compendiumList.push(pack.collection);
-            } else {
-                entityId[pack.documentClass.documentName] = "cfolder-" + randomID(10);
-                allFolders[entityId[pack.documentClass.documentName]] = {
-                    _id: entityId[pack.documentClass.documentName],
-                    titleText: pack.documentClass.documentName,
-                    compendiumList: [pack.collection],
-                    colorText: "#000000",
-                    fontColorText: "#FFFFFF",
-                };
-            }
-        }
-    }
     for (let folder of Object.values(allFolders)) {
         let compendiums = [];
         folder.compendiums = [];
@@ -698,56 +657,35 @@ async function initFolders(refresh = false) {
             }
             if (folder._id != "default") assigned.push(pack);
         }
-        let f = CompendiumFolder.import(folder, compendiums);
-        // refresh flag works like "init" in this case
-        if (init1) await f.save(false);
+        CompendiumFolder.import(folder, compendiums);
     }
-    // Set default folder content
-    let unassigned = game.packs.contents.filter((x) => !assigned.includes(x.collection));
-    for (let pack of unassigned.map((y) => y.collection)) {
-        if (game.customFolders.compendium.entries.has(pack)) {
-            // Pack has an entry (assigned to default folder)
-            game.customFolders.compendium.entries.get(pack).folder = "default";
-        } else {
-            if (pack.length > 1) {
-                // Pack does not have an entry (because it is new)
-                new CompendiumEntry(pack, "default");
-            }
+
+    if (game.customFolders.compendium != null) {
+        // Set child folders
+        let allEntries = [...game.customFolders.compendium.folders.values()];
+        for (let cf of allEntries) {
+            let directChildren = allEntries.filter(
+                (f) => f.data?.pathToFolder?.length > 0 && f.data.pathToFolder[f.data.pathToFolder.length - 1] === cf._id
+            );
+            cf.children = directChildren;
         }
-    }
-    game.customFolders.compendium.folders.default.compendiumList = [
-        ...new Set(game.customFolders.compendium.folders.default.compendiumList.concat(unassigned.map((y) => y.collection))),
-    ];
-    game.customFolders.compendium.folders.default.content = [
-        ...new Set(game.customFolders.compendium.folders.default.content.concat(unassigned)),
-    ];
-    // Check for removed compendiums
-    let missingCompendiums = false;
-    let goneCompendiums = game.customFolders.compendium.entries.filter((x) => !x.pack);
-    for (let c of goneCompendiums) {
-        c.parent.removeCompendium(c, true, false);
-        missingCompendiums = true;
-    }
-    if (missingCompendiums) {
-        ui.compendium.render(true);
-        return;
-    }
 
-    // Set child folders
-    let allEntries = [...game.customFolders.compendium.folders.values()];
-    for (let cf of allEntries) {
-        let directChildren = allEntries.filter(
-            (f) => f.data?.pathToFolder?.length > 0 && f.data.pathToFolder[f.data.pathToFolder.length - 1] === cf._id
-        );
-        cf.children = directChildren;
+        if (game.user.isGM) game.settings.set(mod, "cfolders", allFolders);
     }
-
-    if (game.user.isGM) game.settings.set(mod, "cfolders", allFolders);
+}
+async function migrateSidebar() {
+    ui.notifications.notify(modName + " | Migrating compendium sidebar to v11 folders");
+    await SidebarMigration.migrate();
+    await game.settings.set(mod, "cfolders", {});
+    ui.notifications.notify(modName + " | Migration complete!");
 }
 Hooks.once("init", async function () {
     defineClasses();
     Settings.registerSettings();
     Hooks.once("ready", async function () {
         await initFolders(true);
+        if (Object.keys(game.settings.get(mod, "cfolders")).length > 0) {
+            await migrateSidebar();
+        }
     });
 });
