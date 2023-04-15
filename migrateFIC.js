@@ -12,7 +12,7 @@ export class FICMigration {
         await this.backupOldFolders(cfFolders, targetPack);
     }
     static async backupOldFolders(cfFolders, targetPack) {
-        console.log("Backing up old folders");
+        console.debug("Backing up old folders");
         const backupFolder = await Folder.create(
             {
                 type: targetPack.documentName,
@@ -37,7 +37,6 @@ export class FICMigration {
             _id: docId,
             folder: folder?._id,
         }));
-        console.log(updateData);
         await targetPack.documentClass.updateDocuments(updateData, { pack: targetPack.collection });
     }
     static async convertFolder(targetPack, cfFolder, parentFolder = null) {
@@ -52,6 +51,7 @@ export class FICMigration {
     }
     static async convert(targetPack, rootFolders) {
         for (const folder of rootFolders) {
+            console.debug("Converting " + folder.name);
             await this.convertFolder(targetPack, folder);
         }
     }

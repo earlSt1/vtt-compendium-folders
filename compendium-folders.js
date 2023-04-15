@@ -457,7 +457,9 @@ class MigrateCompendiumConfig extends FormApplication {
     }
     async _updateObject(event, formData) {
         let packCode = formData.pack;
+        ui.notifications.notify("Migrating compendium " + game.packs.get(packCode).title + "...");
         await FICFolderAPI.migrateCompendium(packCode);
+        ui.notifications.notify("Migration complete!");
     }
 }
 // Edit functions
