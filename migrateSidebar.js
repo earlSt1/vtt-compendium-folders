@@ -1,5 +1,8 @@
 export class SidebarMigration {
     static async migrate() {
+        if (!game.customFolders.compendium) {
+            return;
+        }
         const allRootFolders = game.customFolders.compendium.folders.contents.filter((f) => f.parent == null);
         for (const folder of allRootFolders) {
             console.log("Converting " + folder.name);
