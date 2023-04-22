@@ -285,7 +285,5 @@ export class FICFolderAPI {
             return;
         }
         await FICMigration.migrate(packCode);
-
-        ui.notifications.notify("Migration complete.");
     }
 }
