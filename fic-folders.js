@@ -54,6 +54,9 @@ export class FICFolder {
             data: this.data,
         };
     }
+    toObject() {
+        return this;
+    }
     getSaveData() {
         let saveData = this.data;
         saveData.version = game.modules.get("compendium-folders").version;
