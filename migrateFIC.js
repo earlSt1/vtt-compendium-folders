@@ -37,7 +37,17 @@ export class FICMigration {
             _id: docId,
             folder: folder?._id,
         }));
-        await targetPack.documentClass.updateDocuments(updateData, { pack: targetPack.collection });
+        for (const update of updateData) {
+            await targetPack.documentClass.updateDocuments([update], { pack: targetPack.collection });
+            if (targetPack.documentClass.collections) {
+                for (const key of Object.keys(targetPack.documentClass.collections)) {
+                    const embeddedDocClass = targetPack.documentClass.collections[key].documentClass;
+                    await targetPack.documentClass.updateEmbeddedDocuments(embeddedDocClass.name, update, {
+                        pack: targetPack.collection,
+                    });
+                }
+            }
+        }
     }
     static async convertFolder(targetPack, cfFolder, parentFolder = null) {
         const folder = await Folder.create(this.createFoundryFolderData(targetPack, cfFolder, parentFolder), {
