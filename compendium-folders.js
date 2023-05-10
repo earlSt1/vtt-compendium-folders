@@ -591,6 +591,13 @@ export class Settings {
             type: Boolean,
             default: false,
         });
+        game.settings.registerMenu(mod, "cleanupCompendiums", {
+            name: game.i18n.localize("CF.cleanup"),
+            icon: "fas fa-atlas",
+            label: game.i18n.localize("CF.cleanupHint"),
+            type: CleanupPackConfig,
+            restricted: true,
+        });
 
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;
