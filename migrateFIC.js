@@ -10,6 +10,7 @@ export class FICMigration {
         const rootFolders = cfFolders.contents.filter((x) => !x.parent);
         await this.convert(targetPack, rootFolders);
         await this.backupOldFolders(cfFolders, targetPack);
+        await targetPack.getIndex();
     }
     static async backupOldFolders(cfFolders, targetPack) {
         console.debug("Backing up old folders");
