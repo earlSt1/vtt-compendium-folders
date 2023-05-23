@@ -267,7 +267,6 @@ export class FICFolderAPI {
             } catch (error) {
                 console.debug(modName + " | Error from updating pack entities, most likely an entry was deleted");
             }
-            return null;
         }
         return game.customFolders.fic.folders;
     }
