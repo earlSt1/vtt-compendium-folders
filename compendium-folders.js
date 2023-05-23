@@ -48,6 +48,9 @@ function defineClasses() {
         toJSON() {
             return this.data;
         }
+        toObject() {
+            return this.data;
+        }
         /** @override */
         static create(data = {}) {
             let newEntry = new CompendiumEntry(data);
@@ -133,6 +136,9 @@ function defineClasses() {
             return data;
         }
         toJSON() {
+            return this.data;
+        }
+        toObject() {
             return this.data;
         }
         /** @override */

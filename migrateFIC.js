@@ -1,5 +1,5 @@
 import { FICFolderAPI } from "./fic-folders.js";
-
+const mod = "Compendium Folders";
 export class FICMigration {
     static async migrate(packCode) {
         await this.migrateToTarget(packCode, packCode);
@@ -13,7 +13,7 @@ export class FICMigration {
         await targetPack.getIndex();
     }
     static async backupOldFolders(cfFolders, targetPack) {
-        console.debug("Backing up old folders");
+        console.debug(mod + " | Backing up old folders");
         const backupFolder = await Folder.create(
             {
                 type: targetPack.documentName,
@@ -52,7 +52,7 @@ export class FICMigration {
     }
     static async convert(targetPack, rootFolders) {
         for (const folder of rootFolders) {
-            console.debug("Converting " + folder.name);
+            console.debug(mod + " | Converting " + folder.name);
             await this.convertFolder(targetPack, folder);
         }
     }

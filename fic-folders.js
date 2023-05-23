@@ -1,5 +1,4 @@
 import { FICMigration } from "./migrateFIC.js";
-const mod = "compendium-folders";
 const modName = "Compendium Folders";
 
 export class FICUtils {
