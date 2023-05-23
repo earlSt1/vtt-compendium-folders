@@ -12,7 +12,7 @@
     "version": "2.6.0",
     "compatibility": {
         "minimum": 11,
-        "verified": "11.295",
+        "verified": "11.298",
         "maximum": 11
     },
     "esmodules": ["./compendium-folders.js"],
