@@ -56,7 +56,7 @@
     "media": [
         {
             "type": "cover",
-            "link": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/example.png"
+            "url": "https://raw.githubusercontent.com/earlSt1/vtt-compendium-folders/master/example.png"
         }
     ],
     "styles": ["./styles.css"],
