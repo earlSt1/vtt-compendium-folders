@@ -193,6 +193,7 @@ export class FICUtils {
     static async handleMoveFolderToFolder(data, targetFolderElement) {
         const movingFolderId = data.id;
         const targetFolderId = targetFolderElement.dataset.folderId;
+        if (movingFolderId === targetFolderId) return;
 
         let movingFolder = game.customFolders.fic.folders.get(movingFolderId);
         let targetFolder = game.customFolders.fic.folders.get(targetFolderId);
