@@ -1382,7 +1382,7 @@ function filterSelectorBySearchTerm(parent, searchTerm, selector) {
         });
     } else {
         for (let compendium of parent.querySelectorAll(selector)) {
-            if (!compendium.innerText.toLowerCase().includes(searchTerm.toLowerCase())) {
+            if (!compendium.textContent.toLowerCase().includes(searchTerm.toLowerCase())) {
                 //Hide not matching
                 compendium.style.display = "none";
                 compendium.setAttribute("search-failed", "");
@@ -1803,6 +1803,12 @@ export class Settings {
             config: false,
             type: String,
             default: "",
+        });
+        game.settings.register(mod, "grid-settings", {
+            scope: "client",
+            config: false,
+            type: Object,
+            default: {},
         });
         let FolderCollection = CONFIG.CompendiumFolderCollection.documentClass;
         let EntryCollection = CONFIG.CompendiumFolderCollection.documentClass;

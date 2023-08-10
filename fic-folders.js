@@ -743,6 +743,10 @@ export class FICManager {
             let packCode = e.metadata.id;
             const compendiumWindow = document.querySelector(".compendium.directory[data-pack='" + packCode + "']");
             if (!e.collection.locked && game.user.isGM) FICManager.createNewFolderButtonWithinCompendium(compendiumWindow, packCode, null);
+            FICManager.addClickListeners(compendiumWindow);
+            FICManager.createZoomButtonsWithinCompendium(compendiumWindow, packCode);
+            FICManager.createResizeHandle(compendiumWindow, e);
+            FICManager.addSearchHandler(compendiumWindow, FICManager.onSearch.bind(compendiumWindow));
             if (!e.collection.index.contents.some((x) => x.name === game.CF.TEMP_ENTITY_NAME)) return;
 
             FICUtils.removeStaleOpenFolderSettings(packCode);
@@ -1784,6 +1788,188 @@ export class FICManager {
             },
             { renderSheet: true }
         );
+    }
+
+    static getPackGridSettings(packCode) {
+        const allGridSettings = game.settings.get(mod, 'grid-settings');
+        return allGridSettings[packCode] || {
+            zoom: 1,
+            displayType: 'list'
+        };
+    }
+    static async setPackGridSettings(packCode, newSettings) {
+        const allGridSettings = game.settings.get(mod, 'grid-settings');
+        const currentSettings = FICManager.getPackGridSettings(packCode);
+        allGridSettings[packCode] = {
+            ...currentSettings,
+            ...newSettings,
+        };
+        await game.settings.set(mod, 'grid-settings', allGridSettings);
+    }
+    static getZoomLevel(packCode) {
+        const { zoom } = FICManager.getPackGridSettings(packCode);
+        return parseInt(zoom, 10);
+    }
+    static setZoomLevel(window, zoomLevel, packCode) {
+        const newSize = 48 * zoomLevel;
+        window.style.setProperty("--compendium-image-size", `${newSize}px`);
+        FICManager.setPackGridSettings(packCode, {
+            zoom: parseInt(zoomLevel, 10)
+        });
+    }
+    static getDisplayType(packCode) {
+        const { displayType } = FICManager.getPackGridSettings(packCode);
+        return displayType;
+    }
+    static setDisplayType(window, displayType, packCode) {
+        window.classList.toggle('display-mode-grid', displayType === 'grid');
+        FICManager.setPackGridSettings(packCode, {
+            displayType: displayType
+        });
+    }
+    static createZoomButtonsWithinCompendium(window, packCode) {
+        const currentZoom = FICManager.getZoomLevel(packCode);
+        const newSize = 48 * currentZoom;
+        window.style.setProperty("--compendium-image-size", `${newSize}px`);
+
+        if (FICManager.getDisplayType(packCode) === 'grid') {
+            window.classList.add('display-mode-grid');
+        }
+
+        const controls = document.createElement('div');
+        controls.classList.add('header-controls');
+        controls.innerHTML = `
+          <div class="mode-selector">
+            <a class="fic-mode-list" title="List"><i class="fa-solid fa-list"></i></a>
+            <a class="fic-mode-grid" title="Grid"><i class="fa-solid fa-grid"></i></a>
+          </div>
+          <div class="zoom-buttons">
+            <a class="fic-zoom-out" title="Zoom Out"><i class="fas fa-fw fa-magnifying-glass-minus"></i></a>
+            <input type="range" min="1" max="10" value="${currentZoom}" class="zoom-slider" />
+            <a class="fic-zoom-in" title="Zoom In"><i class="fas fa-fw fa-magnifying-glass-plus"></i></a>
+          </div>
+        `;
+
+        const directoryHeader = window.querySelector("header.directory-header");
+        directoryHeader.insertAdjacentElement("afterend", controls);
+
+        const zoomSlider = controls.querySelector('.zoom-slider');
+        const onSlide = (e) => {
+            const value = e.target.value;
+            FICManager.setZoomLevel(window, value, packCode);
+        };
+        zoomSlider.addEventListener("input", onSlide);
+        zoomSlider.addEventListener("change", onSlide);
+
+        const zoomInButton = controls.querySelector('.fic-zoom-in');
+        zoomInButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const currentZoom = FICManager.getZoomLevel(window);
+            const newZoom = currentZoom + 1;
+
+            FICManager.setZoomLevel(window, Math.min(newZoom, 10), packCode);
+
+            const zoomSlider = controls.querySelector('.zoom-slider');
+            zoomSlider.value = newZoom;
+        });
+
+        const zoomOutButton = controls.querySelector('.fic-zoom-out');
+        zoomOutButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const currentZoom = FICManager.getZoomLevel(window);
+            const newZoom = currentZoom - 1;
+
+            FICManager.setZoomLevel(window, Math.min(newZoom, 10), packCode);
+
+            const zoomSlider = controls.querySelector('.zoom-slider');
+            zoomSlider.value = newZoom;
+        });
+
+        const gridModeButton = controls.querySelector('.fic-mode-grid');
+        const listModeButton = controls.querySelector('.fic-mode-list');
+
+        gridModeButton.addEventListener('click', () => {
+            FICManager.setDisplayType(window, 'grid', packCode);
+        });
+
+        listModeButton.addEventListener('click', () => {
+            FICManager.setDisplayType(window, 'list', packCode);
+        });
+    }
+
+    static createResizeHandle(compendiumWindow, compendium) {
+        const handle = document.createElement('div');
+        handle.classList.add('compendium-resize-handle');
+
+        const icon = document.createElement("i");
+        icon.classList.add("fas", "fa-arrows-alt-h");
+        handle.appendChild(icon);
+
+        compendiumWindow.appendChild(handle);
+
+        const minimum_size = 20;
+        let original_width = 0;
+        let original_height = 0;
+        let original_x = 0;
+        let original_y = 0;
+        let original_mouse_x = 0;
+        let original_mouse_y = 0;
+
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault()
+            original_width = compendium.position.width;
+            original_height = compendium.position.height;
+            original_x = compendium.position.left;
+            original_y = compendium.position.top;
+            original_mouse_x = e.pageX;
+            original_mouse_y = e.pageY;
+            window.addEventListener('mousemove', resize)
+            window.addEventListener('mouseup', stopResize)
+        })
+
+        function resize(e) {
+            const width = original_width + (e.pageX - original_mouse_x);
+            const height = original_height + (e.pageY - original_mouse_y)
+            if (width > minimum_size) {
+                compendium.setPosition({
+                    ...compendium.position,
+                    width
+                });
+            }
+            if (height > minimum_size) {
+                compendium.setPosition({
+                    ...compendium.position,
+                    height
+                });
+            }
+        }
+
+        function stopResize() {
+            window.removeEventListener('mousemove', resize)
+        }
+    }
+    static addClickListeners(compendiumWindow) {
+        for (let entity of compendiumWindow.querySelectorAll(".directory-item")) {
+            const thumbnail = entity.querySelector('.thumbnail');
+            if (thumbnail) {
+                thumbnail.removeEventListener('click', FICManager.openItem);
+                thumbnail.addEventListener('click', FICManager.openItem, false);
+            }
+        }
+    }
+    static openItem(ev) {
+        ev.stopPropagation();
+        ev.target.parentElement.querySelector('a').click();
+    }
+    static addSearchHandler(compendiumWindow, searchFn) {
+        const search = compendiumWindow.querySelector('input[name="search"]');
+        search.removeEventListener('keyup', searchFn);
+        search.addEventListener('keyup', searchFn);
+    }
+    static onSearch(e) {
+        const compendiumWindow = this; // bound from parent context
+        const hasValue = e.target?.value?.length > 0;
+        compendiumWindow.querySelector('.directory-list').classList.toggle('searching', hasValue);
     }
 }
 export class FICFolderAPI {

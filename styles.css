@@ -81,7 +81,7 @@ li.match {
   grid-template-columns: calc(36px + 2px) 1fr;
   grid-template-rows: 1fr 1fr;
   list-style: none;
-  padding: 2px 0 2px 4px;  
+  padding: 2px 0 2px 4px;
 }
 li.match > * {
   align-items: inherit;
@@ -120,7 +120,7 @@ li.compendium-folder > .compendium-folder-header .create-entity-c{
 #compendium h3 {border: 0px !important;padding: 0px !important;background: none !important;}
 /* Form styles */
 .form-compendium-list,.form-folder-list {
-  height:300px; 
+  height:300px;
   overflow:auto;
   background:rgba(0,0,0,0.05);
   border:1px solid #7a7971;
@@ -212,16 +212,16 @@ button.create-compendium{
 }
 .folder-header a.export-folder,a.import-folder,a.create-fic{
   flex: 0 0 20px;
-    text-align: center;
-    /*color: #CCC;*/
-    font-size: 14px;
+  text-align: center;
+  /*color: #CCC;*/
+  font-size: 14px;
 }
 div.compendium .compendium-folder-header > h3 > img {
   width:22px !important;
   height:22px !important;
   margin: 0 8px 0 0px !important;
   margin-bottom: -6px !important;
-  border:0px !important; 
+  border:0px !important;
   border-radius:0px !important;
 }
 /*Context menu*/
@@ -260,10 +260,10 @@ button.dialog-button.deleteAll  {
   background-color:#c51c1c
 }
 .d35ecustom #sidebar li.folder::before{
-	background:none
+  background:none
 }
 .d35ecustom #sidebar li.folder h3 i{
-	display:inline	
+  display:inline
 }
 #fix-compendium table{
   border-left: 1px solid #7a7971;
@@ -274,5 +274,99 @@ button.dialog-button.deleteAll  {
 }
 button[data-key='compendium-folders.cleanupCompendiums']{
   background-color: #aa0000;
-    color: #f0f0e0;
+  color: #f0f0e0;
+}
+
+:root {
+  --compendium-image-size: var(--sidebar-item-height);
+}
+.compendium .directory-item .thumbnail {
+  width: var(--compendium-image-size);
+  height: var(--compendium-image-size);
+}
+.compendium .directory-item {
+  cursor: pointer;
+}
+.compendium .directory-item:hover a {
+  text-shadow: 0 0 8px var(--color-shadow-primary);
+}
+.compendium.directory .directory-list .entry-list .directory-item.scene {
+  height: calc(var(--compendium-image-size) + 2px);
+  display: flex;
+  align-items: center;
+}
+.display-mode-grid .directory-item .document-name {
+  display: none;
+}
+.display-mode-grid .entry-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.display-mode-grid .directory-list .cfolders-container {
+  width: 100%;
+}
+.display-mode-grid .directory-list {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-content: flex-start;
+}
+.display-mode-grid .directory-list .directory-item {
+  display: flex;
+}
+.display-mode-grid .directory-list .directory-item.scene {
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.display-mode-grid .directory-list .directory-item.scene img {
+  width: auto;
+}
+.display-mode-grid .directory-list .directory-item.scene .document-name {
+  display: block;
+}
+.header-controls {
+  flex: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  padding: 3px;
+}
+.mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.fic-mode-list {
+  color: darkorange;
+}
+.display-mode-grid .fic-mode-grid {
+  color: darkorange;
+}
+.display-mode-grid .fic-mode-list {
+  color: inherit;
+}
+.zoom-buttons {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.compendium-resize-handle {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  bottom: -1px;
+  right: 0;
+  background: #444;
+  padding: 2px;
+  border: 1px solid var(--color-border-dark-1);
+  border-radius: 4px 0 0 0;
+  color: var(--color-text-light-highlight);
+}
+.compendium-resize-handle i.fas {
+  transform: rotate(45deg);
 }
